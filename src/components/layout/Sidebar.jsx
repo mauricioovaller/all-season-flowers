@@ -46,13 +46,7 @@ const Sidebar = ({ onModuleChange }) => {
       type: 'header'
     },
     { id: 'compras', label: 'Compras', icon: <ShoppingCart className="w-5 h-5" />, category: 'operativos' },
-    {
-      id: 'ventas',
-      label: 'Ventas',
-      icon: <CreditCard className="w-5 h-5" />,
-      category: 'operativos',
-      badge: '⚡ PRIORIDAD'
-    },
+    { id: 'pedidos', label: 'Pedidos', icon: <CreditCard className="w-5 h-5" />, category: 'operativos', badge: '⚡ PRIORIDAD' },
 
     // INFORMES
     {
@@ -88,7 +82,7 @@ const Sidebar = ({ onModuleChange }) => {
 
       return (
         <li key={item.id}>
-          <button 
+          <button
             onClick={() => handleItemClick(item.id)}
             className={`
               w-full text-left p-3 rounded-xl transition-all duration-200 group
@@ -179,11 +173,10 @@ const Sidebar = ({ onModuleChange }) => {
                 <button
                   key={item.id}
                   onClick={() => handleItemClick(item.id)}
-                  className={`flex flex-col items-center p-3 rounded-lg transition-all min-w-[70px] ${
-                    item.id === 'ventas'
+                  className={`flex flex-col items-center p-3 rounded-lg transition-all min-w-[70px] ${item.id === 'ventas'
                       ? 'bg-primary text-white shadow-md'
                       : 'hover:bg-gray-100'
-                  }`}
+                    }`}
                 >
                   <span className="text-xl mb-1">{item.icon}</span>
                   <span className="text-xs font-medium text-center leading-tight">

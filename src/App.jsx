@@ -12,7 +12,7 @@ function App() {
 
   const renderContent = () => {
     switch (currentModule) {
-      case 'ventas':
+      case 'pedidos':
         return <Ventas />;
       case 'dashboard':
       default:

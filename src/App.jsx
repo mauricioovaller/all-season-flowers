@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import Header from './components/layout/Header';
 import Sidebar from './components/layout/Sidebar';
 import Dashboard from './pages/Dashboard/Dashboard';
-import Pedidos from './pages/Pedidos/Pedidos';
+import Pedidos from './modules/pedidos/Pedidos';
 import './index.css';
 
 function App() {

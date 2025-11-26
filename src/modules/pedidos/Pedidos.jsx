@@ -1,4 +1,4 @@
-// src/components/pedidos/Pedidos.jsx
+// src/modules/pedidos/Pedidos.jsx
 import React, { useRef, useState, useEffect } from "react";
 import Swal from "sweetalert2";
 import PedidoHeader from "./PedidoHeader";

@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import Header from './components/layout/Header';
 import Sidebar from './components/layout/Sidebar';
 import Dashboard from './pages/Dashboard/Dashboard';
-import Ventas from './pages/Ventas/Ventas';
+import Pedidos from './pages/Pedidos/Pedidos';
 import './index.css';
 
 function App() {
@@ -13,7 +13,7 @@ function App() {
   const renderContent = () => {
     switch (currentModule) {
       case 'pedidos':
-        return <Ventas />;
+        return <Pedidos />;
       case 'dashboard':
       default:
         return <Dashboard />;

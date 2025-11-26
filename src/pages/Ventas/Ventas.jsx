@@ -1,8 +1,8 @@
 // src/modules/pedidos/pages/GestionVentas.jsx
 import React from 'react';
-import Pedidos from '../Pedidos';
+import Pedidos from '../../modules/pedidos/Pedidos';
 
-export default function GestionVentas() {
+export default function Ventas() {
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="p-4 lg:p-6">

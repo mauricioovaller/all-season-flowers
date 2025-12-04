@@ -3,8 +3,9 @@ import React, { useRef, useState, useEffect } from "react";
 import Swal from "sweetalert2";
 import PedidoHeader from "./PedidoHeader";
 import PedidoDetail from "./PedidoDetail";
+import { getDatosSelect } from "../../services/pedidos/pedidosService";
 
-// Datos mock temporales - luego vendrán de servicios/API
+// Datos mock temporales - para fallback
 const datosMock = {
   clientes: [
     { id: "1", nombre: "Cliente A - Estados Unidos" },
@@ -113,7 +114,7 @@ export default function Pedidos() {
   const [items, setItems] = useState([]);
 
   // --------------------------------------------------------------
-  // Datos de selects globales (mock temporal)
+  // Datos de selects globales
   // --------------------------------------------------------------
   const [datosSelect, setDatosSelect] = useState({
     clientes: [],
@@ -146,20 +147,90 @@ export default function Pedidos() {
   const itemRefs = useRef([]);
 
   // --------------------------------------------------------------
-  // Cargar datos mock iniciales
+  // Cargar datos REALES desde la API
   // --------------------------------------------------------------
   useEffect(() => {
     async function cargarDatos() {
       try {
         setLoadingDatos(true);
-        // Simular carga de datos
-        setTimeout(() => {
-          setDatosSelect(datosMock);
-          setLoadingDatos(false);
-        }, 1000);
+
+        // Llamar a la API
+        const datosAPI = await getDatosSelect();
+
+        // Mapear los datos de la API al formato que necesitan los componentes
+        const datosMapeados = {
+          // Clientes: IdCliente, NOMBRE, IVA
+          clientes: datosAPI.clientes?.map(c => ({
+            id: c.IdCliente.toString(),
+            nombre: `${c.NOMBRE || ''} ${c.IVA ? `(IVA: ${c.IVA})` : ''}`.trim()
+          })) || [],
+
+          // Ejecutivos: IdEjecutivo, NOMEJECUTIVO
+          ejecutivos: datosAPI.ejecutivos?.map(e => ({
+            id: e.IdEjecutivo.toString(),
+            nombre: e.NOMEJECUTIVO || ''
+          })) || [],
+
+          // Monedas: IdMoneda, Moneda
+          monedas: datosAPI.monedas?.map(m => ({
+            id: m.IdMoneda.toString(),
+            nombre: m.Moneda || ''
+          })) || [],
+
+          // Aerolíneas: IdAerolinea, NOMAEROLINEA
+          aerolineas: datosAPI.aerolineas?.map(a => ({
+            id: a.IdAerolinea.toString(),
+            nombre: a.NOMAEROLINEA || ''
+          })) || [],
+
+          // Agencias: IdAgencia, NOMAGENCIA
+          agencias: datosAPI.agencias?.map(a => ({
+            id: a.IdAgencia.toString(),
+            nombre: a.NOMAGENCIA || ''
+          })) || [],
+
+          // Productos: IdProducto, NOMPRODUCTO
+          productos: datosAPI.productos?.map(p => ({
+            id: p.IdProducto.toString(),
+            descripcion: p.NOMPRODUCTO || '',
+            codigo: p.NOMPRODUCTO?.substring(0, 10) || p.IdProducto.toString()
+          })) || [],
+
+          // Tipo Empaque: IdTipoEmpaque, Descripcion
+          tiposEmpaque: datosAPI.tipoEmpaque?.map(t => ({
+            id: t.IdTipoEmpaque.toString(),
+            descripcion: t.Descripcion || ''
+          })) || [],
+
+          // Unidades: IdUnidades, DescripUnidad
+          unidadesFacturacion: datosAPI.unidades?.map(u => ({
+            id: u.IdUnidades.toString(),
+            nombre: u.DescripUnidad || ''
+          })) || [],
+
+          // Predios: IdPredio, NombrePredio
+          predios: datosAPI.predios?.map(p => ({
+            id: p.IdPredio.toString(),
+            nombre: p.NombrePredio || ''
+          })) || [],
+        };
+
+        setDatosSelect(datosMapeados);
+        setLoadingDatos(false);
+
       } catch (err) {
         console.error("Error cargando datos:", err);
-        Swal.fire("Error", "No se pudieron cargar los datos iniciales.", "error");
+
+        // Si falla la API, mostrar mensaje y usar datos mock
+        Swal.fire({
+          icon: 'warning',
+          title: 'API no disponible',
+          text: 'Usando datos de ejemplo. La API no respondió.',
+          timer: 3000
+        });
+
+        // Usar datos mock como fallback
+        setDatosSelect(datosMock);
         setLoadingDatos(false);
       }
     }
@@ -179,16 +250,16 @@ export default function Pedidos() {
   function handleItemsChange(newItems) {
     console.log("Datos recibidos del detalle:", newItems);
     setItems(newItems);
-    
+
     // Calcular totales del encabezado basado en los items
     const totalPiezas = newItems.reduce((sum, item) => sum + (Number(item.cantidadEmpaque) || 0), 0);
     const totalTallos = newItems.reduce((sum, item) => sum + (Number(item.totTallosRegistro) || 0), 0);
     const valorVenta = newItems.reduce((sum, item) => sum + (Number(item.valorRegistro) || 0), 0);
-    
+
     // Calcular IVA y total
     const iva = header.tieneIVA ? valorVenta * 0.19 : 0;
     const totalVenta = valorVenta + iva;
-    
+
     setHeader(prev => ({
       ...prev,
       totalPiezas: totalPiezas.toString(),
@@ -270,9 +341,9 @@ export default function Pedidos() {
       setTimeout(() => {
         const nuevoId = Math.floor(Math.random() * 1000) + 1;
         const nuevoNumero = `PED-${String(nuevoId).padStart(6, "0")}`;
-        
-        setHeader(prev => ({ 
-          ...prev, 
+
+        setHeader(prev => ({
+          ...prev,
           noPedido: nuevoNumero,
           estadoPedido: "Guardado"
         }));
@@ -373,11 +444,10 @@ export default function Pedidos() {
           <button
             onClick={handlePrint}
             disabled={header.noPedido === "PED-000000"}
-            className={`rounded-lg px-4 py-3 sm:py-2 transition font-medium flex-1 ${
-              header.noPedido !== "PED-000000"
-                ? "bg-purple-600 text-white hover:bg-purple-700"
-                : "bg-gray-300 text-gray-500 cursor-not-allowed"
-            }`}
+            className={`rounded-lg px-4 py-3 sm:py-2 transition font-medium flex-1 ${header.noPedido !== "PED-000000"
+              ? "bg-purple-600 text-white hover:bg-purple-700"
+              : "bg-gray-300 text-gray-500 cursor-not-allowed"
+              }`}
           >
             Imprimir PDF
           </button>

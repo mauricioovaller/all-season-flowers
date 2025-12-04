@@ -1,5 +1,6 @@
 // src/components/pedidos/PedidoDetail.jsx
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
+import { getVariedadesYGrados } from "../../services/pedidos/pedidosService";
 
 function formatCurrency(v) {
   return new Intl.NumberFormat("es-CO", {
@@ -13,13 +14,15 @@ export default function PedidoDetail({
   items,
   onChangeItems,
   productos = [],
-  variedades = [],
-  grados = [],
   tiposEmpaque = [],
   unidadesFacturacion = [],
   predios = [],
   itemRefsRef,
 }) {
+  // Estado local para variedades y grados por producto
+  const [variedadesPorProducto, setVariedadesPorProducto] = useState({});
+  const [gradosPorProducto, setGradosPorProducto] = useState({});
+  const [cargandoVariedades, setCargandoVariedades] = useState({});
 
   // Efecto para recalcular campos cuando cambian items
   useEffect(() => {
@@ -43,14 +46,13 @@ export default function PedidoDetail({
       let valorRegistro = 0;
 
       // Calcular según unidad de facturación
-      if (item.unidadFacturacion === "1") { // Tallos
+      const unidad = unidadesFacturacion.find(u => u.id === item.unidadFacturacion);
+      if (unidad?.nombre === "Stem/Tallo") {
         valorRegistro = totTallosRegistro * precioVenta;
-      } else if (item.unidadFacturacion === "2") { // Ramos
+      } else if (unidad?.nombre === "Bunch/Ramo" || unidad?.nombre === "Bouquet" || unidad?.nombre === "Consumer/Bunch") {
         valorRegistro = cantidadEmpaque * ramosCaja * precioVenta;
-      } else if (item.unidadFacturacion === "3") { // Cajas
-        valorRegistro = cantidadEmpaque * precioVenta;
       } else {
-        valorRegistro = totTallosRegistro * precioVenta; // Default por tallos
+        valorRegistro = totTallosRegistro * precioVenta; // Default
       }
 
       return {
@@ -72,7 +74,59 @@ export default function PedidoDetail({
     if (needsUpdate) {
       onChangeItems(recalculatedItems);
     }
-  }, [items, onChangeItems]);
+  }, [items, onChangeItems, unidadesFacturacion]);
+
+  // Función para cargar variedades y grados cuando se selecciona un producto
+  const cargarVariedadesYGrados = async (idProducto, itemIndex) => {
+    if (!idProducto) return;
+    
+    try {
+      setCargandoVariedades(prev => ({ ...prev, [itemIndex]: true }));
+      
+      const datos = await getVariedadesYGrados(idProducto);
+      console.log("Datos recibidos de variedades y grados:", datos);
+      
+      // Actualizar estados con los datos obtenidos
+      setVariedadesPorProducto(prev => ({
+        ...prev,
+        [idProducto]: datos.variedades || []
+      }));
+      
+      setGradosPorProducto(prev => ({
+        ...prev,
+        [idProducto]: datos.grados || []
+      }));
+      
+      // Limpiar variedad y grado seleccionados para este producto
+      const copy = items.map((it, idx) => {
+        if (idx === itemIndex) {
+          return {
+            ...it,
+            variedad: "",
+            grado: ""
+          };
+        }
+        return it;
+      });
+      onChangeItems(copy);
+      
+    } catch (error) {
+      console.error(`Error cargando variedades y grados para producto ${idProducto}:`, error);
+      
+      // Si hay error, limpiar las listas para este producto
+      setVariedadesPorProducto(prev => ({
+        ...prev,
+        [idProducto]: []
+      }));
+      
+      setGradosPorProducto(prev => ({
+        ...prev,
+        [idProducto]: []
+      }));
+    } finally {
+      setCargandoVariedades(prev => ({ ...prev, [itemIndex]: false }));
+    }
+  };
 
   function addItem() {
     const id = `${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
@@ -84,7 +138,7 @@ export default function PedidoDetail({
       grado: "",
       tipoEmpaque: "",
       cantidadEmpaque: 1,
-      unidadFacturacion: "1", // Tallos por defecto
+      unidadFacturacion: "4", // Por defecto "Stem/Tallo" (ID 4 según tus datos)
       tallosRamo: 0,
       ramosCaja: 0,
       tallosCaja: 0,
@@ -115,11 +169,12 @@ export default function PedidoDetail({
       const prod = productos.find((p) => String(p.id) === String(value));
       if (prod) {
         item.producto = prod.id;
-        // Limpiar variedad al cambiar producto
-        item.variedad = "";
+        // Cargar variedades y grados para este producto
+        cargarVariedadesYGrados(prod.id, index);
       } else {
         item.producto = "";
         item.variedad = "";
+        item.grado = "";
       }
     } else if (field === "tallosRamo" || field === "ramosCaja") {
       item[field] = Number(value || 0);
@@ -140,14 +195,13 @@ export default function PedidoDetail({
     let valorRegistro = 0;
 
     // Calcular según unidad de facturación
-    if (item.unidadFacturacion === "1") { // Tallos
+    const unidad = unidadesFacturacion.find(u => u.id === item.unidadFacturacion);
+    if (unidad?.nombre === "Stem/Tallo") {
       valorRegistro = totTallosRegistro * precioVenta;
-    } else if (item.unidadFacturacion === "2") { // Ramos
+    } else if (unidad?.nombre === "Bunch/Ramo" || unidad?.nombre === "Bouquet" || unidad?.nombre === "Consumer/Bunch") {
       valorRegistro = cantidadEmpaque * (Number(item.ramosCaja) || 0) * precioVenta;
-    } else if (item.unidadFacturacion === "3") { // Cajas
-      valorRegistro = cantidadEmpaque * precioVenta;
     } else {
-      valorRegistro = totTallosRegistro * precioVenta; // Default por tallos
+      valorRegistro = totTallosRegistro * precioVenta; // Default
     }
 
     item.tallosCaja = tallosCaja;
@@ -160,7 +214,17 @@ export default function PedidoDetail({
   // Filtrar variedades por producto seleccionado
   const getVariedadesPorProducto = (productoId) => {
     if (!productoId) return [];
-    return variedades.filter(v => String(v.productoId) === String(productoId));
+    const variedades = variedadesPorProducto[productoId] || [];
+    console.log(`Variedades para producto ${productoId}:`, variedades);
+    return variedades;
+  };
+
+  // Filtrar grados por producto seleccionado
+  const getGradosPorProducto = (productoId) => {
+    if (!productoId) return [];
+    const grados = gradosPorProducto[productoId] || [];
+    console.log(`Grados para producto ${productoId}:`, grados);
+    return grados;
   };
 
   const totalPiezas = items.reduce((s, it) => s + Number(it.cantidadEmpaque || 0), 0);
@@ -246,6 +310,7 @@ export default function PedidoDetail({
                         if (itemRefsRef) itemRefsRef.current[idx] = el;
                       }}
                       className="border rounded p-1 w-full text-xs focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                      disabled={cargandoVariedades[idx]}
                     >
                       <option value="">Seleccione...</option>
                       {productos.map((p) => (
@@ -254,6 +319,11 @@ export default function PedidoDetail({
                         </option>
                       ))}
                     </select>
+                    {cargandoVariedades[idx] && (
+                      <div className="text-xs text-blue-600 mt-1">
+                        <span className="animate-pulse">Cargando variedades...</span>
+                      </div>
+                    )}
                   </td>
 
                   {/* Variedad */}
@@ -262,6 +332,7 @@ export default function PedidoDetail({
                       value={it.variedad || ""}
                       onChange={(e) => updateItem(idx, "variedad", e.target.value)}
                       className="border rounded p-1 w-full text-xs focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                      disabled={!it.producto || cargandoVariedades[idx]}
                     >
                       <option value="">Seleccione...</option>
                       {getVariedadesPorProducto(it.producto).map((v) => (
@@ -278,9 +349,10 @@ export default function PedidoDetail({
                       value={it.grado || ""}
                       onChange={(e) => updateItem(idx, "grado", e.target.value)}
                       className="border rounded p-1 w-full text-xs focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                      disabled={!it.producto || cargandoVariedades[idx]}
                     >
                       <option value="">Seleccione...</option>
-                      {grados.map((g) => (
+                      {getGradosPorProducto(it.producto).map((g) => (
                         <option key={g.id} value={g.id}>
                           {g.nombre}
                         </option>
@@ -442,29 +514,38 @@ export default function PedidoDetail({
                 />
               </div>
 
-              {/* Producto y Variedad */}
+              {/* Producto */}
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">Producto</label>
+                <select
+                  value={it.producto || ""}
+                  onChange={(e) => updateItem(idx, "producto", e.target.value)}
+                  className="border rounded p-2 w-full text-sm focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                  disabled={cargandoVariedades[idx]}
+                >
+                  <option value="">Seleccione...</option>
+                  {productos.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.descripcion}
+                    </option>
+                  ))}
+                </select>
+                {cargandoVariedades[idx] && (
+                  <div className="text-xs text-blue-600 mt-1">
+                    <span className="animate-pulse">Cargando variedades...</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Variedad y Grado */}
               <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Producto</label>
-                  <select
-                    value={it.producto || ""}
-                    onChange={(e) => updateItem(idx, "producto", e.target.value)}
-                    className="border rounded p-2 w-full text-sm focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                  >
-                    <option value="">Seleccione...</option>
-                    {productos.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.descripcion}
-                      </option>
-                    ))}
-                  </select>
-                </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1">Variedad</label>
                   <select
                     value={it.variedad || ""}
                     onChange={(e) => updateItem(idx, "variedad", e.target.value)}
                     className="border rounded p-2 w-full text-sm focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                    disabled={!it.producto || cargandoVariedades[idx]}
                   >
                     <option value="">Seleccione...</option>
                     {getVariedadesPorProducto(it.producto).map((v) => (
@@ -474,40 +555,39 @@ export default function PedidoDetail({
                     ))}
                   </select>
                 </div>
-              </div>
-
-              {/* Grado y Tipo Empaque */}
-              <div className="grid grid-cols-2 gap-2">
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1">Grado</label>
                   <select
                     value={it.grado || ""}
                     onChange={(e) => updateItem(idx, "grado", e.target.value)}
                     className="border rounded p-2 w-full text-sm focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                    disabled={!it.producto || cargandoVariedades[idx]}
                   >
                     <option value="">Seleccione...</option>
-                    {grados.map((g) => (
+                    {getGradosPorProducto(it.producto).map((g) => (
                       <option key={g.id} value={g.id}>
                         {g.nombre}
                       </option>
                     ))}
                   </select>
                 </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">Tipo Empaque</label>
-                  <select
-                    value={it.tipoEmpaque || ""}
-                    onChange={(e) => updateItem(idx, "tipoEmpaque", e.target.value)}
-                    className="border rounded p-2 w-full text-sm focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                  >
-                    <option value="">Seleccione...</option>
-                    {tiposEmpaque.map((t) => (
-                      <option key={t.id} value={t.id}>
-                        {t.descripcion}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+              </div>
+
+              {/* Tipo Empaque */}
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">Tipo Empaque</label>
+                <select
+                  value={it.tipoEmpaque || ""}
+                  onChange={(e) => updateItem(idx, "tipoEmpaque", e.target.value)}
+                  className="border rounded p-2 w-full text-sm focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                >
+                  <option value="">Seleccione...</option>
+                  {tiposEmpaque.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.descripcion}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               {/* Cantidad y Unidad Facturación */}

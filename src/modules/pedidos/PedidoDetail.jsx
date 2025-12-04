@@ -79,46 +79,52 @@ export default function PedidoDetail({
   // Función para cargar variedades y grados cuando se selecciona un producto
   const cargarVariedadesYGrados = async (idProducto, itemIndex) => {
     if (!idProducto) return;
-    
+
     try {
       setCargandoVariedades(prev => ({ ...prev, [itemIndex]: true }));
-      
+
       const datos = await getVariedadesYGrados(idProducto);
       console.log("Datos recibidos de variedades y grados:", datos);
-      
+
       // Actualizar estados con los datos obtenidos
       setVariedadesPorProducto(prev => ({
         ...prev,
         [idProducto]: datos.variedades || []
       }));
-      
+
       setGradosPorProducto(prev => ({
         ...prev,
         [idProducto]: datos.grados || []
       }));
-      
-      // Limpiar variedad y grado seleccionados para este producto
+
+      // NO LIMPIAR EL PRODUCTO - solo variedad y grado
       const copy = items.map((it, idx) => {
         if (idx === itemIndex) {
           return {
             ...it,
+            // Mantener el producto seleccionado
             variedad: "",
             grado: ""
           };
         }
         return it;
       });
-      onChangeItems(copy);
-      
+
+      // Solo actualizar si hay cambios
+      if (copy[itemIndex].variedad !== items[itemIndex].variedad ||
+        copy[itemIndex].grado !== items[itemIndex].grado) {
+        onChangeItems(copy);
+      }
+
     } catch (error) {
       console.error(`Error cargando variedades y grados para producto ${idProducto}:`, error);
-      
+
       // Si hay error, limpiar las listas para este producto
       setVariedadesPorProducto(prev => ({
         ...prev,
         [idProducto]: []
       }));
-      
+
       setGradosPorProducto(prev => ({
         ...prev,
         [idProducto]: []
@@ -168,8 +174,10 @@ export default function PedidoDetail({
     if (field === "producto") {
       const prod = productos.find((p) => String(p.id) === String(value));
       if (prod) {
+        // Actualizar el producto primero
         item.producto = prod.id;
-        // Cargar variedades y grados para este producto
+
+        // Luego cargar variedades y grados
         cargarVariedadesYGrados(prod.id, index);
       } else {
         item.producto = "";
@@ -186,27 +194,30 @@ export default function PedidoDetail({
       item[field] = value;
     }
 
-    // Recalcular totales
-    const tallosCaja = (Number(item.tallosRamo) || 0) * (Number(item.ramosCaja) || 0);
-    const cantidadEmpaque = Number(item.cantidadEmpaque) || 0;
-    const totTallosRegistro = tallosCaja * cantidadEmpaque;
-    
-    const precioVenta = Number(item.precioVenta) || 0;
-    let valorRegistro = 0;
+    // Solo recalcular si no es un cambio de producto (para evitar cálculos duplicados)
+    if (field !== "producto") {
+      // Recalcular totales
+      const tallosCaja = (Number(item.tallosRamo) || 0) * (Number(item.ramosCaja) || 0);
+      const cantidadEmpaque = Number(item.cantidadEmpaque) || 0;
+      const totTallosRegistro = tallosCaja * cantidadEmpaque;
 
-    // Calcular según unidad de facturación
-    const unidad = unidadesFacturacion.find(u => u.id === item.unidadFacturacion);
-    if (unidad?.nombre === "Stem/Tallo") {
-      valorRegistro = totTallosRegistro * precioVenta;
-    } else if (unidad?.nombre === "Bunch/Ramo" || unidad?.nombre === "Bouquet" || unidad?.nombre === "Consumer/Bunch") {
-      valorRegistro = cantidadEmpaque * (Number(item.ramosCaja) || 0) * precioVenta;
-    } else {
-      valorRegistro = totTallosRegistro * precioVenta; // Default
+      const precioVenta = Number(item.precioVenta) || 0;
+      let valorRegistro = 0;
+
+      // Calcular según unidad de facturación
+      const unidad = unidadesFacturacion.find(u => u.id === item.unidadFacturacion);
+      if (unidad?.nombre === "Stem/Tallo") {
+        valorRegistro = totTallosRegistro * precioVenta;
+      } else if (unidad?.nombre === "Bunch/Ramo" || unidad?.nombre === "Bouquet" || unidad?.nombre === "Consumer/Bunch") {
+        valorRegistro = cantidadEmpaque * (Number(item.ramosCaja) || 0) * precioVenta;
+      } else {
+        valorRegistro = totTallosRegistro * precioVenta; // Default
+      }
+
+      item.tallosCaja = tallosCaja;
+      item.totTallosRegistro = totTallosRegistro;
+      item.valorRegistro = valorRegistro;
     }
-
-    item.tallosCaja = tallosCaja;
-    item.totTallosRegistro = totTallosRegistro;
-    item.valorRegistro = valorRegistro;
 
     onChangeItems(copy);
   }

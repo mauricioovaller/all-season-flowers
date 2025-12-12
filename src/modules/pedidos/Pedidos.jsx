@@ -3,7 +3,9 @@ import React, { useRef, useState, useEffect } from "react";
 import Swal from "sweetalert2";
 import PedidoHeader from "./PedidoHeader";
 import PedidoEmpaque from "./PedidoEmpaque";
-import { getDatosSelect, guardarPedidoCompleto } from "../../services/pedidos/pedidosService";
+import ModalBuscarPedidos from "./ModalBuscarPedidos";
+import ModalFactura from "./ModalFactura";
+import { getDatosSelect, guardarPedidoCompleto, getPedidoEspecifico } from "../../services/pedidos/pedidosService";
 
 // Datos mock temporales - para fallback
 const datosMock = {
@@ -155,6 +157,25 @@ export default function Pedidos() {
     guiaMaster: useRef(null),
   };
 
+  const [mostrarModalBuscar, setMostrarModalBuscar] = useState(false);
+  const [cargandoPedido, setCargandoPedido] = useState(false);
+
+  // --------------------------------------------------------------
+  // NUEVO: Estados para documentos
+  // --------------------------------------------------------------
+  const [documentos, setDocumentos] = useState({
+    factura: { numero: "", fecha: "", generado: false },
+    planilla: { numero: "", fecha: "", generado: false },
+    etiqueta: { numero: "", fecha: "", generado: false },
+    fitosanitario: { numero: "", fecha: "", generado: false }
+  });
+
+  // Estados para modales
+  const [mostrarModalFactura, setMostrarModalFactura] = useState(false);
+  const [mostrarModalPlanilla, setMostrarModalPlanilla] = useState(false);
+  const [mostrarModalEtiqueta, setMostrarModalEtiqueta] = useState(false);
+  const [mostrarModalFitosanitario, setMostrarModalFitosanitario] = useState(false);
+
   // --------------------------------------------------------------
   // Cargar datos REALES desde la API
   // --------------------------------------------------------------
@@ -252,8 +273,8 @@ export default function Pedidos() {
   // --------------------------------------------------------------
   useEffect(() => {
     console.log("Estado actual de empaques:", empaques);
-    console.log("Descripciones por producto:", 
-      empaques.flatMap((emp, empIdx) => 
+    console.log("Descripciones por producto:",
+      empaques.flatMap((emp, empIdx) =>
         emp.items?.map((item, itemIdx) => ({
           empaque: empIdx + 1,
           producto: itemIdx + 1,
@@ -438,7 +459,7 @@ export default function Pedidos() {
                 }
               });
             }
-            
+
           }
 
           if (!item.precioVenta || Number(item.precioVenta) <= 0) {
@@ -562,7 +583,7 @@ export default function Pedidos() {
                 if (!ingrediente.variedad) {
                   errores.push(`Empaque ${numEmpaque}, Bouquet ${numProducto}, Ingrediente ${numIng}: Variedad es obligatoria`);
                 }
-                
+
                 const tallosPorBouquet = parseInt(ingrediente.tallosPorBouquet);
                 if (!ingrediente.tallosPorBouquet || isNaN(tallosPorBouquet) || tallosPorBouquet <= 0) {
                   errores.push(`Empaque ${numEmpaque}, Bouquet ${numProducto}, Ingrediente ${numIng}: Tallos por bouquet debe ser mayor a 0`);
@@ -623,15 +644,15 @@ export default function Pedidos() {
       IdEjecutivo: parseInt(header.ejecutivo) || 0,
       FechaSolicitud: header.fechaSolicitud || '',
       FechaEntrega: header.fechaEntrega || '',
-      IdMoneda: header.moneda || '',
+      IdMoneda: parseInt(header.moneda) || 0,  // ← CAMBIAR de string a integer
       TRM: parseFloat(header.trm) || 0,
       PO_Cliente: header.poCodeEncab || '',
       Observaciones: header.observaciones || '',
       AWB: header.guiaMaster || '',
       AWB_HIJA: header.guiaHija || '',
       AWB_NIETA: header.guiaNieta || '',
-      IdAerolinea: header.aerolinea ? parseInt(header.aerolinea) : null,
-      IdAgencia: header.agencia ? parseInt(header.agencia) : null,
+      IdAerolinea: header.aerolinea ? parseInt(header.aerolinea) : 0,  // ← 0 en lugar de null
+      IdAgencia: header.agencia ? parseInt(header.agencia) : 0,        // ← 0 en lugar de null
       PuertoSalida: header.puertoSalida || '',
       IVA: header.tieneIVA ? 1 : 0,
       Estado: "Pendiente",
@@ -709,8 +730,8 @@ export default function Pedidos() {
     };
 
     console.log("Datos completos preparados:", datosCompletos);
-    console.log("Descripciones de productos:", 
-      datosCompletos.empaques.flatMap(emp => 
+    console.log("Descripciones de productos:",
+      datosCompletos.empaques.flatMap(emp =>
         emp.productos.map(p => ({
           productoId: p.producto.IdProducto,
           descripcion: p.producto.Descripcion,
@@ -775,9 +796,9 @@ export default function Pedidos() {
           <p><strong>Fechas:</strong> ${datosParaGuardar.encabezado.FechaSolicitud} → ${datosParaGuardar.encabezado.FechaEntrega}</p>
           <p><strong>Empaques:</strong> ${datosParaGuardar.empaques.length}</p>
           <p><strong>Total productos:</strong> ${datosParaGuardar.empaques.reduce((sum, emp) => sum + emp.productos.length, 0)}</p>
-          <p><strong>Descripciones incluidas:</strong> ${datosParaGuardar.empaques.flatMap(emp => 
-            emp.productos.map(p => p.producto.Descripcion || 'Sin descripción')
-          ).filter(Boolean).length}</p>
+          <p><strong>Descripciones incluidas:</strong> ${datosParaGuardar.empaques.flatMap(emp =>
+        emp.productos.map(p => p.producto.Descripcion || 'Sin descripción')
+      ).filter(Boolean).length}</p>
         </div>
         <p class="text-xs text-gray-500 mt-3">Revise la consola para ver todos los datos.</p>
       </div>
@@ -812,8 +833,8 @@ export default function Pedidos() {
       // 1. Llamar al servicio real
       console.log("Llamando a guardarPedidoCompleto...");
       console.log("Datos para guardar (incluyendo descripciones):", datosParaGuardar);
-      console.log("Descripciones de productos:", 
-        datosParaGuardar.empaques.flatMap(emp => 
+      console.log("Descripciones de productos:",
+        datosParaGuardar.empaques.flatMap(emp =>
           emp.productos.map(p => ({
             productoId: p.producto.IdProducto,
             descripcion: p.producto.Descripcion
@@ -846,9 +867,9 @@ export default function Pedidos() {
               <p class="mt-2"><strong>ID Pedido:</strong> ${resultado.idEncabPedido}</p>
               <p><strong>Fecha registro:</strong> ${resultado.fechaRegistro || new Date().toLocaleString()}</p>
               <p><strong>Mensaje:</strong> ${resultado.message}</p>
-              <p><strong>Descripciones guardadas:</strong> ${datosParaGuardar.empaques.flatMap(emp => 
-                emp.productos.map(p => p.producto.Descripcion || 'Sin descripción')
-              ).filter(Boolean).length}</p>
+              <p><strong>Descripciones guardadas:</strong> ${datosParaGuardar.empaques.flatMap(emp =>
+            emp.productos.map(p => p.producto.Descripcion || 'Sin descripción')
+          ).filter(Boolean).length}</p>
             </div>
             <p class="text-xs text-gray-500 mt-3">Puede continuar trabajando con este pedido.</p>
           </div>
@@ -983,8 +1004,8 @@ export default function Pedidos() {
     };
 
     console.log("Datos para imprimir:", datosImpresion);
-    console.log("Descripciones en impresión:", 
-      empaques.flatMap((emp, empIdx) => 
+    console.log("Descripciones en impresión:",
+      empaques.flatMap((emp, empIdx) =>
         emp.items?.map((item, itemIdx) => ({
           empaque: empIdx + 1,
           producto: itemIdx + 1,
@@ -1000,6 +1021,205 @@ export default function Pedidos() {
       timer: 3000
     });
   }
+
+  const handleSeleccionarPedido = async (pedido) => {
+    try {
+      setCargandoPedido(true);
+
+      // Obtener datos completos del pedido
+      const res = await getPedidoEspecifico(pedido.idPedido);
+
+      if (res.success) {
+        const datosPedido = res.pedido;
+
+        // 1. Actualizar encabezado
+        const headerData = datosPedido.header;
+
+        // Primero establecer el encabezado básico
+        const nuevoHeader = {
+          noPedido: headerData.NumeroPedido || `PED-${String(headerData.IdEncabPedido).padStart(6, "0")}`,
+          cliente: String(headerData.IdCliente),
+          ejecutivo: String(headerData.IdEjecutivo),
+          fechaSolicitud: headerData.FechaSolicitud || todayISODate(),
+          fechaEntrega: headerData.FechaEntrega || "",
+          moneda: String(headerData.IdMoneda),
+          trm: String(headerData.TRM || ""),
+          poCodeEncab: headerData.PO_Cliente || "",
+          observaciones: headerData.Observaciones || "",
+          guiaMaster: headerData.AWB || "",
+          guiaHija: headerData.AWB_HIJA || "",
+          guiaNieta: headerData.AWB_NIETA || "",
+          aerolinea: String(headerData.IdAerolinea || ""),
+          agencia: String(headerData.IdAgencia || ""),
+          puertoSalida: headerData.PuertoSalida || "",
+          estadoPedido: headerData.Estado || "Pendiente",
+          noInvoice: String(headerData.Factura || "0"),
+          noEtiqueta: "0",
+          noPlanilla: "0",
+          noFito: "0",
+          totalPiezas: "0", // Se calcularán después
+          equivalenciaFulles: "0", // Se calcularán después
+          totalTallos: "0", // Se calcularán después
+          valorVenta: String(headerData.ValorTotal || "0"),
+          tieneIVA: headerData.IVA === 1,
+          iva: String(headerData.TotalIVA || "0"),
+          totalVenta: String(headerData.TotalGeneral || "0"),
+        };
+
+        setHeader(nuevoHeader);
+
+        // 2. Transformar empaques al formato que espera el componente
+        const empaquesTransformados = datosPedido.empaques.map(empaque => {
+          // Calcular fulles según equivalencia del tipo de empaque
+          const tipoEmpaqueObj = datosSelect.tiposEmpaque.find(t => t.id === String(empaque.tipoEmpaque));
+          const equivFull = tipoEmpaqueObj?.equivFull || 1;
+          const cantidadEmpaques = Number(empaque.cantidadEmpaque) || 0;
+          const fullesEmpaque = cantidadEmpaques * equivFull;
+
+          // Calcular totales de este empaque
+          let totalTallosEmpaque = 0;
+          let valorTotalEmpaque = 0;
+
+          const itemsTransformados = empaque.items.map(item => {
+            // Convertir valores a números para cálculos
+            const tallosRamo = Number(item.tallosRamo) || 0;
+            const ramosCaja = Number(item.ramosCaja) || 0;
+            const cantidadBouquets = Number(item.cantidadBouquets) || 1;
+            const precioVenta = parseFloat(String(item.precioVenta || "0").replace(/,/g, '.')) || 0;
+
+            // Calcular totales del item
+            let tallosCaja = 0;
+            let totTallosRegistro = 0;
+            let valorRegistro = 0;
+
+            if (item.esBouquet) {
+              tallosCaja = tallosRamo;
+              totTallosRegistro = tallosRamo * cantidadBouquets * cantidadEmpaques;
+
+              const unidad = datosSelect.unidadesFacturacion.find(u => u.id === String(item.unidadFacturacion));
+              if (unidad?.nombre === "Stem/Tallo") {
+                valorRegistro = totTallosRegistro * precioVenta;
+              } else {
+                valorRegistro = cantidadBouquets * cantidadEmpaques * precioVenta;
+              }
+            } else {
+              tallosCaja = tallosRamo * ramosCaja;
+              totTallosRegistro = tallosCaja * cantidadEmpaques;
+
+              const unidad = datosSelect.unidadesFacturacion.find(u => u.id === String(item.unidadFacturacion));
+              if (unidad?.nombre === "Stem/Tallo") {
+                valorRegistro = totTallosRegistro * precioVenta;
+              } else if (unidad?.nombre === "Bunch/Ramo" || unidad?.nombre === "Bouquet" || unidad?.nombre === "Consumer/Bunch") {
+                valorRegistro = cantidadEmpaques * ramosCaja * precioVenta;
+              } else {
+                valorRegistro = totTallosRegistro * precioVenta;
+              }
+            }
+
+            // Sumar al total del empaque
+            totalTallosEmpaque += totTallosRegistro;
+            valorTotalEmpaque += valorRegistro;
+
+            return {
+              id: `${item.id}_${Date.now()}`,
+              producto: String(item.producto),
+              variedad: String(item.variedad || ""),
+              grado: String(item.grado || ""),
+              descripcion: item.descripcion || "",
+              unidadFacturacion: String(item.unidadFacturacion),
+              tallosRamo: tallosRamo,
+              ramosCaja: ramosCaja,
+              precioVenta: String(item.precioVenta || 0),
+              totTallosRegistro: totTallosRegistro, // ¡CALCULADO!
+              valorRegistro: valorRegistro, // ¡CALCULADO!
+              predio: String(item.predio || ""),
+              esBouquet: item.esBouquet || false,
+              cantidadBouquets: cantidadBouquets,
+              receta: item.receta?.map(ing => ({
+                id: `${ing.id}_${Date.now()}`,
+                producto: String(ing.producto),
+                variedad: String(ing.variedad),
+                tallosPorBouquet: ing.tallosPorBouquet,
+                descripcion: `${ing.nombreProducto} ${ing.nombreVariedad}`
+              })) || []
+            };
+          });
+
+          return {
+            id: `${empaque.id}_${Date.now()}`,
+            tipoEmpaque: String(empaque.tipoEmpaque),
+            cantidadEmpaque: cantidadEmpaques,
+            poCodeEmpaque: empaque.poCodeEmpaque || "",
+            items: itemsTransformados,
+            totalTallosEmpaque: totalTallosEmpaque, // ¡CALCULADO!
+            valorTotalEmpaque: valorTotalEmpaque, // ¡CALCULADO!
+            fullesEmpaque: fullesEmpaque // ¡CALCULADO!
+          };
+        });
+
+        // 3. Calcular totales generales del encabezado
+        let totalPiezas = 0;
+        let totalFulles = 0;
+        let totalTallos = 0;
+        let valorVenta = 0;
+
+        empaquesTransformados.forEach(empaque => {
+          totalPiezas += Number(empaque.cantidadEmpaque) || 0;
+          totalFulles += empaque.fullesEmpaque || 0;
+          totalTallos += empaque.totalTallosEmpaque || 0;
+          valorVenta += empaque.valorTotalEmpaque || 0;
+        });
+
+        // Calcular IVA y total
+        const tieneIVA = headerData.IVA === 1;
+        const iva = tieneIVA ? valorVenta * 0.19 : 0;
+        const totalVenta = valorVenta + iva;
+
+        // 4. Actualizar TODOS los estados con los valores calculados
+        setHeader(prev => ({
+          ...prev,
+          totalPiezas: totalPiezas.toString(),
+          equivalenciaFulles: totalFulles.toString(),
+          totalTallos: totalTallos.toString(),
+          valorVenta: valorVenta.toString(),
+          tieneIVA: tieneIVA,
+          iva: iva.toString(),
+          totalVenta: totalVenta.toString()
+        }));
+
+        setEmpaques(empaquesTransformados);
+
+        // 5. Mostrar mensaje de éxito con resumen
+        Swal.fire({
+          icon: 'success',
+          title: 'Pedido Cargado',
+          html: `
+          <div class="text-left">
+            <p><strong>Pedido:</strong> ${headerData.NumeroPedido || `PED-${headerData.IdEncabPedido}`}</p>
+            <p><strong>Empaques:</strong> ${empaquesTransformados.length}</p>
+            <p><strong>Piezas totales:</strong> ${totalPiezas}</p>
+            <p><strong>Fulles totales:</strong> ${totalFulles.toFixed(3)}</p>
+            <p><strong>Tallos totales:</strong> ${totalTallos}</p>
+            <p><strong>Valor total:</strong> $${valorVenta.toLocaleString()}</p>
+          </div>
+        `,
+          timer: 3000
+        });
+
+      } else {
+        throw new Error(res.message || "Error al cargar el pedido");
+      }
+    } catch (error) {
+      console.error("Error cargando pedido:", error);
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: 'No se pudo cargar el pedido. Intenta nuevamente.',
+      });
+    } finally {
+      setCargandoPedido(false);
+    }
+  };
 
   // --------------------------------------------------------------
   // Renderizado
@@ -1037,19 +1257,20 @@ export default function Pedidos() {
           <div className="text-right">
             <div className="text-xs md:text-sm font-medium text-gray-700">
               Estado: <span className={`font-bold ${header.noPedido !== 'PED-000000' ? 'text-green-600' : 'text-orange-600'}`}>
-                {header.noPedido !== 'PED-000000' ? 'Pendiente' : 'Sin guardar'}
+                {header.noPedido !== 'PED-000000' ? header.estadoPedido || 'Pendiente' : 'Sin guardar'}
               </span>
             </div>
             <div className="text-xs text-gray-500">
               {header.noPedido}
             </div>
           </div>
+
         </div>
 
         {/* Botones - Responsivos */}
         <div className={`${menuCompacto ? 'hidden md:flex' : 'flex'} flex-col sm:flex-row gap-2`}>
           <button
-            onClick={handleOpenModal}
+            onClick={() => setMostrarModalBuscar(true)}
             className="bg-blue-600 text-white rounded-lg px-3 py-2 hover:bg-blue-700 transition font-medium text-sm flex-1"
           >
             <div className="flex items-center justify-center gap-1">
@@ -1137,6 +1358,146 @@ export default function Pedidos() {
         predios={datosSelect.predios}
       />
 
+      {/* =========================================================== */}
+      {/* NUEVA SECCIÓN: DOCUMENTOS DEL PEDIDO - SOLO VISUAL         */}
+      {/* =========================================================== */}
+      <div className="bg-white rounded-lg md:rounded-xl shadow-sm md:shadow-md p-3 md:p-4">
+        <div className="flex justify-between items-center mb-3">
+          <h3 className="text-base md:text-lg font-semibold text-slate-700">
+            📄 Documentos del Pedido
+          </h3>
+          <div className="text-xs text-gray-500">
+            {header.noPedido !== "PED-000000" ? "Disponibles" : "Guarde el pedido primero"}
+          </div>
+        </div>
+
+        {/* BOTONES PARA GENERAR DOCUMENTOS - RESPONSIVOS */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4">
+          {/* FACTURA */}
+          <button
+            onClick={() => header.noPedido !== "PED-000000" && setMostrarModalFactura(true)}
+            disabled={header.noPedido === "PED-000000"}
+            className={`flex flex-col items-center justify-center p-3 rounded-lg border transition-all ${header.noPedido !== "PED-000000"
+              ? "bg-green-50 border-green-200 hover:bg-green-100 hover:shadow-sm"
+              : "bg-gray-100 border-gray-200 cursor-not-allowed"
+              }`}
+          >
+            <div className="text-2xl mb-1">🧾</div>
+            <div className="font-medium text-sm text-gray-800">Factura</div>
+            <div className="text-xs text-gray-600 mt-0.5">Generar PDF</div>
+          </button>
+
+          {/* PLANILLA */}
+          <button
+            onClick={() => header.noPedido !== "PED-000000" && setMostrarModalPlanilla(true)}
+            disabled={header.noPedido === "PED-000000"}
+            className={`flex flex-col items-center justify-center p-3 rounded-lg border transition-all ${header.noPedido !== "PED-000000"
+              ? "bg-blue-50 border-blue-200 hover:bg-blue-100 hover:shadow-sm"
+              : "bg-gray-100 border-gray-200 cursor-not-allowed"
+              }`}
+          >
+            <div className="text-2xl mb-1">📋</div>
+            <div className="font-medium text-sm text-gray-800">Planilla</div>
+            <div className="text-xs text-gray-600 mt-0.5">Datos de transporte</div>
+          </button>
+
+          {/* ETIQUETA */}
+          <button
+            onClick={() => header.noPedido !== "PED-000000" && setMostrarModalEtiqueta(true)}
+            disabled={header.noPedido === "PED-000000"}
+            className={`flex flex-col items-center justify-center p-3 rounded-lg border transition-all ${header.noPedido !== "PED-000000"
+              ? "bg-purple-50 border-purple-200 hover:bg-purple-100 hover:shadow-sm"
+              : "bg-gray-100 border-gray-200 cursor-not-allowed"
+              }`}
+          >
+            <div className="text-2xl mb-1">🏷️</div>
+            <div className="font-medium text-sm text-gray-800">Etiqueta</div>
+            <div className="text-xs text-gray-600 mt-0.5">Marcación</div>
+          </button>
+
+          {/* FITOSANITARIO */}
+          <button
+            onClick={() => header.noPedido !== "PED-000000" && setMostrarModalFitosanitario(true)}
+            disabled={header.noPedido === "PED-000000"}
+            className={`flex flex-col items-center justify-center p-3 rounded-lg border transition-all ${header.noPedido !== "PED-000000"
+              ? "bg-amber-50 border-amber-200 hover:bg-amber-100 hover:shadow-sm"
+              : "bg-gray-100 border-gray-200 cursor-not-allowed"
+              }`}
+          >
+            <div className="text-2xl mb-1">🌿</div>
+            <div className="font-medium text-sm text-gray-800">Fitosanitario</div>
+            <div className="text-xs text-gray-600 mt-0.5">Certificado</div>
+          </button>
+        </div>
+
+        {/* ESTADO DE DOCUMENTOS GENERADOS */}
+        {header.noPedido !== "PED-000000" && (
+          <div className="border rounded-lg p-3 bg-gray-50">
+            <h4 className="text-sm font-semibold text-gray-700 mb-2">📊 Estado de Documentos</h4>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {/* Factura */}
+              <div className={`flex items-center justify-between p-2 rounded ${documentos.factura.generado ? 'bg-green-50 border border-green-200' : 'bg-gray-100'}`}>
+                <div className="flex items-center gap-2">
+                  <div className={`w-2 h-2 rounded-full ${documentos.factura.generado ? 'bg-green-500' : 'bg-gray-400'}`}></div>
+                  <span className="text-sm font-medium text-gray-700">Factura</span>
+                </div>
+                <div className="text-right">
+                  <div className="text-sm font-semibold">{documentos.factura.numero || "Pendiente"}</div>
+                  {documentos.factura.fecha && (
+                    <div className="text-xs text-gray-500">{documentos.factura.fecha}</div>
+                  )}
+                </div>
+              </div>
+
+              {/* Planilla */}
+              <div className={`flex items-center justify-between p-2 rounded ${documentos.planilla.generado ? 'bg-blue-50 border border-blue-200' : 'bg-gray-100'}`}>
+                <div className="flex items-center gap-2">
+                  <div className={`w-2 h-2 rounded-full ${documentos.planilla.generado ? 'bg-blue-500' : 'bg-gray-400'}`}></div>
+                  <span className="text-sm font-medium text-gray-700">Planilla</span>
+                </div>
+                <div className="text-right">
+                  <div className="text-sm font-semibold">{documentos.planilla.numero || "Pendiente"}</div>
+                  {documentos.planilla.fecha && (
+                    <div className="text-xs text-gray-500">{documentos.planilla.fecha}</div>
+                  )}
+                </div>
+              </div>
+
+              {/* Etiqueta */}
+              <div className={`flex items-center justify-between p-2 rounded ${documentos.etiqueta.generado ? 'bg-purple-50 border border-purple-200' : 'bg-gray-100'}`}>
+                <div className="flex items-center gap-2">
+                  <div className={`w-2 h-2 rounded-full ${documentos.etiqueta.generado ? 'bg-purple-500' : 'bg-gray-400'}`}></div>
+                  <span className="text-sm font-medium text-gray-700">Etiqueta</span>
+                </div>
+                <div className="text-right">
+                  <div className="text-sm font-semibold">{documentos.etiqueta.numero || "Pendiente"}</div>
+                  {documentos.etiqueta.fecha && (
+                    <div className="text-xs text-gray-500">{documentos.etiqueta.fecha}</div>
+                  )}
+                </div>
+              </div>
+
+              {/* Fitosanitario */}
+              <div className={`flex items-center justify-between p-2 rounded ${documentos.fitosanitario.generado ? 'bg-amber-50 border border-amber-200' : 'bg-gray-100'}`}>
+                <div className="flex items-center gap-2">
+                  <div className={`w-2 h-2 rounded-full ${documentos.fitosanitario.generado ? 'bg-amber-500' : 'bg-gray-400'}`}></div>
+                  <span className="text-sm font-medium text-gray-700">Fitosanitario</span>
+                </div>
+                <div className="text-right">
+                  <div className="text-sm font-semibold">{documentos.fitosanitario.numero || "Pendiente"}</div>
+                  {documentos.fitosanitario.fecha && (
+                    <div className="text-xs text-gray-500">{documentos.fitosanitario.fecha}</div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+      {/* FIN NUEVA SECCIÓN */}
+
+
+
       {/* Información adicional - COMPACTA */}
       <div className="bg-white rounded-lg md:rounded-xl shadow-sm md:shadow-md p-3 md:p-4">
         <div className="flex items-center justify-between mb-2">
@@ -1194,6 +1555,240 @@ export default function Pedidos() {
           </div>
         </div>
       </div>
+
+      {/* =========================================================== */}
+      {/* MODALES PARA DOCUMENTOS - SOLO VISUAL POR AHORA            */}
+      {/* =========================================================== */}      
+
+      {/* MODAL FACTURA - CON FUNCIONALIDAD REAL */}
+      {mostrarModalFactura && (
+        <ModalFactura
+          isOpen={mostrarModalFactura}
+          onClose={() => setMostrarModalFactura(false)}
+          pedidoId={header.noPedido.replace("PED-", "")}
+          pedidoNumero={header.noPedido}
+          facturaExistente={header.noInvoice !== "0"} 
+          numeroFacturaExistente={header.noInvoice !== "0" ? `FACT-${header.noInvoice.padStart(6, "0")}` : ""}
+          onFacturaGenerada={(facturaData) => {
+            // Actualizar estado local
+            setDocumentos(prev => ({
+              ...prev,
+              factura: {
+                numero: headerData.Factura ? `FACT-${String(headerData.Factura).padStart(6, "0")}` : "",
+                fecha: new Date().toLocaleDateString('es-CO'),
+                generado: !!headerData.Factura
+              }
+            }));
+
+            // Actualizar header si es necesario
+            setHeader(prev => ({
+              ...prev,
+              noInvoice: facturaData.numeroFactura.replace("FACT-", "")
+            }));
+
+            // Cerrar modal
+            setMostrarModalFactura(false);
+          }}
+        />
+      )}
+
+      {/* MODAL PLANILLA */}
+      {mostrarModalPlanilla && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md">
+            <div className="p-6 border-b">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-semibold text-gray-800">📋 Generar Planilla</h3>
+                <button
+                  onClick={() => setMostrarModalPlanilla(false)}
+                  className="text-gray-500 hover:text-gray-700"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Conductor
+                  </label>
+                  <input
+                    type="text"
+                    className="w-full border rounded-lg px-3 py-2 text-sm"
+                    placeholder="Nombre del conductor"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Ayudante
+                  </label>
+                  <input
+                    type="text"
+                    className="w-full border rounded-lg px-3 py-2 text-sm"
+                    placeholder="Nombre del ayudante"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Placa del Vehículo
+                  </label>
+                  <input
+                    type="text"
+                    className="w-full border rounded-lg px-3 py-2 text-sm"
+                    placeholder="ABC-123"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Número de Precinto
+                  </label>
+                  <input
+                    type="text"
+                    className="w-full border rounded-lg px-3 py-2 text-sm"
+                    placeholder="000001"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="p-6 border-t">
+              <div className="flex justify-end gap-2">
+                <button
+                  onClick={() => setMostrarModalPlanilla(false)}
+                  className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={() => {
+                    alert("Funcionalidad de planilla en desarrollo");
+                    setMostrarModalPlanilla(false);
+                  }}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                >
+                  Generar Planilla
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL ETIQUETA */}
+      {mostrarModalEtiqueta && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md">
+            <div className="p-6 border-b">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-semibold text-gray-800">🏷️ Generar Etiquetas</h3>
+                <button
+                  onClick={() => setMostrarModalEtiqueta(false)}
+                  className="text-gray-500 hover:text-gray-700"
+                >
+                  ✕
+                </button>
+              </div>
+              <p className="text-sm text-gray-600 mb-4">
+                Se generarán etiquetas de marcación para cada empaque del pedido.
+              </p>
+              <div className="p-3 bg-purple-50 rounded-lg border border-purple-200">
+                <div className="text-center">
+                  <div className="text-sm text-gray-600">Etiquetas a generar</div>
+                  <div className="text-xl font-bold text-purple-600">{header.totalPiezas || 0} etiquetas</div>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-6 border-t">
+              <div className="flex justify-end gap-2">
+                <button
+                  onClick={() => setMostrarModalEtiqueta(false)}
+                  className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={() => {
+                    alert("Funcionalidad de etiquetas en desarrollo");
+                    setMostrarModalEtiqueta(false);
+                  }}
+                  className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
+                >
+                  Generar Etiquetas
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL FITOSANITARIO */}
+      {mostrarModalFitosanitario && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md">
+            <div className="p-6 border-b">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-semibold text-gray-800">🌿 Generar Fitosanitario</h3>
+                <button
+                  onClick={() => setMostrarModalFitosanitario(false)}
+                  className="text-gray-500 hover:text-gray-700"
+                >
+                  ✕
+                </button>
+              </div>
+              <p className="text-sm text-gray-600 mb-4">
+                Se generará el certificado fitosanitario para exportación.
+              </p>
+              <div className="p-3 bg-amber-50 rounded-lg border border-amber-200">
+                <div className="text-center">
+                  <div className="text-sm text-gray-600">Próximo consecutivo</div>
+                  <div className="text-xl font-bold text-amber-600">FITO-000034</div>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-6 border-t">
+              <div className="flex justify-end gap-2">
+                <button
+                  onClick={() => setMostrarModalFitosanitario(false)}
+                  className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={() => {
+                    alert("Funcionalidad fitosanitario en desarrollo");
+                    setMostrarModalFitosanitario(false);
+                  }}
+                  className="px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700"
+                >
+                  Generar Fitosanitario
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de búsqueda de pedidos */}
+      <ModalBuscarPedidos
+        isOpen={mostrarModalBuscar}
+        onClose={() => setMostrarModalBuscar(false)}
+        onSeleccionarPedido={handleSeleccionarPedido}
+      />
+
+      {/* Loading overlay mientras carga el pedido */}
+      {cargandoPedido && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
+          <div className="bg-white rounded-xl p-6 text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p className="text-gray-700">Cargando pedido...</p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

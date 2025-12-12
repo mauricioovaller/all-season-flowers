@@ -1,5 +1,5 @@
 // src/components/pedidos/EmpaqueItem.jsx - VERSIÓN REORGANIZADA COMPACTA
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { getVariedadesYGrados } from "../../services/pedidos/pedidosService";
 
 function formatCurrency(v) {
@@ -52,6 +52,72 @@ export default function EmpaqueItem({
     }
   }, [items, cantidadEmpaque, onChangeItems]);
 
+  useEffect(() => {
+    items.forEach((item, index) => {
+      if (item.producto && !variedadesPorProducto[item.producto]) {
+        // Solo cargar si no está ya cargado
+        cargarVariedadesYGrados(item.producto, index, "producto").then(() => {
+          // Después de cargar, asegurar que el select muestre el valor correcto
+          // Esto se hará automáticamente porque el estado se actualiza
+        });
+      }
+    });
+  }, [items]); // Se ejecuta cuando items cambia
+
+  // Efecto para cargar variedades/grados de los ingredientes en recetas
+  useEffect(() => {
+    const cargarVariedadesParaRecetas = async () => {
+      for (let i = 0; i < items.length; i++) {
+        const item = items[i];
+        if (item.esBouquet && item.receta && item.receta.length > 0) {
+          for (let j = 0; j < item.receta.length; j++) {
+            const ingrediente = item.receta[j];
+            if (ingrediente.producto && !variedadesPorProducto[ingrediente.producto]) {
+              try {
+                await cargarVariedadesYGrados(ingrediente.producto, i, "ingrediente");
+                // Pequeña pausa
+                await new Promise(resolve => setTimeout(resolve, 50));
+              } catch (error) {
+                console.error(`Error cargando variedades para ingrediente ${ingrediente.producto}:`, error);
+              }
+            }
+          }
+        }
+      }
+      setTimeout(() => {
+        sincronizarVariedadesIngredientes();
+      }, 500);
+    };
+
+    cargarVariedadesParaRecetas();
+  }, [items]); // Se ejecuta cuando cambian los items
+
+
+  // Efecto para recalcular productos cuando se cargan datos iniciales
+  useEffect(() => {
+    // Solo recalcular si hay items y el empaque está expandido
+    if (items.length > 0 && empaqueExpandido) {
+      const nuevosItems = items.map(item => {
+        // Asegurar que totTallosRegistro y valorRegistro estén calculados
+        if (!item.totTallosRegistro || !item.valorRegistro || item.totTallosRegistro === 0) {
+          return recalcularItem(item, cantidadEmpaque);
+        }
+        return item;
+      });
+
+      // Verificar si hubo cambios
+      const huboCambios = nuevosItems.some((newItem, index) => {
+        const oldItem = items[index];
+        return newItem.totTallosRegistro !== oldItem.totTallosRegistro ||
+          newItem.valorRegistro !== oldItem.valorRegistro;
+      });
+
+      if (huboCambios) {
+        onChangeItems(nuevosItems);
+      }
+    }
+  }, [items, cantidadEmpaque, empaqueExpandido]); // Dependencias clave
+
   function addItem() {
     const id = `${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
     const newItem = {
@@ -98,15 +164,15 @@ export default function EmpaqueItem({
   // Función para construir la descripción automáticamente
   function construirDescripcionAutomatica(item) {
     let descripcion = "";
-    
+
     const productoObj = productos.find(p => p.id === item.producto);
     const variedadObj = getVariedadesPorProducto(item.producto).find(v => v.id === item.variedad);
     const gradoObj = getGradosPorProducto(item.producto).find(g => g.id === item.grado);
-    
+
     if (productoObj) descripcion = productoObj.descripcion;
     if (variedadObj) descripcion = descripcion ? `${descripcion} ${variedadObj.nombre}` : variedadObj.nombre;
     if (gradoObj) descripcion = descripcion ? `${descripcion} ${gradoObj.nombre}` : gradoObj.nombre;
-    
+
     return descripcion.trim();
   }
 
@@ -122,12 +188,12 @@ export default function EmpaqueItem({
         item.variedad = "";
         item.grado = "";
         item.descripcion = prod.descripcion || "";
-        
+
         const nombreProducto = (prod.descripcion || "").toLowerCase();
-        item.esBouquet = nombreProducto.includes("bouquet") || 
-                        nombreProducto.includes("ramo compuesto") ||
-                        nombreProducto.includes("composición");
-        
+        item.esBouquet = nombreProducto.includes("bouquet") ||
+          nombreProducto.includes("ramo compuesto") ||
+          nombreProducto.includes("composición");
+
         if (item.esBouquet) {
           item.ramosCaja = 1;
           item.cantidadBouquets = item.cantidadBouquets || 1;
@@ -144,9 +210,9 @@ export default function EmpaqueItem({
           item.cantidadBouquets = 0;
           item.receta = [];
         }
-        
+
         cargarVariedadesYGrados(prod.id, index, "producto");
-        
+
         setTimeout(() => {
           const nuevaDescripcion = construirDescripcionAutomatica(item);
           if (nuevaDescripcion && nuevaDescripcion !== item.descripcion) {
@@ -169,8 +235,15 @@ export default function EmpaqueItem({
       if (nuevaDescripcion && nuevaDescripcion !== item.descripcion) {
         item.descripcion = nuevaDescripcion;
       }
-    } else if (["tallosRamo", "ramosCaja", "precioVenta", "cantidadBouquets"].includes(field)) {
+
+    } else if (["tallosRamo", "ramosCaja", "cantidadBouquets"].includes(field)) {
+      // Campos enteros
       item[field] = Number(value || 0);
+
+    } else if (field === "precioVenta") {
+      // Para precio, guardar como string mientras se escribe
+      // La conversión a número se hará en recalcularItem
+      item[field] = value;
     } else {
       item[field] = value;
     }
@@ -181,46 +254,52 @@ export default function EmpaqueItem({
 
   function recalcularItem(item, cantEmpaqueFisico) {
     const cantidadEmpaques = Number(cantEmpaqueFisico) || 1;
+
+    // Asegurar que tenemos números válidos
+    const tallosRamo = Number(item.tallosRamo) || 0;
+    const ramosCaja = Number(item.ramosCaja) || 0;
+    const cantidadBouquets = Number(item.cantidadBouquets) || 1;
+
+    // Convertir precioVenta a número (maneja decimales con punto o coma)
+    const precioStr = String(item.precioVenta || "0");
+    const precioNumero = parseFloat(precioStr.replace(/,/g, '.')) || 0;
+
     let tallosCaja = 0;
     let totTallosRegistro = 0;
     let valorRegistro = 0;
 
     if (item.esBouquet) {
-      const tallosPorBouquet = Number(item.tallosRamo) || 0;
-      const cantidadBouquets = Number(item.cantidadBouquets) || 1;
-      
-      tallosCaja = tallosPorBouquet;
-      totTallosRegistro = tallosPorBouquet * cantidadBouquets * cantidadEmpaques;
-      
+      // Para bouquets
+      tallosCaja = tallosRamo;
+      totTallosRegistro = tallosRamo * cantidadBouquets * cantidadEmpaques;
+
       const unidad = unidadesFacturacion.find(u => u.id === item.unidadFacturacion);
-      const precioVenta = Number(item.precioVenta) || 0;
-      
       if (unidad?.nombre === "Stem/Tallo") {
-        valorRegistro = totTallosRegistro * precioVenta;
+        valorRegistro = totTallosRegistro * precioNumero;
       } else {
-        valorRegistro = cantidadBouquets * cantidadEmpaques * precioVenta;
+        valorRegistro = cantidadBouquets * cantidadEmpaques * precioNumero;
       }
     } else {
-      const tallosRamo = Number(item.tallosRamo) || 0;
-      const ramosCaja = Number(item.ramosCaja) || 0;
-      const precioVenta = Number(item.precioVenta) || 0;
-      
+      // Para productos simples
       tallosCaja = tallosRamo * ramosCaja;
       totTallosRegistro = tallosCaja * cantidadEmpaques;
-      
+
       const unidad = unidadesFacturacion.find(u => u.id === item.unidadFacturacion);
-      
       if (unidad?.nombre === "Stem/Tallo") {
-        valorRegistro = totTallosRegistro * precioVenta;
+        valorRegistro = totTallosRegistro * precioNumero;
       } else if (unidad?.nombre === "Bunch/Ramo" || unidad?.nombre === "Bouquet" || unidad?.nombre === "Consumer/Bunch") {
-        valorRegistro = cantidadEmpaques * ramosCaja * precioVenta;
+        valorRegistro = cantidadEmpaques * ramosCaja * precioNumero;
       } else {
-        valorRegistro = totTallosRegistro * precioVenta;
+        valorRegistro = totTallosRegistro * precioNumero;
       }
     }
 
     return {
       ...item,
+      tallosRamo, // Asegurar que sea número
+      ramosCaja, // Asegurar que sea número
+      cantidadBouquets, // Asegurar que sea número
+      precioVenta: item.precioVenta, // Mantener como string para input
       tallosCaja,
       totTallosRegistro,
       valorRegistro,
@@ -228,30 +307,33 @@ export default function EmpaqueItem({
   }
 
   const cargarVariedadesYGrados = async (idProducto, itemIndex, tipo = "producto") => {
-    if (!idProducto) return;
-    
-    const key = tipo === "producto" 
-      ? `producto_${empaqueIndex}_${itemIndex}` 
+    if (!idProducto) return Promise.resolve(); // ← Cambiar return
+
+    const key = tipo === "producto"
+      ? `producto_${empaqueIndex}_${itemIndex}`
       : `ingrediente_${empaqueIndex}_${itemIndex}_${Date.now()}`;
-    
+
     try {
       setCargandoVariedades(prev => ({ ...prev, [key]: true }));
       const datos = await getVariedadesYGrados(idProducto);
-      
+
       setVariedadesPorProducto(prev => ({
         ...prev,
         [idProducto]: datos.variedades || []
       }));
-      
+
       setGradosPorProducto(prev => ({
         ...prev,
         [idProducto]: datos.grados || []
       }));
-      
+
+      return Promise.resolve(); // ← Agregar este return
+
     } catch (error) {
       console.error(`Error cargando variedades y grados:`, error);
       setVariedadesPorProducto(prev => ({ ...prev, [idProducto]: [] }));
       setGradosPorProducto(prev => ({ ...prev, [idProducto]: [] }));
+      return Promise.reject(error); // ← Agregar este return
     } finally {
       setTimeout(() => {
         setCargandoVariedades(prev => ({ ...prev, [key]: false }));
@@ -273,9 +355,9 @@ export default function EmpaqueItem({
   function addIngredienteReceta(itemIndex) {
     const copy = items.map((it) => ({ ...it }));
     const item = copy[itemIndex];
-    
+
     if (!item.receta) item.receta = [];
-    
+
     const ingredienteId = `${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
     item.receta.push({
       id: ingredienteId,
@@ -283,7 +365,7 @@ export default function EmpaqueItem({
       variedad: "",
       tallosPorBouquet: 1,
     });
-    
+
     copy[itemIndex] = recalcularItem(item, cantidadEmpaque);
     onChangeItems(copy);
   }
@@ -291,7 +373,7 @@ export default function EmpaqueItem({
   function removeIngredienteReceta(itemIndex, ingredienteIndex) {
     const copy = items.map((it) => ({ ...it }));
     const item = copy[itemIndex];
-    
+
     if (item.receta && item.receta.length > ingredienteIndex) {
       item.receta.splice(ingredienteIndex, 1);
       copy[itemIndex] = recalcularItem(item, cantidadEmpaque);
@@ -302,16 +384,30 @@ export default function EmpaqueItem({
   function updateIngredienteReceta(itemIndex, ingredienteIndex, field, value) {
     const copy = items.map((it) => ({ ...it }));
     const item = copy[itemIndex];
-    
+
     if (item.receta && item.receta.length > ingredienteIndex) {
       const ingrediente = item.receta[ingredienteIndex];
-      
+
       if (field === "producto") {
         const prod = productos.find((p) => String(p.id) === String(value));
         if (prod) {
           ingrediente.producto = prod.id;
           ingrediente.variedad = "";
-          cargarVariedadesYGrados(prod.id, itemIndex, "ingrediente");
+          // Cargar variedades para este producto de ingrediente
+          cargarVariedadesYGrados(prod.id, itemIndex, "ingrediente").then(() => {
+            // Después de cargar las variedades, si hay una variedad guardada, seleccionarla
+            const variedadGuardada = item.receta?.[ingredienteIndex]?.variedad;
+            if (variedadGuardada) {
+              setTimeout(() => {
+                // Esto permite que el select de variedad se actualice con el valor guardado
+                const nuevaCopy = [...items];
+                if (nuevaCopy[itemIndex]?.receta?.[ingredienteIndex]) {
+                  nuevaCopy[itemIndex].receta[ingredienteIndex].variedad = variedadGuardada;
+                  onChangeItems(nuevaCopy);
+                }
+              }, 300);
+            }
+          });
         } else {
           ingrediente.producto = "";
           ingrediente.variedad = "";
@@ -321,11 +417,39 @@ export default function EmpaqueItem({
       } else {
         ingrediente[field] = value;
       }
-      
+
       copy[itemIndex] = recalcularItem(item, cantidadEmpaque);
       onChangeItems(copy);
     }
   }
+
+  // Función para sincronizar variedades de ingredientes después de cargar
+  const sincronizarVariedadesIngredientes = useCallback(() => {
+    const nuevosItems = [...items];
+    let huboCambios = false;
+
+    nuevosItems.forEach((item, itemIndex) => {
+      if (item.esBouquet && item.receta) {
+        item.receta.forEach((ingrediente, ingIndex) => {
+          if (ingrediente.producto && ingrediente.variedad) {
+            const variedadesDisponibles = getVariedadesPorProducto(ingrediente.producto);
+            const variedadExiste = variedadesDisponibles.some(v => String(v.id) === String(ingrediente.variedad));
+
+            if (!variedadExiste && variedadesDisponibles.length > 0) {
+              // Si la variedad guardada no existe en las opciones cargadas
+              // Podemos resetearla o mantenerla según tu lógica de negocio
+              // item.receta[ingIndex].variedad = ""; // <- Descomenta si quieres resetear
+              // huboCambios = true;
+            }
+          }
+        });
+      }
+    });
+
+    if (huboCambios) {
+      onChangeItems(nuevosItems);
+    }
+  }, [items, variedadesPorProducto]);
 
   const calcularSumaReceta = (receta) => {
     if (!receta || receta.length === 0) return 0;
@@ -373,7 +497,7 @@ export default function EmpaqueItem({
           const recetaValida = item.esBouquet ? sumaReceta === tallosBouquet : true;
           const estaItemExpandido = itemExpandido[item.id] !== false;
           const nombreProducto = productos.find(p => p.id === item.producto)?.descripcion || "Sin seleccionar";
-          
+
           return (
             <div key={item.id} className="border rounded bg-white shadow-sm">
               {/* Encabezado del producto */}
@@ -385,10 +509,10 @@ export default function EmpaqueItem({
                       onClick={() => toggleItemExpandido(item.id)}
                       className="text-gray-500 hover:text-gray-700 flex-shrink-0"
                     >
-                      <svg 
-                        className={`w-3 h-3 transform transition-transform ${estaItemExpandido ? 'rotate-90' : ''}`} 
-                        fill="none" 
-                        stroke="currentColor" 
+                      <svg
+                        className={`w-3 h-3 transform transition-transform ${estaItemExpandido ? 'rotate-90' : ''}`}
+                        fill="none"
+                        stroke="currentColor"
                         viewBox="0 0 24 24"
                       >
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
@@ -468,7 +592,7 @@ export default function EmpaqueItem({
                         ))}
                       </select>
                     </div>
-                    
+
                     {/* Grado */}
                     <div>
                       <label className="block text-xs font-medium text-gray-700 mb-0.5">Grado</label>
@@ -565,16 +689,18 @@ export default function EmpaqueItem({
                       </div>
                     )}
 
-                    {/* Precio Venta */}
+                    {/* Precio Venta - VERSIÓN SIMPLE QUE SÍ FUNCIONA */}
                     <div>
                       <label className="block text-xs font-medium text-gray-700 mb-0.5">Precio *</label>
                       <input
-                        type="number"
+                        type="text"
                         value={item.precioVenta || ""}
-                        onChange={(e) => updateItem(idx, "precioVenta", e.target.value)}
-                        className="border rounded p-1 w-full text-xs text-center"
-                        step="0.01"
-                        min="0"
+                        onChange={(e) => {
+                          // Solo guardar lo que el usuario escribe
+                          updateItem(idx, "precioVenta", e.target.value);
+                        }}
+                        className="border rounded p-1 w-full text-xs text-center focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                        placeholder="0.00"
                       />
                     </div>
 
@@ -617,7 +743,7 @@ export default function EmpaqueItem({
                           + Ingrediente
                         </button>
                       </div>
-                      
+
                       <div className="space-y-1">
                         {item.receta.map((ing, ingIdx) => (
                           <div key={ing.id} className="border rounded p-1 bg-white">
@@ -675,7 +801,7 @@ export default function EmpaqueItem({
                           </div>
                         ))}
                       </div>
-                      
+
                       <div className="mt-1 text-center text-xs">
                         <span className={`font-bold ${recetaValida ? 'text-green-600' : 'text-red-600'}`}>
                           {sumaReceta} tallos totales

@@ -1,5 +1,5 @@
 // src/components/pedidos/PedidoEmpaque.jsx - VERSIÓN CON CÁLCULO DE FÜLLES
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import EmpaqueItem from "./EmpaqueItem";
 
 // Colores diferenciados para cada empaque
@@ -30,6 +30,34 @@ export default function PedidoEmpaque({
 }) {
   // Estado para controlar qué empaques están expandidos
   const [empaquesExpandidos, setEmpaquesExpandidos] = useState({});
+
+
+  // Efecto para recalcular totales cuando cambian los empaques
+  useEffect(() => {
+    if (empaques.length > 0) {
+      const empaquesConTotales = empaques.map(empaque => {
+        // Si ya tiene totales calculados, mantenerlos
+        if (empaque.totalTallosEmpaque && empaque.valorTotalEmpaque && empaque.fullesEmpaque) {
+          return empaque;
+        }
+
+        // Recalcular si faltan totales
+        return recalcularTotalesEmpaque(empaque);
+      });
+
+      // Verificar si hubo cambios
+      const huboCambios = empaquesConTotales.some((newEmp, index) => {
+        const oldEmp = empaques[index];
+        return newEmp.totalTallosEmpaque !== oldEmp.totalTallosEmpaque ||
+          newEmp.valorTotalEmpaque !== oldEmp.valorTotalEmpaque ||
+          newEmp.fullesEmpaque !== oldEmp.fullesEmpaque;
+      });
+
+      if (huboCambios) {
+        onChangeEmpaques(empaquesConTotales);
+      }
+    }
+  }, [empaques, tiposEmpaque]); // Se ejecuta cuando cambian los empaques o tiposEmpaque
 
   // Función para agregar un nuevo empaque
   function addEmpaque() {
@@ -75,12 +103,12 @@ export default function PedidoEmpaque({
   function updateEmpaque(index, field, value) {
     const copy = [...empaques];
     copy[index] = { ...copy[index], [field]: value };
-    
+
     // Recalcular totales del empaque (incluyendo fulles)
     if (field !== "items") {
       copy[index] = recalcularTotalesEmpaque(copy[index]);
     }
-    
+
     onChangeEmpaques(copy);
   }
 
@@ -174,10 +202,10 @@ export default function PedidoEmpaque({
           const tipoEmpaqueDesc = tipoEmpaqueObj?.descripcion || "Seleccionar tipo";
           const equivFull = tipoEmpaqueObj?.equivFull || 1;
           const fullesCalculados = (Number(empaque.cantidadEmpaque) || 0) * equivFull;
-          
+
           const colorIndex = empIndex % coloresEmpaques.length;
           const colores = coloresEmpaques[colorIndex];
-          
+
           return (
             <div key={empaque.id} className={`border rounded-lg md:rounded-xl overflow-hidden ${colores.bg} ${colores.border}`}>
               {/* ENCABEZADO DEL EMPAQUE - SIEMPRE VISIBLE Y COMPACTO */}
@@ -189,10 +217,10 @@ export default function PedidoEmpaque({
                       onClick={() => toggleEmpaqueExpandido(empaque.id)}
                       className={`${colores.text} hover:opacity-80 flex-shrink-0`}
                     >
-                      <svg 
-                        className={`w-4 h-4 transform transition-transform ${estaExpandido ? 'rotate-90' : ''}`} 
-                        fill="none" 
-                        stroke="currentColor" 
+                      <svg
+                        className={`w-4 h-4 transform transition-transform ${estaExpandido ? 'rotate-90' : ''}`}
+                        fill="none"
+                        stroke="currentColor"
                         viewBox="0 0 24 24"
                       >
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
@@ -212,7 +240,7 @@ export default function PedidoEmpaque({
                       </div>
                     </div>
                   </div>
-                  
+
                   <div className="flex items-center gap-2 flex-shrink-0">
                     <div className="text-right">
                       <div className="text-xs font-medium">
@@ -280,7 +308,7 @@ export default function PedidoEmpaque({
                         />
                       </div>
                     </div>
-                    
+
                     {/* Totales del Empaque en línea - AHORA CON FÜLLES */}
                     <div className="mt-2 grid grid-cols-3 gap-1 p-1.5 bg-gray-50 rounded border">
                       <div className="text-center">
@@ -331,7 +359,7 @@ export default function PedidoEmpaque({
           <p className="text-xs text-gray-500 mt-0.5">Agregue empaques para comenzar</p>
         </div>
       )}
-      
+
       {/* Instrucción rápida */}
       <div className="mt-3 text-center">
         <p className="text-xs text-gray-500">

@@ -1,20 +1,21 @@
-// src/modules/pedidos/ModalFactura.jsx - VERSIÓN CORREGIDA
+// src/modules/pedidos/ModalFitosanitario.jsx
 import React, { useState, useEffect } from "react";
 import Swal from "sweetalert2";
 import ModalVisorPreliminar from "./ModalVisorPreliminar";
 import {
-  obtenerUltimoNumeroFactura,
-  generarFactura,  
+  obtenerUltimoNumeroFitosanitario,
+  generarFitosanitario,
+  generarPDFFitosanitario
 } from "../../services/pedidos/pedidosService";
 
-export default function ModalFactura({
+export default function ModalFitosanitario({
   isOpen,
   onClose,
   pedidoId,
   pedidoNumero,
-  facturaExistente = false,
-  numeroFacturaExistente = "",
-  onFacturaGenerada
+  fitoExistente = false,
+  numeroFitoExistente = "",
+  onFitosanitarioGenerada
 }) {
   const [cargando, setCargando] = useState(false);
   const [ultimoNumero, setUltimoNumero] = useState(null);
@@ -24,27 +25,27 @@ export default function ModalFactura({
   const [mostrarVisor, setMostrarVisor] = useState(false);
   const [urlPDF, setUrlPDF] = useState(null);
 
-  // Cargar último número de factura al abrir el modal (solo si no existe factura)
+  // Cargar último número de fitosanitario al abrir el modal (solo si no existe)
   useEffect(() => {
-    if (isOpen && !facturaExistente) {
-      cargarUltimoNumeroFactura();
+    if (isOpen && !fitoExistente) {
+      cargarUltimoNumeroFitosanitario();
     }
-  }, [isOpen, facturaExistente]);
+  }, [isOpen, fitoExistente]);
 
-  const cargarUltimoNumeroFactura = async () => {
+  const cargarUltimoNumeroFitosanitario = async () => {
     try {
       setCargando(true);
       setError(null);
 
-      const resultado = await obtenerUltimoNumeroFactura();
+      const resultado = await obtenerUltimoNumeroFitosanitario();
 
       if (resultado.success) {
         setUltimoNumero(resultado.ultimoNumero);
-        setSiguienteNumero(resultado.siguienteNumeroFormateado || `FACT-${String(resultado.ultimoNumero + 1).padStart(6, "0")}`);
+        setSiguienteNumero(resultado.siguienteNumeroFormateado || `FITO-${String(resultado.ultimoNumero + 1).padStart(6, "0")}`);
       } else {
         // Fallback: usar valor por defecto
         setUltimoNumero(resultado.ultimoNumero || 0);
-        setSiguienteNumero(`FACT-${String((resultado.ultimoNumero || 0) + 1).padStart(6, "0")}`);
+        setSiguienteNumero(`FITO-${String((resultado.ultimoNumero || 0) + 1).padStart(6, "0")}`);
 
         if (resultado.message) {
           console.warn(resultado.message);
@@ -54,13 +55,13 @@ export default function ModalFactura({
       console.error("Error al cargar último número:", err);
       setError("No se pudo conectar con el servidor");
       // Fallback extremo
-      setSiguienteNumero("FACT-000001");
+      setSiguienteNumero("FITO-000001");
     } finally {
       setCargando(false);
     }
   };
 
-  const handleGenerarFactura = async () => {
+  const handleGenerarFitosanitario = async () => {
     if (!pedidoId || pedidoId === "000000") {
       Swal.fire("Error", "ID de pedido inválido", "error");
       return;
@@ -71,21 +72,21 @@ export default function ModalFactura({
 
       // Mostrar confirmación
       const confirmacion = await Swal.fire({
-        title: '¿Generar Factura?',
+        title: '¿Generar Fitosanitario?',
         html: `
           <div class="text-left">
             <p>Se asignará al pedido:</p>
             <p class="font-bold">${pedidoNumero}</p>
-            <p class="mt-2">El siguiente número de factura:</p>
-            <p class="text-xl font-bold text-green-600">${siguienteNumero}</p>
+            <p class="mt-2">El siguiente número de fitosanitario:</p>
+            <p class="text-xl font-bold text-amber-600">${siguienteNumero}</p>
             <p class="text-sm text-gray-500 mt-3">¿Está seguro de continuar?</p>
           </div>
         `,
         icon: 'question',
         showCancelButton: true,
-        confirmButtonText: 'Sí, generar factura',
+        confirmButtonText: 'Sí, generar fitosanitario',
         cancelButtonText: 'Cancelar',
-        confirmButtonColor: '#10B981',
+        confirmButtonColor: '#F59E0B',
       });
 
       if (!confirmacion.isConfirmed) {
@@ -93,8 +94,8 @@ export default function ModalFactura({
         return;
       }
 
-      // Llamar al servicio para generar la factura
-      const resultado = await generarFactura(
+      // Llamar al servicio para generar el fitosanitario
+      const resultado = await generarFitosanitario(
         parseInt(pedidoId),
         siguienteNumero
       );
@@ -103,18 +104,18 @@ export default function ModalFactura({
         // Éxito
         Swal.fire({
           icon: 'success',
-          title: '¡Factura Generada!',
+          title: '¡Fitosanitario Generado!',
           html: `
             <div class="text-center">
               <p class="font-bold text-lg">${siguienteNumero}</p>
-              <div class="mt-3 text-sm text-left bg-green-50 p-3 rounded border border-green-200">
+              <div class="mt-3 text-sm text-left bg-amber-50 p-3 rounded border border-amber-200">
                 <p><strong>Pedido:</strong> ${pedidoNumero}</p>
-                <p><strong>Factura:</strong> ${siguienteNumero}</p>
-                <p><strong>Fecha:</strong> ${new Date().toLocaleDateString('es-CO')}</p>
+                <p><strong>Fitosanitario:</strong> ${siguienteNumero}</p>
+                <p><strong>Vigencia:</strong> ${resultado.fechaVigenciaInicial} al ${resultado.fechaVigenciaFinal}</p>
                 <p><strong>Mensaje:</strong> ${resultado.message}</p>
               </div>
               <p class="text-xs text-gray-500 mt-4">
-                Ahora puedes imprimir la factura desde el botón de impresión.
+                Ahora puedes imprimir el fitosanitario desde el botón de impresión.
               </p>
             </div>
           `,
@@ -122,9 +123,11 @@ export default function ModalFactura({
         });
 
         // Notificar al componente padre
-        onFacturaGenerada({
-          numeroFactura: siguienteNumero,
-          numeroFacturaInt: resultado.numeroFacturaInt || parseInt(siguienteNumero.replace('FACT-', '')),
+        onFitosanitarioGenerada({
+          numeroFitosanitario: siguienteNumero,
+          numeroFitosanitarioInt: resultado.numeroFitosanitarioInt || parseInt(siguienteNumero.replace('FITO-', '')),
+          fechaVigenciaInicial: resultado.fechaVigenciaInicial,
+          fechaVigenciaFinal: resultado.fechaVigenciaFinal,
           fecha: new Date().toISOString(),
           pedidoId: pedidoId,
           ...resultado
@@ -135,11 +138,11 @@ export default function ModalFactura({
       }
 
     } catch (err) {
-      console.error("Error al generar factura:", err);
+      console.error("Error al generar fitosanitario:", err);
 
       Swal.fire({
         icon: 'error',
-        title: 'Error al generar factura',
+        title: 'Error al generar fitosanitario',
         html: `
           <div class="text-left">
             <p>${err.message}</p>
@@ -154,23 +157,23 @@ export default function ModalFactura({
     }
   };
 
-  const handleImprimirFactura = async () => {
-    console.log("🔵 handleImprimirFactura INICIADO");
+  const handleImprimirFitosanitario = async () => {
+    console.log("🔵 handleImprimirFitosanitario INICIADO");
 
     try {
       setCargando(true);
       console.log("1. Cargando estado: true");
 
-      if (!numeroFacturaExistente) {
-        console.error("❌ Error: numeroFacturaExistente es:", numeroFacturaExistente);
-        throw new Error("No hay número de factura disponible");
+      if (!numeroFitoExistente) {
+        console.error("❌ Error: numeroFitoExistente es:", numeroFitoExistente);
+        throw new Error("No hay número de fitosanitario disponible");
       }
 
-      console.log("2. Número factura:", numeroFacturaExistente);
+      console.log("2. Número fitosanitario:", numeroFitoExistente);
 
       // Mostrar mensaje de carga
       Swal.fire({
-        title: 'Generando Factura...',
+        title: 'Generando Fitosanitario...',
         text: 'Obteniendo datos para el PDF',
         allowOutsideClick: false,
         didOpen: () => {
@@ -179,25 +182,20 @@ export default function ModalFactura({
         }
       });
 
-      // 🔥 VERSIÓN SIMPLIFICADA PARA PRUEBA
-      // Extraer número para la llamada a la API
-      const numero = numeroFacturaExistente.replace("FACT-", "");
-
-      console.log("4. Número limpio para API:", numero);
-
       // Llamar directamente a la API para obtener el PDF como Blob
       const API_URL = "https://portal.datenbankensoluciones.com.co/DatenBankenApp/AllSeasonFlowers/Api/pedidos";
 
+      console.log("4. Número limpio para API:", numeroFitoExistente.replace("FITO-", ""));
       console.log("5. Llamando a API...");
 
-      const res = await fetch(`${API_URL}/ApiGenerarPDFFactura.php`, {
+      const res = await fetch(`${API_URL}/ApiGenerarPDFFitosanitario.php`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          numeroFactura: numero,
-          tipo: "factura"
+          numeroFitosanitario: numeroFitoExistente.replace("FITO-", ""),
+          tipo: "fitosanitario"
         }),
       });
 
@@ -234,7 +232,7 @@ export default function ModalFactura({
 
       Swal.fire({
         icon: 'error',
-        title: 'Error al generar factura',
+        title: 'Error al generar fitosanitario',
         html: `
         <div class="text-left">
           <p class="font-medium">${error.message}</p>
@@ -260,16 +258,16 @@ export default function ModalFactura({
   };
 
   // ============================================
-  // 1. MODAL PARA FACTURA EXISTENTE
+  // 1. MODAL PARA FITOSANITARIO EXISTENTE
   // ============================================
-  if (facturaExistente && isOpen) {
+  if (fitoExistente && isOpen) {
     return (
       <>
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50">
           <div className="bg-white rounded-xl shadow-2xl w-full max-w-md">
             <div className="p-6 border-b">
               <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-semibold text-gray-800">🧾 Factura ya Generada</h3>
+                <h3 className="text-lg font-semibold text-gray-800">🌿 Fitosanitario ya Generado</h3>
                 <button
                   onClick={onClose}
                   className="text-gray-500 hover:text-gray-700"
@@ -280,21 +278,21 @@ export default function ModalFactura({
               </div>
 
               <div className="text-center p-4">
-                <div className="text-4xl mb-3 text-green-500">✅</div>
-                <p className="text-gray-700 mb-2">Este pedido ya tiene una factura asignada:</p>
-                <div className="text-xl font-bold text-green-600 mb-6">
-                  {numeroFacturaExistente || "FACT-000000"}
+                <div className="text-4xl mb-3 text-amber-500">✅</div>
+                <p className="text-gray-700 mb-2">Este pedido ya tiene un fitosanitario asignado:</p>
+                <div className="text-xl font-bold text-amber-600 mb-6">
+                  {numeroFitoExistente || "FITO-000000"}
                 </div>
 
                 <div className="space-y-3">
-                  {/* Botón para imprimir factura */}
+                  {/* Botón para imprimir fitosanitario */}
                   <button
                     onClick={() => {
                       console.log("🟢 Botón CLICKEADO");
-                      handleImprimirFactura();
+                      handleImprimirFitosanitario();
                     }}
                     disabled={cargando}
-                    className="w-full px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    className="w-full px-4 py-3 bg-amber-600 text-white rounded-lg hover:bg-amber-700 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   >
                     {cargando ? (
                       <>
@@ -306,12 +304,12 @@ export default function ModalFactura({
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
                         </svg>
-                        <span>📄 Imprimir Factura</span>
+                        <span>📄 Imprimir Fitosanitario</span>
                       </>
                     )}
                   </button>
 
-                  {/* Botón para descargar factura (opcional) */}
+                  {/* Botón para cerrar */}
                   <button
                     onClick={onClose}
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
@@ -322,16 +320,16 @@ export default function ModalFactura({
 
                 <div className="mt-6 text-xs text-gray-500 bg-gray-50 p-3 rounded-lg">
                   <p className="font-medium text-gray-600 mb-1">Información:</p>
-                  <p>• El estado del pedido ha cambiado a "Facturado"</p>
-                  <p>• Puedes imprimir la factura cuantas veces necesites</p>
-                  <p>• Para anular o modificar la factura, contacta al administrador</p>
+                  <p>• El estado del pedido ha cambiado a "Fitosanitado"</p>
+                  <p>• Puedes imprimir el fitosanitario cuantas veces necesites</p>
+                  <p>• Validez: 2 días desde la fecha de entrega</p>
                 </div>
               </div>
             </div>
           </div>
         </div>
 
-        {/* VISOR DE PDF - AÑADIDO AQUÍ */}
+        {/* VISOR DE PDF */}
         {mostrarVisor && urlPDF && (
           <ModalVisorPreliminar
             url={urlPDF}
@@ -343,7 +341,7 @@ export default function ModalFactura({
   }
 
   // ============================================
-  // 2. MODAL PARA GENERAR NUEVA FACTURA
+  // 2. MODAL PARA GENERAR NUEVO FITOSANITARIO
   // ============================================
   if (!isOpen) return null;
 
@@ -353,7 +351,7 @@ export default function ModalFactura({
         <div className="bg-white rounded-xl shadow-2xl w-full max-w-md">
           <div className="p-6 border-b">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold text-gray-800">🧾 Generar Factura</h3>
+              <h3 className="text-lg font-semibold text-gray-800">🌿 Generar Fitosanitario</h3>
               <button
                 onClick={onClose}
                 className="text-gray-500 hover:text-gray-700"
@@ -367,7 +365,7 @@ export default function ModalFactura({
               <div className="p-3 bg-red-50 rounded-lg border border-red-200 mb-4">
                 <p className="text-sm text-red-600">{error}</p>
                 <button
-                  onClick={cargarUltimoNumeroFactura}
+                  onClick={cargarUltimoNumeroFitosanitario}
                   className="mt-2 text-sm text-red-700 hover:text-red-900 font-medium"
                 >
                   Reintentar
@@ -377,41 +375,41 @@ export default function ModalFactura({
 
             <div className="mb-4">
               <p className="text-sm text-gray-600 mb-3">
-                Se asignará una nueva factura al pedido <span className="font-semibold">{pedidoNumero}</span>
+                Se asignará un nuevo fitosanitario al pedido <span className="font-semibold">{pedidoNumero}</span>
               </p>
 
               <div className="grid grid-cols-2 gap-3 mb-3">
-                {/* Última factura generada */}
+                {/* Último fitosanitario generado */}
                 <div className="p-3 bg-gray-50 rounded-lg border">
-                  <div className="text-xs text-gray-500 mb-1">Última factura</div>
+                  <div className="text-xs text-gray-500 mb-1">Último fitosanitario</div>
                   <div className="text-sm font-semibold">
                     {ultimoNumero !== null
                       ? ultimoNumero > 0
-                        ? `FACT-${String(ultimoNumero).padStart(6, "0")}`
-                        : "Ninguna"
+                        ? `FITO-${String(ultimoNumero).padStart(6, "0")}`
+                        : "Ninguno"
                       : cargando ? "Cargando..." : "---"
                     }
                   </div>
                 </div>
 
-                {/* Próxima factura */}
-                <div className="p-3 bg-green-50 rounded-lg border border-green-200">
-                  <div className="text-xs text-gray-600 mb-1">Próxima factura</div>
-                  <div className="text-lg font-bold text-green-600">
+                {/* Próximo fitosanitario */}
+                <div className="p-3 bg-amber-50 rounded-lg border border-amber-200">
+                  <div className="text-xs text-gray-600 mb-1">Próximo fitosanitario</div>
+                  <div className="text-lg font-bold text-amber-600">
                     {siguienteNumero || (cargando ? "Cargando..." : "---")}
                   </div>
                 </div>
               </div>
 
               {/* Información adicional */}
-              <div className="text-xs text-gray-500 p-3 bg-blue-50 rounded border border-blue-100 mt-3">
-                <div className="font-medium text-blue-700 mb-1">✓ ¿Qué pasará al generar la factura?</div>
+              <div className="text-xs text-gray-500 p-3 bg-green-50 rounded border border-green-100 mt-3">
+                <div className="font-medium text-green-700 mb-1">✓ ¿Qué pasará al generar el fitosanitario?</div>
                 <ul className="list-disc pl-4 space-y-1 mt-1">
-                  <li>Se asignará el número <span className="font-semibold">{siguienteNumero || "FACT-XXXXXX"}</span> al pedido</li>
-                  <li>El estado del pedido cambiará a "Facturado"</li>
-                  <li>Se guardará la fecha de facturación</li>
-                  <li>Podrás imprimir la factura desde el botón de impresión</li>
-                  <li>No se podrá generar otra factura para este pedido</li>
+                  <li>Se asignará el número <span className="font-semibold">{siguienteNumero || "FITO-XXXXXX"}</span> al pedido</li>
+                  <li>El estado del pedido cambiará a "Fitosanitado"</li>
+                  <li>Se guardará la fecha de vigencia (2 días desde entrega)</li>
+                  <li>Podrás imprimir el fitosanitario desde el botón de impresión</li>
+                  <li>No se podrá generar otro fitosanitario para este pedido</li>
                 </ul>
               </div>
             </div>
@@ -427,11 +425,11 @@ export default function ModalFactura({
                 Cancelar
               </button>
               <button
-                onClick={handleGenerarFactura}
+                onClick={handleGenerarFitosanitario}
                 disabled={cargando || !siguienteNumero}
                 className={`px-4 py-2 rounded-lg flex items-center gap-2 transition-colors ${cargando || !siguienteNumero
                   ? 'bg-gray-400 text-gray-300 cursor-not-allowed'
-                  : 'bg-green-600 text-white hover:bg-green-700'
+                  : 'bg-amber-600 text-white hover:bg-amber-700'
                   }`}
               >
                 {cargando ? (
@@ -444,22 +442,22 @@ export default function ModalFactura({
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
-                    <span>Generar Factura</span>
+                    <span>Generar Fitosanitario</span>
                   </>
                 )}
               </button>
             </div>
 
             {/* Advertencia importante */}
-            <div className="mt-4 p-2 bg-amber-50 border border-amber-200 rounded text-xs text-amber-800">
-              <p className="font-medium">⚠️ Advertencia:</p>
-              <p>Esta acción no se puede deshacer. Asegúrate de que todos los datos del pedido sean correctos.</p>
+            <div className="mt-4 p-2 bg-blue-50 border border-blue-200 rounded text-xs text-blue-800">
+              <p className="font-medium">📋 Nota importante:</p>
+              <p>El fitosanitario tendrá validez de 2 días desde la fecha de entrega del pedido.</p>
             </div>
           </div>
         </div>
       </div>
 
-      {/* VISOR DE PDF - AÑADIDO AQUÍ TAMBIÉN (por si acaso) */}
+      {/* VISOR DE PDF */}
       {mostrarVisor && urlPDF && (
         <ModalVisorPreliminar
           url={urlPDF}

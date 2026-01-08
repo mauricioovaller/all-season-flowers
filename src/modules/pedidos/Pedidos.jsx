@@ -5,6 +5,9 @@ import PedidoHeader from "./PedidoHeader";
 import PedidoEmpaque from "./PedidoEmpaque";
 import ModalBuscarPedidos from "./ModalBuscarPedidos";
 import ModalFactura from "./ModalFactura";
+import ModalPlanilla from "./ModalPlanilla";
+import ModalEtiqueta from "./ModalEtiqueta";
+import ModalFitosanitario from "./ModalFitosanitario";
 import { getDatosSelect, guardarPedidoCompleto, getPedidoEspecifico } from "../../services/pedidos/pedidosService";
 
 // Datos mock temporales - para fallback
@@ -138,6 +141,8 @@ export default function Pedidos() {
     tiposEmpaque: [],
     unidadesFacturacion: [],
     predios: [],
+    conductores: [],
+    ayudantes: [],
   });
 
   // Estados de carga inicial
@@ -243,6 +248,18 @@ export default function Pedidos() {
           predios: datosAPI.predios?.map(p => ({
             id: p.IdPredio.toString(),
             nombre: p.NombrePredio || ''
+          })) || [],
+
+          // Conductores: IdConductor, NombreConductor
+          conductores: datosAPI.conductores?.map(c => ({
+            id: c.IdConductor.toString(),
+            nombre: c.NombreConductor || ''
+          })) || [],
+
+          // Ayudantes: IdAyudante, NomAyudante
+          ayudantes: datosAPI.ayudantes?.map(a => ({
+            id: a.IdAyudante.toString(),
+            nombre: a.NomAyudante || ''
           })) || [],
         };
 
@@ -687,7 +704,8 @@ export default function Pedidos() {
           IdUnidad: parseInt(item.unidadFacturacion) || 0,
           IdPredio: item.predio ? parseInt(item.predio) : 0,
           Tallos_Ramo: parseInt(item.tallosRamo) || 0,
-          Ramos_Caja: parseInt(item.ramosCaja) || 0,
+          // ✅ CAMBIO CRÍTICO: Para bouquets usar cantidadBouquets, para productos normales usar ramosCaja
+          Ramos_Caja: item.esBouquet ? parseInt(item.cantidadBouquets) || 1 : parseInt(item.ramosCaja) || 0,
           Precio_Venta: parseFloat(item.precioVenta) || 0,
           // NUEVO: Incluir la descripción del frontend
           Descripcion: item.descripcion || (item.esBouquet ? "Bouquet personalizado" : "")
@@ -988,37 +1006,70 @@ export default function Pedidos() {
   }
 
   // --------------------------------------------------------------
-  // Imprimir (mock temporal)
+  // Exportar a Excel (nueva funcionalidad)
   // --------------------------------------------------------------
-  function handlePrint() {
+  function handleExportExcel() {
     if (!header.noPedido || header.noPedido === "PED-000000") {
-      Swal.fire("Aviso", "No hay pedido para imprimir.", "info");
+      Swal.fire("Aviso", "No hay pedido para exportar.", "info");
       return;
     }
 
-    // Preparar datos para imprimir
-    const datosImpresion = {
+    // Preparar datos para exportación
+    const datosExportacion = {
       encabezado: header,
       empaques: empaques,
-      fechaImpresion: new Date().toLocaleDateString('es-CO')
+      fechaExportacion: new Date().toLocaleDateString('es-CO'),
+      totales: {
+        piezas: header.totalPiezas,
+        fulles: header.equivalenciaFulles,
+        tallos: header.totalTallos,
+        valor: header.valorVenta,
+        iva: header.iva,
+        total: header.totalVenta
+      }
     };
 
-    console.log("Datos para imprimir:", datosImpresion);
-    console.log("Descripciones en impresión:",
+    console.log("Datos para exportar a Excel:", datosExportacion);
+    console.log("Descripciones en exportación:",
       empaques.flatMap((emp, empIdx) =>
         emp.items?.map((item, itemIdx) => ({
           empaque: empIdx + 1,
           producto: itemIdx + 1,
-          descripcion: item.descripcion || "Sin descripción"
+          descripcion: item.descripcion || "Sin descripción",
+          precio: item.precioVenta,
+          total: item.valorRegistro
         })) || []
       )
     );
 
+    // Simular exportación a Excel
     Swal.fire({
       icon: 'info',
-      title: 'Imprimir PDF',
-      text: 'Funcionalidad en desarrollo. Los datos están listos en consola.',
-      timer: 3000
+      title: 'Exportar a Excel',
+      html: `
+        <div class="text-left">
+          <p>Se prepararán los datos para exportar:</p>
+          <ul class="list-disc pl-5 mt-2 space-y-1">
+            <li><strong>Pedido:</strong> ${header.noPedido}</li>
+            <li><strong>Empaques:</strong> ${empaques.length}</li>
+            <li><strong>Productos totales:</strong> ${empaques.reduce((sum, emp) => sum + (emp.items?.length || 0), 0)}</li>
+            <li><strong>Valor total:</strong> $${parseFloat(header.totalVenta).toLocaleString('es-CO')}</li>
+          </ul>
+          <p class="mt-3 text-sm text-gray-600">Los datos están listos en consola para integración con API de exportación.</p>
+        </div>
+      `,
+      showCancelButton: true,
+      confirmButtonText: 'Generar Excel',
+      cancelButtonText: 'Cancelar'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        Swal.fire({
+          icon: 'success',
+          title: 'Excel generado',
+          text: 'Archivo listo para descargar (simulación)',
+          timer: 2000
+        });
+      }
     });
   }
 
@@ -1055,8 +1106,8 @@ export default function Pedidos() {
           estadoPedido: headerData.Estado || "Pendiente",
           noInvoice: String(headerData.Factura || "0"),
           noEtiqueta: "0",
-          noPlanilla: "0",
-          noFito: "0",
+          noPlanilla: String(headerData.NoPlanilla || "0"),
+          noFito: String(headerData.NoFito || "0"),
           totalPiezas: "0", // Se calcularán después
           equivalenciaFulles: "0", // Se calcularán después
           totalTallos: "0", // Se calcularán después
@@ -1068,7 +1119,34 @@ export default function Pedidos() {
 
         setHeader(nuevoHeader);
 
-        // 2. Transformar empaques al formato que espera el componente
+        // 2. Actualizar el estado de documentos con los datos reales del pedido
+        const nuevosDocumentos = {
+          factura: {
+            numero: headerData.Factura ? `FACT-${String(headerData.Factura).padStart(6, "0")}` : "",
+            fecha: headerData.FechaFactura || "",
+            generado: !!headerData.Factura
+          },
+          planilla: {
+            numero: headerData.NoPlanilla ? `PLAN-${String(headerData.NoPlanilla).padStart(4, "0")}` : "",
+            fecha: headerData.FechaPlanilla || "",
+            generado: !!headerData.NoPlanilla
+          },
+          etiqueta: {
+            numero: headerData.NoEtiqueta ? `ETIQ-${String(headerData.NoEtiqueta).padStart(6, "0")}` : "",
+            fecha: headerData.FechaEtiqueta || "",
+            generado: !!headerData.NoEtiqueta
+          },
+          fitosanitario: {
+            numero: headerData.NoFito ? `FITO-${String(headerData.NoFito).padStart(6, "0")}` : "",
+            fecha: headerData.FechaFito || "",
+            generado: !!headerData.NoFito
+          }
+        };
+
+        console.log("Actualizando documentos con:", nuevosDocumentos);
+        setDocumentos(nuevosDocumentos);
+
+        // 3. Transformar empaques al formato que espera el componente
         const empaquesTransformados = datosPedido.empaques.map(empaque => {
           // Calcular fulles según equivalencia del tipo de empaque
           const tipoEmpaqueObj = datosSelect.tiposEmpaque.find(t => t.id === String(empaque.tipoEmpaque));
@@ -1084,7 +1162,8 @@ export default function Pedidos() {
             // Convertir valores a números para cálculos
             const tallosRamo = Number(item.tallosRamo) || 0;
             const ramosCaja = Number(item.ramosCaja) || 0;
-            const cantidadBouquets = Number(item.cantidadBouquets) || 1;
+            //const cantidadBouquets = Number(item.cantidadBouquets) || 1;
+            const cantidadBouquets = Number(item.ramosCaja) || 1;
             const precioVenta = parseFloat(String(item.precioVenta || "0").replace(/,/g, '.')) || 0;
 
             // Calcular totales del item
@@ -1103,6 +1182,7 @@ export default function Pedidos() {
                 valorRegistro = cantidadBouquets * cantidadEmpaques * precioVenta;
               }
             } else {
+              // Para productos simples
               tallosCaja = tallosRamo * ramosCaja;
               totTallosRegistro = tallosCaja * cantidadEmpaques;
 
@@ -1110,7 +1190,13 @@ export default function Pedidos() {
               if (unidad?.nombre === "Stem/Tallo") {
                 valorRegistro = totTallosRegistro * precioVenta;
               } else if (unidad?.nombre === "Bunch/Ramo" || unidad?.nombre === "Bouquet" || unidad?.nombre === "Consumer/Bunch") {
-                valorRegistro = cantidadEmpaques * ramosCaja * precioVenta;
+                // ✅ CORRECCIÓN: Si es bouquet, usar cantidadBouquets en lugar de ramosCaja
+                if (item.esBouquet) {
+                  const cantidadBouquets = Number(item.cantidadBouquets) || Number(ramosCaja) || 1;
+                  valorRegistro = cantidadEmpaques * cantidadBouquets * precioVenta;
+                } else {
+                  valorRegistro = cantidadEmpaques * ramosCaja * precioVenta;
+                }
               } else {
                 valorRegistro = totTallosRegistro * precioVenta;
               }
@@ -1319,18 +1405,18 @@ export default function Pedidos() {
           </button>
 
           <button
-            onClick={handlePrint}
+            onClick={handleExportExcel}
             disabled={header.noPedido === "PED-000000"}
             className={`rounded-lg px-3 py-2 transition font-medium text-sm flex-1 ${header.noPedido !== "PED-000000"
-              ? "bg-purple-600 text-white hover:bg-purple-700"
+              ? "bg-green-600 text-white hover:bg-green-700"
               : "bg-gray-300 text-gray-500 cursor-not-allowed"
               }`}
           >
             <div className="flex items-center justify-center gap-1">
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
               </svg>
-              <span>Imprimir</span>
+              <span>Excel</span>
             </div>
           </button>
         </div>
@@ -1348,18 +1434,8 @@ export default function Pedidos() {
         inputRefs={headerRefs}
       />
 
-      {/* NUEVO: Componente de empaques */}
-      <PedidoEmpaque
-        empaques={empaques}
-        onChangeEmpaques={handleEmpaquesChange}
-        productos={datosSelect.productos}
-        tiposEmpaque={datosSelect.tiposEmpaque}
-        unidadesFacturacion={datosSelect.unidadesFacturacion}
-        predios={datosSelect.predios}
-      />
-
       {/* =========================================================== */}
-      {/* NUEVA SECCIÓN: DOCUMENTOS DEL PEDIDO - SOLO VISUAL         */}
+      {/* NUEVA SECCIÓN: DOCUMENTOS DEL PEDIDO - MOVIDA ARRIBA       */}
       {/* =========================================================== */}
       <div className="bg-white rounded-lg md:rounded-xl shadow-sm md:shadow-md p-3 md:p-4">
         <div className="flex justify-between items-center mb-3">
@@ -1403,9 +1479,21 @@ export default function Pedidos() {
 
           {/* ETIQUETA */}
           <button
-            onClick={() => header.noPedido !== "PED-000000" && setMostrarModalEtiqueta(true)}
-            disabled={header.noPedido === "PED-000000"}
-            className={`flex flex-col items-center justify-center p-3 rounded-lg border transition-all ${header.noPedido !== "PED-000000"
+            onClick={() => {
+              // Usar header.totalPiezas en lugar de totalPiezas
+              const piezas = parseInt(header.totalPiezas) || 0;
+              if (header.noPedido !== "PED-000000" && piezas > 0) {
+                setMostrarModalEtiqueta(true);
+              } else if (piezas === 0) {
+                Swal.fire({
+                  icon: 'warning',
+                  title: 'No hay piezas',
+                  text: 'El pedido no tiene piezas para generar etiquetas',
+                });
+              }
+            }}
+            disabled={header.noPedido === "PED-000000" || (parseInt(header.totalPiezas) || 0) === 0}
+            className={`flex flex-col items-center justify-center p-3 rounded-lg border transition-all ${header.noPedido !== "PED-000000" && (parseInt(header.totalPiezas) || 0) > 0
               ? "bg-purple-50 border-purple-200 hover:bg-purple-100 hover:shadow-sm"
               : "bg-gray-100 border-gray-200 cursor-not-allowed"
               }`}
@@ -1417,7 +1505,12 @@ export default function Pedidos() {
 
           {/* FITOSANITARIO */}
           <button
-            onClick={() => header.noPedido !== "PED-000000" && setMostrarModalFitosanitario(true)}
+            onClick={() => {
+              const fitoNum = parseInt(header.noFito) || 0;
+              if (header.noPedido !== "PED-000000") {
+                setMostrarModalFitosanitario(true);
+              }
+            }}
             disabled={header.noPedido === "PED-000000"}
             className={`flex flex-col items-center justify-center p-3 rounded-lg border transition-all ${header.noPedido !== "PED-000000"
               ? "bg-amber-50 border-amber-200 hover:bg-amber-100 hover:shadow-sm"
@@ -1484,7 +1577,7 @@ export default function Pedidos() {
                   <span className="text-sm font-medium text-gray-700">Fitosanitario</span>
                 </div>
                 <div className="text-right">
-                  <div className="text-sm font-semibold">{documentos.fitosanitario.numero || "Pendiente"}</div>
+                  <div className="text-sm font-semibold">{documentos.fitosanitario.numero || (header.noFito !== "0" ? `FITO-${header.noFito.padStart(6, "0")}` : "Pendiente")}</div>
                   {documentos.fitosanitario.fecha && (
                     <div className="text-xs text-gray-500">{documentos.fitosanitario.fecha}</div>
                   )}
@@ -1494,9 +1587,17 @@ export default function Pedidos() {
           </div>
         )}
       </div>
-      {/* FIN NUEVA SECCIÓN */}
+      {/* FIN NUEVA SECCIÓN MOVIDA ARRIBA */}
 
-
+      {/* NUEVO: Componente de empaques (AHORA DESPUÉS DE DOCUMENTOS) */}
+      <PedidoEmpaque
+        empaques={empaques}
+        onChangeEmpaques={handleEmpaquesChange}
+        productos={datosSelect.productos}
+        tiposEmpaque={datosSelect.tiposEmpaque}
+        unidadesFacturacion={datosSelect.unidadesFacturacion}
+        predios={datosSelect.predios}
+      />
 
       {/* Información adicional - COMPACTA */}
       <div className="bg-white rounded-lg md:rounded-xl shadow-sm md:shadow-md p-3 md:p-4">
@@ -1558,7 +1659,7 @@ export default function Pedidos() {
 
       {/* =========================================================== */}
       {/* MODALES PARA DOCUMENTOS - SOLO VISUAL POR AHORA            */}
-      {/* =========================================================== */}      
+      {/* =========================================================== */}
 
       {/* MODAL FACTURA - CON FUNCIONALIDAD REAL */}
       {mostrarModalFactura && (
@@ -1567,210 +1668,166 @@ export default function Pedidos() {
           onClose={() => setMostrarModalFactura(false)}
           pedidoId={header.noPedido.replace("PED-", "")}
           pedidoNumero={header.noPedido}
-          facturaExistente={header.noInvoice !== "0"} 
+          facturaExistente={header.noInvoice !== "0"}
           numeroFacturaExistente={header.noInvoice !== "0" ? `FACT-${header.noInvoice.padStart(6, "0")}` : ""}
           onFacturaGenerada={(facturaData) => {
+            console.log("Factura generada recibida:", facturaData);
+
             // Actualizar estado local
             setDocumentos(prev => ({
               ...prev,
               factura: {
-                numero: headerData.Factura ? `FACT-${String(headerData.Factura).padStart(6, "0")}` : "",
+                numero: facturaData.numeroFactura,
                 fecha: new Date().toLocaleDateString('es-CO'),
-                generado: !!headerData.Factura
+                generado: true
               }
             }));
 
-            // Actualizar header si es necesario
+            // Actualizar header con el número de factura
             setHeader(prev => ({
               ...prev,
-              noInvoice: facturaData.numeroFactura.replace("FACT-", "")
+              noInvoice: facturaData.numeroFactura.replace("FACT-", ""),
+              estadoPedido: "Facturado" // También actualizar estado si es necesario
             }));
 
             // Cerrar modal
             setMostrarModalFactura(false);
+
+            // Mostrar mensaje de éxito
+            Swal.fire({
+              icon: 'success',
+              title: 'Factura asignada',
+              text: `Factura ${facturaData.numeroFactura} asignada al pedido ${header.noPedido}`,
+              timer: 3000
+            });
           }}
         />
       )}
 
-      {/* MODAL PLANILLA */}
+      {/* MODAL PLANILLA - NUEVA VERSIÓN */}
       {mostrarModalPlanilla && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md">
-            <div className="p-6 border-b">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-semibold text-gray-800">📋 Generar Planilla</h3>
-                <button
-                  onClick={() => setMostrarModalPlanilla(false)}
-                  className="text-gray-500 hover:text-gray-700"
-                >
-                  ✕
-                </button>
-              </div>
+        <ModalPlanilla
+          isOpen={mostrarModalPlanilla}
+          onClose={() => setMostrarModalPlanilla(false)}
+          pedidoId={header.noPedido.replace("PED-", "")}
+          pedidoNumero={header.noPedido}
+          facturaExistente={header.noInvoice !== "0"}
+          numeroFacturaExistente={header.noInvoice !== "0" ? `FACT-${header.noInvoice.padStart(6, "0")}` : ""}
+          planillaExistente={header.noPlanilla !== "0"}
+          numeroPlanillaExistente={header.noPlanilla !== "0" ? `PLAN-${header.noPlanilla.padStart(4, "0")}` : ""}
+          conductores={datosSelect.conductores}
+          ayudantes={datosSelect.ayudantes}
+          datosPedido={{
+            awb: header.guiaMaster,
+            awbHija: header.guiaHija,
+            awbNieta: header.guiaNieta,
+            aerolinea: datosSelect.aerolineas.find(a => a.id === header.aerolinea)?.nombre || "",
+            agencia: datosSelect.agencias.find(a => a.id === header.agencia)?.nombre || "",
+            cliente: datosSelect.clientes.find(c => c.id === header.cliente)?.nombre || "",
+            totalPiezas: header.totalPiezas,
+            equivalenciaFulles: header.equivalenciaFulles,
+            totalTallos: header.totalTallos
+          }}
+          onPlanillaGenerada={(planillaData) => {
+            console.log("Planilla generada recibida:", planillaData);
 
-              <div className="space-y-3">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Conductor
-                  </label>
-                  <input
-                    type="text"
-                    className="w-full border rounded-lg px-3 py-2 text-sm"
-                    placeholder="Nombre del conductor"
-                  />
-                </div>
+            // Actualizar estado local
+            setDocumentos(prev => ({
+              ...prev,
+              planilla: {
+                numero: planillaData.numeroPlanilla,
+                fecha: new Date().toLocaleDateString('es-CO'),
+                generado: true
+              }
+            }));
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Ayudante
-                  </label>
-                  <input
-                    type="text"
-                    className="w-full border rounded-lg px-3 py-2 text-sm"
-                    placeholder="Nombre del ayudante"
-                  />
-                </div>
+            // Actualizar header con el número de planilla
+            setHeader(prev => ({
+              ...prev,
+              noPlanilla: planillaData.numeroPlanilla.replace("PLAN-", ""),
+              estadoPedido: prev.estadoPedido === "Facturado" ? "Planillado" : prev.estadoPedido
+            }));
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Placa del Vehículo
-                  </label>
-                  <input
-                    type="text"
-                    className="w-full border rounded-lg px-3 py-2 text-sm"
-                    placeholder="ABC-123"
-                  />
-                </div>
+            // Cerrar modal
+            setMostrarModalPlanilla(false);
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Número de Precinto
-                  </label>
-                  <input
-                    type="text"
-                    className="w-full border rounded-lg px-3 py-2 text-sm"
-                    placeholder="000001"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="p-6 border-t">
-              <div className="flex justify-end gap-2">
-                <button
-                  onClick={() => setMostrarModalPlanilla(false)}
-                  className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
-                >
-                  Cancelar
-                </button>
-                <button
-                  onClick={() => {
-                    alert("Funcionalidad de planilla en desarrollo");
-                    setMostrarModalPlanilla(false);
-                  }}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-                >
-                  Generar Planilla
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
+            // Mostrar mensaje de éxito
+            Swal.fire({
+              icon: 'success',
+              title: planillaData.numeroPlanilla ? '¡Planilla actualizada!' : '¡Planilla generada!',
+              text: `${planillaData.numeroPlanilla} ${planillaData.numeroPlanilla ? 'actualizada' : 'asignada'} al pedido ${header.noPedido}`,
+              timer: 3000
+            });
+          }}
+        />
       )}
 
-      {/* MODAL ETIQUETA */}
+      {/* MODAL ETIQUETAS - NUEVA VERSIÓN CON FUNCIONALIDAD REAL */}
       {mostrarModalEtiqueta && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md">
-            <div className="p-6 border-b">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-semibold text-gray-800">🏷️ Generar Etiquetas</h3>
-                <button
-                  onClick={() => setMostrarModalEtiqueta(false)}
-                  className="text-gray-500 hover:text-gray-700"
-                >
-                  ✕
-                </button>
-              </div>
-              <p className="text-sm text-gray-600 mb-4">
-                Se generarán etiquetas de marcación para cada empaque del pedido.
-              </p>
-              <div className="p-3 bg-purple-50 rounded-lg border border-purple-200">
-                <div className="text-center">
-                  <div className="text-sm text-gray-600">Etiquetas a generar</div>
-                  <div className="text-xl font-bold text-purple-600">{header.totalPiezas || 0} etiquetas</div>
-                </div>
-              </div>
-            </div>
-
-            <div className="p-6 border-t">
-              <div className="flex justify-end gap-2">
-                <button
-                  onClick={() => setMostrarModalEtiqueta(false)}
-                  className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
-                >
-                  Cancelar
-                </button>
-                <button
-                  onClick={() => {
-                    alert("Funcionalidad de etiquetas en desarrollo");
-                    setMostrarModalEtiqueta(false);
-                  }}
-                  className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
-                >
-                  Generar Etiquetas
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
+        <ModalEtiqueta
+          isOpen={mostrarModalEtiqueta}
+          onClose={() => setMostrarModalEtiqueta(false)}
+          pedidoId={header.noPedido.replace("PED-", "")}
+          pedidoNumero={header.noPedido}
+          totalPiezas={parseInt(header.totalPiezas) || 0}
+          datosPedido={{
+            cliente: datosSelect.clientes.find(c => c.id === header.cliente)?.nombre || "",
+            awb: header.guiaMaster,
+            awbHija: header.guiaHija,
+            poCliente: header.poCodeEncab,
+            aerolinea: datosSelect.aerolineas.find(a => a.id === header.aerolinea)?.nombre || "",
+            agencia: datosSelect.agencias.find(a => a.id === header.agencia)?.nombre || "",
+          }}
+        />
       )}
 
-      {/* MODAL FITOSANITARIO */}
+      {/* MODAL FITOSANITARIO - VERSIÓN COMPLETA */}
       {mostrarModalFitosanitario && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md">
-            <div className="p-6 border-b">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-semibold text-gray-800">🌿 Generar Fitosanitario</h3>
-                <button
-                  onClick={() => setMostrarModalFitosanitario(false)}
-                  className="text-gray-500 hover:text-gray-700"
-                >
-                  ✕
-                </button>
-              </div>
-              <p className="text-sm text-gray-600 mb-4">
-                Se generará el certificado fitosanitario para exportación.
-              </p>
-              <div className="p-3 bg-amber-50 rounded-lg border border-amber-200">
-                <div className="text-center">
-                  <div className="text-sm text-gray-600">Próximo consecutivo</div>
-                  <div className="text-xl font-bold text-amber-600">FITO-000034</div>
-                </div>
-              </div>
-            </div>
+        <ModalFitosanitario
+          isOpen={mostrarModalFitosanitario}
+          onClose={() => setMostrarModalFitosanitario(false)}
+          pedidoId={header.noPedido.replace("PED-", "")}
+          pedidoNumero={header.noPedido}
+          fitoExistente={header.noFito !== "0"}
+          numeroFitoExistente={header.noFito !== "0" ? `FITO-${header.noFito.padStart(6, "0")}` : ""}
+          onFitosanitarioGenerada={(fitoData) => {
+            console.log("Fitosanitario generado recibido:", fitoData);
 
-            <div className="p-6 border-t">
-              <div className="flex justify-end gap-2">
-                <button
-                  onClick={() => setMostrarModalFitosanitario(false)}
-                  className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
-                >
-                  Cancelar
-                </button>
-                <button
-                  onClick={() => {
-                    alert("Funcionalidad fitosanitario en desarrollo");
-                    setMostrarModalFitosanitario(false);
-                  }}
-                  className="px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700"
-                >
-                  Generar Fitosanitario
-                </button>
-              </div>
-            </div>
+            // Actualizar estado local
+            setDocumentos(prev => ({
+              ...prev,
+              fitosanitario: {
+                numero: fitoData.numeroFitosanitario,
+                fecha: new Date().toLocaleDateString('es-CO'),
+                generado: true
+              }
+            }));
+
+            // Actualizar header con el número de fitosanitario
+            setHeader(prev => ({
+              ...prev,
+              noFito: fitoData.numeroFitosanitarioInt.toString(),
+              estadoPedido: "Fitosanitado"
+            }));
+
+            // Cerrar modal
+            setMostrarModalFitosanitario(false);
+
+            // Mostrar mensaje de éxito
+            Swal.fire({
+              icon: 'success',
+              title: 'Fitosanitario asignado',
+              html: `
+          <div class="text-left">
+            <p>Fitosanitario <strong>${fitoData.numeroFitosanitario}</strong></p>
+            <p>asignado al pedido <strong>${header.noPedido}</strong></p>
+            <p class="text-sm text-gray-600 mt-2">Vigencia: ${fitoData.fechaVigenciaInicial} al ${fitoData.fechaVigenciaFinal}</p>
           </div>
-        </div>
+        `,
+              timer: 3000
+            });
+          }}
+        />
       )}
 
       {/* Modal de búsqueda de pedidos */}

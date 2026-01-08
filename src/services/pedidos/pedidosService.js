@@ -259,13 +259,12 @@ export async function obtenerFactura(numeroFactura) {
   }
 }
 
-// En pedidosService.js, MODIFICA la función generarPDFFactura:
-
 /**
  * Genera el PDF de una factura
  * @param {string} numeroFactura - Número de factura (ej: "FACT-000001")
  * @returns {Promise<Object>} Datos para generar el PDF
  */
+
 export async function generarPDFFactura(numeroFactura) {
   try {
     // Extraer solo el número si viene con prefijo
@@ -279,35 +278,25 @@ export async function generarPDFFactura(numeroFactura) {
       body: JSON.stringify({
         numeroFactura: numero,
         tipo: "factura",
+        formato: "base64", // 👈 Añadir este parámetro para que devuelva base64
       }),
     });
 
     if (!res.ok) {
-      // Si hay error 500, obtener más detalles
       const errorText = await res.text();
       console.error("Error detallado del servidor:", errorText);
-
-      try {
-        const errorJson = JSON.parse(errorText);
-        throw new Error(
-          `Error del servidor: ${
-            errorJson.error || errorJson.message || "Error desconocido"
-          }`
-        );
-      } catch (e) {
-        throw new Error(
-          `Error HTTP ${res.status}: ${errorText.substring(0, 100)}...`
-        );
-      }
+      throw new Error(`Error HTTP ${res.status}`);
     }
 
     const data = await res.json();
 
+    // IMPORTANTE: Esperar que el backend devuelva el PDF en base64
+    // o una URL directa al PDF
     if (!data.success) {
       throw new Error(data.error || "Error al generar datos para el PDF");
     }
 
-    return data; // Retornamos los datos JSON, no un Blob
+    return data;
   } catch (err) {
     console.error("Error en generarPDFFactura:", err);
     throw err;
@@ -602,4 +591,347 @@ export function abrirPDF(pdfBlob, nombreArchivo = "factura.pdf") {
   // link.href = pdfUrl;
   // link.download = nombreArchivo;
   // link.click();
+}
+
+// ============================================
+// SERVICIOS PARA PLANILLAS
+// ============================================
+
+/**
+ * Obtiene el último número de planilla utilizado
+ * @returns {Promise<Object>} { success: boolean, ultimoNumero: number, prefijo: string }
+ */
+export async function obtenerUltimoNumeroPlanilla() {
+  try {
+    const res = await fetch(`${API_URL}/ApiGetUltimoNumeroPlanilla.php`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+
+    if (!res.ok) {
+      throw new Error(`Error HTTP: ${res.status}`);
+    }
+
+    return await res.json();
+  } catch (err) {
+    console.error("Error al obtener último número de planilla:", err);
+
+    // Fallback: Si la API no responde, retornar un valor por defecto
+    return {
+      success: false,
+      ultimoNumero: 0,
+      prefijo: "PLAN-",
+      message: "Usando valor por defecto",
+    };
+  }
+}
+
+/**
+ * Genera o actualiza una planilla para un pedido
+ * @param {number} idPedido - ID del pedido
+ * @param {string} numeroPlanilla - Número de planilla a asignar
+ * @param {Object} datosPlanilla - Datos de la planilla { conductorId, ayudanteId, placa, precinto }
+ * @returns {Promise<Object>} Respuesta del servidor
+ */
+export async function generarPlanilla(
+  idPedido,
+  numeroPlanilla,
+  datosPlanilla = {}
+) {
+  try {
+    const res = await fetch(`${API_URL}/ApiGenerarPlanilla.php`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        idPedido,
+        numeroPlanilla,
+        ...datosPlanilla,
+      }),
+    });
+
+    if (!res.ok) {
+      throw new Error(`Error HTTP: ${res.status}`);
+    }
+
+    return await res.json();
+  } catch (err) {
+    console.error("Error al generar planilla:", err);
+    throw err;
+  }
+}
+
+/**
+ * Obtiene los datos de una planilla existente
+ * @param {number} idPlanilla - ID de la planilla (o número de planilla)
+ * @returns {Promise<Object>} Datos de la planilla
+ */
+export async function obtenerPlanilla(idPlanilla) {
+  try {
+    const res = await fetch(`${API_URL}/ApiGetPlanilla.php`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ idPlanilla }),
+    });
+
+    if (!res.ok) {
+      throw new Error(`Error HTTP: ${res.status}`);
+    }
+
+    return await res.json();
+  } catch (err) {
+    console.error("Error al obtener planilla:", err);
+    throw err;
+  }
+}
+
+/**
+ * Genera el PDF de una planilla (las 3 páginas juntas)
+ * VERSIÓN SIMPLIFICADA - Abre directamente en nueva pestaña
+ * @param {string} numeroPlanilla - Número de planilla (ej: "PLAN-000001")
+ */
+export async function generarPDFPlanilla(numeroPlanilla) {
+  try {
+    // Extraer solo el número si viene con prefijo
+    const numero = numeroPlanilla.replace("PLAN-", "");
+
+    const apiUrl = `${API_URL}/ApiGenerarPDFPlanilla.php`;
+
+    // Crear formulario temporal para enviar POST
+    const form = document.createElement("form");
+    form.method = "POST";
+    form.action = apiUrl;
+    form.target = "_blank";
+    form.style.display = "none";
+
+    // Agregar campo con los datos
+    const input = document.createElement("input");
+    input.type = "hidden";
+    input.name = "numeroPlanilla";
+    input.value = numero;
+    form.appendChild(input);
+
+    // Agregar campo JSON para el backend
+    const inputJson = document.createElement("input");
+    inputJson.type = "hidden";
+    inputJson.name = "json_data";
+    inputJson.value = JSON.stringify({ numeroPlanilla: numero });
+    form.appendChild(inputJson);
+
+    // Agregar al documento y enviar
+    document.body.appendChild(form);
+    form.submit();
+    document.body.removeChild(form);
+
+    return { success: true };
+  } catch (err) {
+    console.error("Error en generarPDFPlanilla:", err);
+    throw err;
+  }
+}
+
+/**
+ * Abre el PDF de planilla en una nueva ventana
+ * @param {Blob} pdfBlob - Archivo PDF
+ * @param {string} nombreArchivo - Nombre del archivo
+ */
+export function abrirPDFPlanilla(pdfBlob, nombreArchivo = "planilla.pdf") {
+  try {
+    // Crear URL para el blob
+    const pdfUrl = URL.createObjectURL(pdfBlob);
+
+    // Abrir en nueva pestaña
+    window.open(pdfUrl, "_blank");
+
+    // Opcional: Limpiar URL después de un tiempo
+    setTimeout(() => {
+      URL.revokeObjectURL(pdfUrl);
+    }, 10000);
+  } catch (err) {
+    console.error("Error al abrir PDF:", err);
+    throw err;
+  }
+}
+
+/**
+ * Genera las etiquetas de marcación para un pedido
+ * @param {number} idPedido - ID del pedido
+ * @param {string} tipo - Tipo de etiqueta (por ahora "marcacion")
+ * @returns {Promise<Object>} Respuesta del servidor con datos para el PDF
+ */
+export async function generarEtiquetas(idPedido, tipo = "marcacion") {
+  try {
+    const res = await fetch(`${API_URL}/ApiGenerarPDFEtiqueta.php`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        idPedido: idPedido,
+        tipo: tipo,
+      }),
+    });
+
+    if (!res.ok) {
+      throw new Error(`Error HTTP: ${res.status}`);
+    }
+
+    return await res.json();
+  } catch (err) {
+    console.error("Error al generar etiquetas:", err);
+    throw err;
+  }
+}
+
+/**
+ * Genera y abre el PDF de etiquetas directamente
+ * Versión simplificada - abre directamente en nueva pestaña
+ * @param {number} idPedido - ID del pedido
+ */
+export async function generarPDFEtiquetas(idPedido) {
+  try {
+    const apiUrl = `${API_URL}/ApiGenerarPDFEtiqueta.php`;
+    
+    // Crear formulario temporal para enviar POST
+    const form = document.createElement("form");
+    form.method = "POST";
+    form.action = apiUrl;
+    form.target = "_blank"; // Abrir en nueva pestaña
+    form.style.display = "none";
+
+    // Agregar campo con los datos
+    const input = document.createElement("input");
+    input.type = "hidden";
+    input.name = "idPedido";
+    input.value = idPedido;
+    form.appendChild(input);
+
+    // Agregar campo JSON para el backend
+    const inputJson = document.createElement("input");
+    inputJson.type = "hidden";
+    inputJson.name = "json_data";
+    inputJson.value = JSON.stringify({ idPedido: idPedido });
+    form.appendChild(inputJson);
+
+    // Agregar al documento y enviar
+    document.body.appendChild(form);
+    form.submit();
+    document.body.removeChild(form);
+
+    return { success: true };
+  } catch (err) {
+    console.error("Error en generarPDFEtiquetas:", err);
+    throw err;
+  }
+}
+
+/**
+ * Obtiene el último número de fitosanitario utilizado
+ * @returns {Promise<Object>} { success: boolean, ultimoNumero: number, prefijo: string }
+ */
+export async function obtenerUltimoNumeroFitosanitario() {
+  try {
+    const res = await fetch(`${API_URL}/ApiGetUltimoNumeroFitosanitario.php`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+
+    if (!res.ok) {
+      throw new Error(`Error HTTP: ${res.status}`);
+    }
+
+    return await res.json();
+  } catch (err) {
+    console.error("Error al obtener último número de fitosanitario:", err);
+
+    // Fallback: Si la API no responde, retornar un valor por defecto
+    return {
+      success: false,
+      ultimoNumero: 0,
+      prefijo: "FITO-",
+      message: "Usando valor por defecto",
+    };
+  }
+}
+
+/**
+ * Genera un nuevo fitosanitario para un pedido
+ * @param {number} idPedido - ID del pedido
+ * @param {string} numeroFitosanitario - Número de fitosanitario a asignar
+ * @param {Object} datosFitosanitario - Datos adicionales { fechaVigenciaInicial, fechaVigenciaFinal }
+ * @returns {Promise<Object>} Respuesta del servidor
+ */
+export async function generarFitosanitario(
+  idPedido,
+  numeroFitosanitario,
+  datosFitosanitario = {}
+) {
+  try {
+    const res = await fetch(`${API_URL}/ApiGenerarFitosanitario.php`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        idPedido,
+        numeroFitosanitario,
+        ...datosFitosanitario,
+      }),
+    });
+
+    if (!res.ok) {
+      throw new Error(`Error HTTP: ${res.status}`);
+    }
+
+    return await res.json();
+  } catch (err) {
+    console.error("Error al generar fitosanitario:", err);
+    throw err;
+  }
+}
+
+/**
+ * Genera el PDF de un fitosanitario
+ * @param {string} numeroFitosanitario - Número de fitosanitario (ej: "FITO-000001")
+ * @returns {Promise<Blob>} Blob del PDF
+ */
+export async function generarPDFFitosanitario(numeroFitosanitario) {
+  try {
+    // Extraer solo el número si viene con prefijo
+    const numero = numeroFitosanitario.replace("FITO-", "");
+
+    const res = await fetch(`${API_URL}/ApiGenerarPDFFitosanitario.php`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        numeroFitosanitario: numero,
+        tipo: "fitosanitario"  // ← SIN "formato: base64"
+      }),
+    });
+
+    if (!res.ok) {
+      const errorText = await res.text();
+      console.error("❌ Error respuesta API:", errorText);
+      throw new Error(`Error HTTP: ${res.status}`);
+    }
+
+    // Obtener como Blob (igual que en ModalFactura.jsx)
+    const pdfBlob = await res.blob();
+    console.log("Blob obtenido, tamaño:", pdfBlob.size, "type:", pdfBlob.type);
+    
+    return pdfBlob;  // ← Retorna Blob directamente
+
+  } catch (err) {
+    console.error("Error en generarPDFFitosanitario:", err);
+    throw err;
+  }
 }

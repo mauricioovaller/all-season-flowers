@@ -207,7 +207,7 @@ export async function obtenerUltimoNumeroFactura() {
 export async function generarFactura(
   idPedido,
   numeroFactura,
-  datosFactura = {}
+  datosFactura = {},
 ) {
   try {
     const res = await fetch(`${API_URL}/ApiGenerarFactura.php`, {
@@ -315,7 +315,7 @@ export function generarYMostrarPDF(datosFactura) {
     if (!window.jspdf) {
       console.error("jsPDF no está disponible");
       alert(
-        "Error: La librería jsPDF no está cargada. Por favor recargue la página."
+        "Error: La librería jsPDF no está cargada. Por favor recargue la página.",
       );
       return;
     }
@@ -374,7 +374,7 @@ export function generarYMostrarPDF(datosFactura) {
     pdf.text(
       `Nombre: ${datosFactura.cliente?.nombre || "No especificado"}`,
       20,
-      y
+      y,
     );
     y += 5;
     pdf.text(`NIT: ${datosFactura.cliente?.nit || "No especificado"}`, 20, y);
@@ -382,19 +382,19 @@ export function generarYMostrarPDF(datosFactura) {
     pdf.text(
       `Dirección: ${datosFactura.cliente?.direccion || "No especificada"}`,
       20,
-      y
+      y,
     );
     y += 5;
     pdf.text(
       `Ciudad: ${datosFactura.cliente?.ciudad || "No especificada"}`,
       20,
-      y
+      y,
     );
     y += 5;
     pdf.text(
       `Teléfono: ${datosFactura.cliente?.telefono || "No especificado"}`,
       20,
-      y
+      y,
     );
     y += 10;
 
@@ -408,20 +408,20 @@ export function generarYMostrarPDF(datosFactura) {
     pdf.text(
       `PO Cliente: ${datosFactura.pedido?.poCliente || "No especificado"}`,
       100,
-      y
+      y,
     );
     y += 5;
     pdf.text(
       `Aerolínea: ${datosFactura.pedido?.aerolinea || "No especificada"}`,
       20,
-      y
+      y,
     );
     pdf.text(`AWB: ${datosFactura.pedido?.awb || "No especificado"}`, 100, y);
     y += 5;
     pdf.text(
       `Moneda: ${datosFactura.pedido?.moneda || "No especificada"}`,
       20,
-      y
+      y,
     );
     pdf.text(`TRM: ${datosFactura.pedido?.trm || "0"}`, 100, y);
     y += 10;
@@ -494,7 +494,7 @@ export function generarYMostrarPDF(datosFactura) {
             pdf.text(
               precio.toLocaleString("es-CO", { minimumFractionDigits: 2 }),
               margin + 110,
-              y + 4
+              y + 4,
             );
 
             // Total
@@ -502,13 +502,13 @@ export function generarYMostrarPDF(datosFactura) {
             pdf.text(
               total.toLocaleString("es-CO", { minimumFractionDigits: 2 }),
               margin + 140,
-              y + 4
+              y + 4,
             );
 
             totalFactura += total;
             y += 6;
           });
-        }
+        },
       );
     } else {
       pdf.text("No hay productos registrados", margin + 2, y + 4);
@@ -527,7 +527,7 @@ export function generarYMostrarPDF(datosFactura) {
     pdf.text(
       subtotal.toLocaleString("es-CO", { style: "currency", currency: "COP" }),
       margin + 140,
-      y
+      y,
     );
     y += 7;
 
@@ -536,7 +536,7 @@ export function generarYMostrarPDF(datosFactura) {
       pdf.text(
         iva.toLocaleString("es-CO", { style: "currency", currency: "COP" }),
         margin + 140,
-        y
+        y,
       );
       y += 7;
     }
@@ -546,7 +546,7 @@ export function generarYMostrarPDF(datosFactura) {
     pdf.text(
       total.toLocaleString("es-CO", { style: "currency", currency: "COP" }),
       margin + 140,
-      y
+      y,
     );
     pdf.setTextColor(0, 0, 0);
 
@@ -556,13 +556,13 @@ export function generarYMostrarPDF(datosFactura) {
     pdf.text(
       "Factura generada el " + new Date().toLocaleDateString("es-CO"),
       margin,
-      y
+      y,
     );
     pdf.text(
       "All Season Flowers - Sistema de Pedidos",
       pageWidth - margin - 60,
       y,
-      { align: "right" }
+      { align: "right" },
     );
 
     // 11. Abrir PDF en nueva ventana
@@ -638,7 +638,7 @@ export async function obtenerUltimoNumeroPlanilla() {
 export async function generarPlanilla(
   idPedido,
   numeroPlanilla,
-  datosPlanilla = {}
+  datosPlanilla = {},
 ) {
   try {
     const res = await fetch(`${API_URL}/ApiGenerarPlanilla.php`, {
@@ -796,7 +796,7 @@ export async function generarEtiquetas(idPedido, tipo = "marcacion") {
 export async function generarPDFEtiquetas(idPedido) {
   try {
     const apiUrl = `${API_URL}/ApiGenerarPDFEtiqueta.php`;
-    
+
     // Crear formulario temporal para enviar POST
     const form = document.createElement("form");
     form.method = "POST";
@@ -871,7 +871,7 @@ export async function obtenerUltimoNumeroFitosanitario() {
 export async function generarFitosanitario(
   idPedido,
   numeroFitosanitario,
-  datosFitosanitario = {}
+  datosFitosanitario = {},
 ) {
   try {
     const res = await fetch(`${API_URL}/ApiGenerarFitosanitario.php`, {
@@ -914,7 +914,7 @@ export async function generarPDFFitosanitario(numeroFitosanitario) {
       },
       body: JSON.stringify({
         numeroFitosanitario: numero,
-        tipo: "fitosanitario"  // ← SIN "formato: base64"
+        tipo: "fitosanitario", // ← SIN "formato: base64"
       }),
     });
 
@@ -927,11 +927,11 @@ export async function generarPDFFitosanitario(numeroFitosanitario) {
     // Obtener como Blob (igual que en ModalFactura.jsx)
     const pdfBlob = await res.blob();
     console.log("Blob obtenido, tamaño:", pdfBlob.size, "type:", pdfBlob.type);
-    
-    return pdfBlob;  // ← Retorna Blob directamente
 
+    return pdfBlob; // ← Retorna Blob directamente
   } catch (err) {
     console.error("Error en generarPDFFitosanitario:", err);
     throw err;
   }
 }
+

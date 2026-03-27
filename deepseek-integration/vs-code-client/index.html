@@ -1,0 +1,816 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🌺 DeepSeek - AllSeasonFlowers</title>
+    <style>
+        /* RESET */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: #0f172a;
+            min-height: 100vh;
+            padding: 15px;
+            color: #fff;
+            overflow: hidden;
+        }
+
+        /* CONTENEDOR PRINCIPAL - 2 COLUMNAS EQUILIBRADAS */
+        .main-container {
+            display: flex;
+            height: 95vh;
+            gap: 20px;
+            max-width: 100%;
+        }
+
+        /* ===== COLUMNA IZQUIERDA: RESPUESTAS (60%) ===== */
+        .responses-column {
+            flex: 6;
+            display: flex;
+            flex-direction: column;
+            background: #1e293b;
+            border-radius: 12px;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+
+        /* HEADER DE RESPUESTAS */
+        .responses-header {
+            background: #3b82f6;
+            color: white;
+            padding: 18px 25px;
+            flex-shrink: 0;
+        }
+
+        .responses-header h1 {
+            font-size: 22px;
+            margin-bottom: 4px;
+        }
+
+        .responses-header p {
+            opacity: 0.9;
+            font-size: 13px;
+        }
+
+        /* ÁREA DE RESPUESTAS - MUY VISIBLE */
+        .responses-area {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            background: #0f172a;
+        }
+
+        /* MENSAJE - DISEÑO CLARO */
+        .response-message {
+            margin-bottom: 20px;
+            padding: 20px;
+            border-radius: 10px;
+            animation: fadeIn 0.3s ease;
+            line-height: 1.6;
+            font-size: 15px;
+        }
+
+        .user-response {
+            background: #3b82f6;
+            color: white;
+            margin-left: 10%;
+            border-bottom-right-radius: 4px;
+        }
+
+        .ai-response {
+            background: #334155;
+            color: #e2e8f0;
+            margin-right: 10%;
+            border-left: 4px solid #3b82f6;
+        }
+
+        .ai-response strong {
+            color: #60a5fa;
+        }
+
+        .ai-response pre {
+            background: #1e293b;
+            color: #cbd5e1;
+            padding: 15px;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 10px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            border: 1px solid #475569;
+        }
+
+        /* ÁREA DE ESCRITURA - ANCHA Y CLARA */
+        .writing-area {
+            padding: 20px;
+            background: #1e293b;
+            border-top: 1px solid #334155;
+            flex-shrink: 0;
+        }
+
+        .input-container {
+            display: flex;
+            gap: 12px;
+            align-items: flex-end;
+        }
+
+        /* TEXTAREA MUY ANCHO */
+        .message-input {
+            flex: 1;
+            padding: 16px;
+            border: 2px solid #475569;
+            border-radius: 10px;
+            font-size: 15px;
+            resize: none;
+            min-height: 100px;
+            max-height: 200px;
+            font-family: inherit;
+            background: #0f172a;
+            color: white;
+            transition: all 0.3s;
+        }
+
+        .message-input:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+        }
+
+        .message-input::placeholder {
+            color: #94a3b8;
+        }
+
+        /* BOTÓN ENVIAR COMPACTO */
+        .send-btn {
+            background: #3b82f6;
+            color: white;
+            border: none;
+            padding: 16px 24px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 14px;
+            transition: all 0.3s;
+            min-width: 100px;
+            height: 54px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            flex-shrink: 0;
+        }
+
+        .send-btn:hover {
+            background: #2563eb;
+            transform: translateY(-2px);
+        }
+
+        .send-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* ===== COLUMNA DERECHA: CONTROLES (40%) ===== */
+        .controls-column {
+            flex: 4;
+            display: flex;
+            flex-direction: column;
+            background: #1e293b;
+            border-radius: 12px;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.3);
+            overflow: hidden;
+            min-width: 380px;
+        }
+
+        /* HEADER CONTROLES */
+        .controls-header {
+            background: #6366f1;
+            color: white;
+            padding: 18px 25px;
+            flex-shrink: 0;
+        }
+
+        .controls-header h2 {
+            font-size: 20px;
+            margin-bottom: 4px;
+        }
+
+        /* CONTENIDO CONTROLES */
+        .controls-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            background: #0f172a;
+        }
+
+        /* STATUS */
+        .status-box {
+            background: #1e293b;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            border: 1px solid #334155;
+        }
+
+        .status-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid #334155;
+        }
+
+        .status-item:last-child {
+            border-bottom: none;
+        }
+
+        /* SECCIONES */
+        .control-section {
+            background: #1e293b;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 1px solid #334155;
+        }
+
+        .section-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: #e2e8f0;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* FORMULARIOS */
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: 500;
+            color: #cbd5e1;
+            font-size: 14px;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #475569;
+            border-radius: 8px;
+            font-size: 14px;
+            background: #0f172a;
+            color: white;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: #3b82f6;
+        }
+
+        .form-textarea {
+            min-height: 80px;
+            resize: vertical;
+            font-family: inherit;
+        }
+
+        /* BOTONES DE ACCIÓN */
+        .action-btn {
+            width: 100%;
+            padding: 14px;
+            border-radius: 8px;
+            border: none;
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: #3b82f6;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #2563eb;
+        }
+
+        .btn-secondary {
+            background: #475569;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #374151;
+        }
+
+        /* ACCIONES RÁPIDAS */
+        .quick-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin: 15px 0;
+        }
+
+        .quick-btn {
+            background: #334155;
+            border: 1px solid #475569;
+            padding: 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 13px;
+            text-align: center;
+            transition: all 0.3s;
+            color: #e2e8f0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .quick-btn:hover {
+            background: #3b82f6;
+            border-color: #3b82f6;
+        }
+
+        /* ESTADÍSTICAS */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            margin: 15px 0;
+        }
+
+        .stat-item {
+            background: #1e293b;
+            padding: 12px;
+            border-radius: 8px;
+            text-align: center;
+            border: 1px solid #334155;
+        }
+
+        .stat-value {
+            font-size: 18px;
+            font-weight: 700;
+            color: #3b82f6;
+            margin-bottom: 4px;
+        }
+
+        .stat-label {
+            font-size: 11px;
+            color: #94a3b8;
+            text-transform: uppercase;
+        }
+
+        /* SCROLLBAR */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #1e293b;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #475569;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #3b82f6;
+        }
+
+        /* ANIMACIONES */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* RESPONSIVE */
+        @media (max-width: 1200px) {
+            .main-container {
+                flex-direction: column;
+                height: auto;
+                min-height: 100vh;
+            }
+            
+            .responses-column, .controls-column {
+                min-width: 100%;
+            }
+            
+            .controls-column {
+                order: -1;
+                margin-bottom: 20px;
+            }
+        }
+
+        /* UTILIDADES */
+        .icon {
+            font-size: 18px;
+        }
+
+        .text-sm {
+            font-size: 13px;
+        }
+
+        .text-muted {
+            color: #94a3b8;
+        }
+
+        .mt-10 { margin-top: 10px; }
+        .mt-15 { margin-top: 15px; }
+        .mb-10 { margin-bottom: 10px; }
+        .mb-15 { margin-bottom: 15px; }
+    </style>
+</head>
+<body>
+    <!-- CONTENEDOR PRINCIPAL -->
+    <div class="main-container">
+        <!-- ===== COLUMNA IZQUIERDA: RESPUESTAS ===== -->
+        <div class="responses-column">
+            <!-- HEADER -->
+            <div class="responses-header">
+                <h1>🌺 DeepSeek Assistant</h1>
+                <p>AllSeasonFlowers - Respuestas aparecen aquí</p>
+            </div>
+
+            <!-- ÁREA DE RESPUESTAS -->
+            <div class="responses-area" id="responsesArea">
+                <!-- MENSAJE INICIAL VISIBLE -->
+                <div class="response-message ai-response">
+                    <strong>¡Bienvenido al asistente DeepSeek! 🤖</strong><br><br>
+                    
+                    <strong>📌 ESTA ÁREA ES PARA LAS RESPUESTAS</strong><br>
+                    Aquí verás todo lo que DeepSeek responda a tus preguntas.<br><br>
+                    
+                    <strong>🚀 Cómo empezar:</strong><br>
+                    1. Escribe tu pregunta en el <strong>cuadro grande de abajo</strong><br>
+                    2. Usa el <strong>panel derecho</strong> para analizar archivos<br>
+                    3. Las respuestas aparecerán <strong>aquí mismo</strong><br><br>
+                    
+                    <em class="text-muted">Las respuestas pueden ser largas - usa el scroll para ver todo</em>
+                </div>
+            </div>
+
+            <!-- ÁREA DE ESCRITURA - TEXTAREA ANCHO -->
+            <div class="writing-area">
+                <div class="input-container">
+                    <textarea 
+                        class="message-input"
+                        id="messageInput" 
+                        placeholder="✍️ Escribe tu pregunta aquí... (Ctrl+Enter para enviar)"
+                        rows="4"
+                    >Hola DeepSeek, ¿puedes ayudarme con mi proyecto AllSeasonFlowers?</textarea>
+                    <button class="send-btn" id="sendButton">
+                        <span class="icon">🚀</span> Enviar
+                    </button>
+                </div>
+                <div class="text-sm text-muted mt-10">
+                    💡 Presiona <strong>Ctrl+Enter</strong> para enviar rápidamente
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== COLUMNA DERECHA: CONTROLES ===== -->
+        <div class="controls-column">
+            <!-- HEADER -->
+            <div class="controls-header">
+                <h2>⚙️ Panel de Control</h2>
+                <p>Analiza archivos y configuración</p>
+            </div>
+
+            <!-- CONTENIDO -->
+            <div class="controls-content">
+                <!-- STATUS -->
+                <div class="status-box">
+                    <div class="status-item">
+                        <span>🟢 Servidor</span>
+                        <span id="serverStatus">Conectado</span>
+                    </div>
+                    <div class="status-item">
+                        <span>💰 Saldo</span>
+                        <span id="balanceStatus">~$2.00</span>
+                    </div>
+                    <div class="status-item">
+                        <span>📁 Proyecto</span>
+                        <span>AllSeasonFlowers</span>
+                    </div>
+                </div>
+
+                <!-- ANALIZAR ARCHIVOS -->
+                <div class="control-section">
+                    <div class="section-title">
+                        <span class="icon">📁</span> Analizar Archivos
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Ruta del archivo:</label>
+                        <input 
+                            type="text" 
+                            class="form-input" 
+                            id="filePath"
+                            placeholder="Ej: C:\proyectos\allseasonflowers\src\App.js"
+                            value="C:\xampp\htdocs\Proyectos_React\all-season-flowers\"
+                        >
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Pregunta de análisis:</label>
+                        <textarea 
+                            class="form-input form-textarea" 
+                            id="analysisQuestion"
+                            placeholder="¿Cómo mejorar este código? ¿Hay bugs? ¿Sugerencias?"
+                            rows="3"
+                        >¿Puedes revisar este archivo y darme sugerencias de mejora?</textarea>
+                    </div>
+
+                    <button class="action-btn btn-primary" onclick="analyzeFile()">
+                        <span class="icon">🔍</span> Analizar Archivo
+                    </button>
+
+                    <button class="action-btn btn-secondary" onclick="analyzeMultiple()">
+                        <span class="icon">📚</span> Analizar Varios
+                    </button>
+                </div>
+
+                <!-- ACCIONES RÁPIDAS -->
+                <div class="control-section">
+                    <div class="section-title">
+                        <span class="icon">⚡</span> Acciones Rápidas
+                    </div>
+
+                    <div class="quick-grid">
+                        <button class="quick-btn" onclick="setQuickQuestion('optimizar')">
+                            <span class="icon">⚡</span>
+                            <span>Optimizar</span>
+                        </button>
+                        <button class="quick-btn" onclick="setQuickQuestion('debug')">
+                            <span class="icon">🐛</span>
+                            <span>Debuggear</span>
+                        </button>
+                        <button class="quick-btn" onclick="setQuickQuestion('seguridad')">
+                            <span class="icon">🔒</span>
+                            <span>Seguridad</span>
+                        </button>
+                        <button class="quick-btn" onclick="setQuickQuestion('estructura')">
+                            <span class="icon">🏗️</span>
+                            <span>Estructura</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- ESTADÍSTICAS -->
+                <div class="control-section">
+                    <div class="section-title">
+                        <span class="icon">📊</span> Estadísticas
+                    </div>
+
+                    <div class="stats-grid">
+                        <div class="stat-item">
+                            <div class="stat-value" id="tokenCount">0</div>
+                            <div class="stat-label">Tokens</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value" id="fileCount">0</div>
+                            <div class="stat-label">Archivos</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value" id="costCount">$0.00</div>
+                            <div class="stat-label">Costo</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value" id="timeSaved">0h</div>
+                            <div class="stat-label">Ahorrado</div>
+                        </div>
+                    </div>
+
+                    <button class="action-btn btn-secondary mt-15" onclick="checkBalance()">
+                        <span class="icon">💰</span> Verificar Saldo
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ==================== CONFIGURACIÓN ====================
+        const API_URL = 'http://localhost:3000';
+        const responsesArea = document.getElementById('responsesArea');
+        const messageInput = document.getElementById('messageInput');
+        const sendButton = document.getElementById('sendButton');
+        
+        // Estadísticas
+        let tokensUsed = 0;
+        let filesAnalyzed = 0;
+        let timeSaved = 0;
+
+        // ==================== FUNCIONES DE UI ====================
+        function updateStats() {
+            document.getElementById('tokenCount').textContent = tokensUsed.toLocaleString();
+            document.getElementById('fileCount').textContent = filesAnalyzed;
+            document.getElementById('costCount').textContent = `$${(tokensUsed / 1000000 * 0.14).toFixed(4)}`;
+            document.getElementById('timeSaved').textContent = `${Math.floor(timeSaved / 60)}h`;
+        }
+
+        function formatMessage(text) {
+            // Formatear código
+            text = text.replace(/```(\w+)?\n([\s\S]*?)```/g, '<pre><code>$2</code></pre>');
+            // Formatear negritas
+            text = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+            // Mantener saltos de línea
+            text = text.replace(/\n/g, '<br>');
+            return text;
+        }
+
+        function addResponse(text, type = 'ai') {
+            const responseDiv = document.createElement('div');
+            responseDiv.className = `response-message ${type}-response`;
+            
+            const now = new Date();
+            const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            
+            responseDiv.innerHTML = `
+                <div style="opacity: 0.8; font-size: 12px; margin-bottom: 8px;">
+                    ${type === 'user' ? '👤 Tú' : '🤖 DeepSeek'} • ${timeStr}
+                </div>
+                <div>${formatMessage(text)}</div>
+            `;
+            
+            responsesArea.appendChild(responseDiv);
+            responsesArea.scrollTop = responsesArea.scrollHeight;
+        }
+
+        // ==================== FUNCIONES PRINCIPALES ====================
+        async function sendMessage() {
+            const message = messageInput.value.trim();
+            if (!message) return;
+
+            addResponse(message, 'user');
+            messageInput.value = '';
+            sendButton.disabled = true;
+            sendButton.innerHTML = '<span class="icon">⏳</span> Procesando...';
+
+            try {
+                const response = await fetch(`${API_URL}/api/chat`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        message: message,
+                        context: 'Eres un experto en desarrollo web con React, Node.js y proyectos e-commerce.'
+                    })
+                });
+
+                if (!response.ok) {
+                    const error = await response.json().catch(() => ({}));
+                    throw new Error(error.error || `Error ${response.status}`);
+                }
+
+                const data = await response.json();
+                addResponse(data.reply);
+                
+                tokensUsed += Math.ceil((message.length + data.reply.length) / 4);
+                timeSaved += 15;
+                updateStats();
+                updateBalance();
+
+            } catch (error) {
+                console.error('Error:', error);
+                addResponse(`❌ Error: ${error.message}<br><br>Asegúrate que el servidor esté corriendo.`);
+            } finally {
+                sendButton.disabled = false;
+                sendButton.innerHTML = '<span class="icon">🚀</span> Enviar';
+                messageInput.focus();
+            }
+        }
+
+        async function analyzeFile() {
+            const filePath = document.getElementById('filePath').value.trim();
+            const question = document.getElementById('analysisQuestion').value.trim();
+
+            if (!filePath) {
+                alert('Por favor ingresa la ruta del archivo');
+                return;
+            }
+
+            if (!question) {
+                alert('Por favor ingresa una pregunta');
+                return;
+            }
+
+            addResponse(`📁 Analizando: ${filePath}<br>❓ Pregunta: ${question}`, 'user');
+
+            try {
+                const response = await fetch(`${API_URL}/api/analyze-file`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ filePath, question })
+                });
+
+                if (!response.ok) {
+                    const error = await response.json().catch(() => ({}));
+                    throw new Error(error.error || `Error ${response.status}`);
+                }
+
+                const data = await response.json();
+                addResponse(`📄 ${data.fileName}<br><br>${data.reply}`);
+                
+                filesAnalyzed++;
+                tokensUsed += 2000;
+                timeSaved += 30;
+                updateStats();
+                updateBalance();
+
+            } catch (error) {
+                console.error('Error:', error);
+                addResponse(`❌ Error al analizar: ${error.message}`);
+            }
+        }
+
+        function setQuickQuestion(type) {
+            const questions = {
+                optimizar: '¿Cómo optimizar este código para rendimiento y mantenibilidad?',
+                debug: 'Analiza este código en busca de bugs y errores.',
+                seguridad: 'Revisa vulnerabilidades de seguridad en este código.',
+                estructura: 'Evalúa la estructura y arquitectura del código.'
+            };
+            document.getElementById('analysisQuestion').value = questions[type] || '';
+        }
+
+        function updateBalance() {
+            const cost = tokensUsed / 1000000 * 0.14;
+            const remaining = Math.max(0, 2 - cost);
+            const monthsLeft = (remaining / 0.14 * 7.14).toFixed(1);
+            document.getElementById('balanceStatus').textContent = `~$${remaining.toFixed(2)} (${monthsLeft}m)`;
+        }
+
+        async function checkBalance() {
+            const cost = tokensUsed / 1000000 * 0.14;
+            const remaining = Math.max(0, 2 - cost);
+            addResponse(
+                `💰 Saldo estimado: ~$${remaining.toFixed(2)}<br>` +
+                `📊 Tokens usados: ${tokensUsed.toLocaleString()}<br>` +
+                `💵 Costo: $${cost.toFixed(4)}<br>` +
+                `📁 Archivos: ${filesAnalyzed}<br>` +
+                `⏱️ Tiempo ahorrado: ${Math.floor(timeSaved / 60)} horas`
+            );
+        }
+
+        // ==================== EVENT LISTENERS ====================
+        sendButton.addEventListener('click', sendMessage);
+
+        messageInput.addEventListener('keydown', (e) => {
+            if (e.ctrlKey && e.key === 'Enter') {
+                e.preventDefault();
+                sendMessage();
+            }
+            this.style.height = 'auto';
+            this.style.height = (this.scrollHeight) + 'px';
+        });
+
+        // Auto-ajustar textareas
+        document.querySelectorAll('textarea').forEach(ta => {
+            ta.addEventListener('input', function() {
+                this.style.height = 'auto';
+                this.style.height = (this.scrollHeight) + 'px';
+            });
+        });
+
+        // ==================== INICIALIZACIÓN ====================
+        async function checkServer() {
+            try {
+                await fetch(`${API_URL}/api/project-info`);
+                document.getElementById('serverStatus').textContent = 'Conectado';
+                document.getElementById('serverStatus').style.color = '#10b981';
+            } catch {
+                document.getElementById('serverStatus').textContent = 'Desconectado';
+                document.getElementById('serverStatus').style.color = '#ef4444';
+            }
+        }
+
+        // Inicializar
+        checkServer();
+        setInterval(checkServer, 30000);
+        messageInput.focus();
+        updateStats();
+        updateBalance();
+
+        console.log('✅ DeepSeek Assistant cargado');
+    </script>
+</body>
+</html>

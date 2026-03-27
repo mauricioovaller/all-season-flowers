@@ -1,4 +1,5 @@
 <?php
+//src/Api/pedidos/ApiGetDatosSelect.php
 //echo "LLEGÓ AL ARCHIVO"; exit;
 header("Access-Control-Allow-Origin: *"); // Permite solicitudes desde cualquier origen (puedes cambiarlo)
 header("Content-Type: application/json; charset=UTF-8");

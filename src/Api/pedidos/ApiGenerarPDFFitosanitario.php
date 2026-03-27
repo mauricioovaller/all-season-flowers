@@ -42,8 +42,8 @@ $sqlPedido = "SELECT
                 cli.TEL1 AS telefono_cliente,
                 enc.PO_Cliente,
                 enc.AWB,
-                COALESCE(aer.NOMAEROLINEA, 'UNITED PARCEL SERVICE') AS aerolinea,
-                COALESCE(age.NOMAGENCIA, 'K&M Handling') AS agencia,
+                COALESCE(aer.NOMAEROLINEA, '') AS aerolinea,
+                COALESCE(age.NOMAGENCIA, '') AS agencia,
                 enc.PuertoSalida
             FROM
                 SAS_EncabPedido enc 
@@ -118,6 +118,7 @@ $stmtProductos->bind_result(
 
 $productos = [];
 $total_cajas_pedido = 0;
+$total_piezas_pedido = 0;
 $total_tallos_pedido = 0;
 
 while ($stmtProductos->fetch()) {
@@ -125,13 +126,14 @@ while ($stmtProductos->fetch()) {
         'nombre' => $nombre_producto,
         'variedad' => $nombre_variedad,
         'grado' => $nombre_grado,
-        'cajas' => $num_cajas,
+        'cajas' => $total_piezas,
         'piezas' => $total_piezas,
         'tallos' => $total_tallos
     ];
     $productos[] = $producto;
 
     $total_cajas_pedido += $num_cajas;
+    $total_piezas_pedido += $total_piezas;
     $total_tallos_pedido += $total_tallos;
 }
 $stmtProductos->close();
@@ -144,11 +146,11 @@ $sqlEmpresa = "SELECT
                 'Facatativa, Cundinamarca, Colombia' AS ciudad_empresa,
                 '(+057) 3114677282 - 3023090940' AS telefono_empresa,
                 'freshfloral.erikajulie@gmail.com' AS email_empresa,
-                'REGISTRO ICA 123456' AS registro_ica,
-                'JULIO ALBERTO RODRIGUEZ RODRIGUEZ' AS inspector_nombre,
-                '79.501.299' AS inspector_cc,
-                '16.661' AS inspector_tp,
-                '2500496' AS inspector_reg_sv
+                'REGISTRO ICA EXP250201' AS registro_ica,
+                'JOSE YAIR FONSECA CAMACHO' AS inspector_nombre,
+                '1073514261' AS inspector_cc,
+                '091019-0567503' AS inspector_tp,
+                '2502027' AS inspector_reg_sv
                 FROM DUAL";
 
 $stmtEmpresa = $enlace->prepare($sqlEmpresa);
@@ -172,7 +174,7 @@ $stmtEmpresa->close();
 // 🔴 CONSULTA 4: DATOS DE CULTIVO (por ahora fijos)
 $sqlCultivo = "SELECT 
                 'ALL SEASON FLOWERS SAS' AS cultivo_nombre,
-                'BIC 252440' AS cultivo_registro_ica,
+                'EXP250201' AS cultivo_registro_ica,
                 'INDEFINIDO' AS cultivo_vencimiento
                 FROM DUAL";
 
@@ -348,7 +350,7 @@ class PDF_Fitosanitario extends FPDF
         $this->SetFont('Helvetica', 'B', 8);
         $this->Cell(40, 5, 'NO REGISTRO ICA', 'L', 0, 'L');
         $this->SetFont('Helvetica', '', 8);
-        $this->Cell(60, 5, 'BIC 252440', 'R', 0, 'L');
+        $this->Cell(60, 5, 'EXP250201', 'R', 0, 'L');
         $this->SetFont('Helvetica', 'B', 8);
         $this->Cell(40, 5, 'NO REGISTRO ICA', 0, 0, 'L');
         $this->SetFont('Helvetica', '', 8);
@@ -365,7 +367,7 @@ class PDF_Fitosanitario extends FPDF
         $this->Ln(5);
     }
 
-    function agregarTablaCargamento($productos, $fecha_despacho, $agencia_carga, $total_cajas, $total_tallos)
+    function agregarTablaCargamento($productos, $fecha_despacho, $agencia_carga, $total_piezas_pedido,  $total_tallos_pedido)
     {
         $this->SetFont('Helvetica', 'B', 9);
         $this->Cell(200, 6, 'DESCRIPCION DEL CARGAMENTO', 1, 1, 'C');
@@ -404,17 +406,18 @@ class PDF_Fitosanitario extends FPDF
             $this->Cell(55, 6, substr($producto['nombre'] . ' ' . $producto['variedad'], 0, 25), 1, 0, 'L');
             $this->Cell(30, 6, number_format($producto['cajas'], 2), 1, 0, 'C');
             $this->Cell(35, 6, $fecha_despacho, 1, 0, 'C');
-            $this->Cell(50, 6, $agencia_carga ?: 'APOLLO FREIGHT SERVICES COL', 1, 0, 'L');
+            $this->Cell(50, 6, $agencia_carga ?: '', 1, 0, 'L');
             $this->Cell(30, 6, number_format($producto['tallos']), 1, 1, 'C');
         }
 
         // Fila de totales
         $this->SetFont('Helvetica', 'B', 8);
         $this->Cell(55, 6, 'TOTAL', 1, 0, 'L');
-        $this->Cell(30, 6, number_format($total_cajas, 2), 1, 0, 'C');
+        $this->Cell(30, 6, number_format($total_piezas_pedido), 1, 0, 'C');
+        //$this->Cell(30, 6, number_format(380, 2), 1, 0, 'C');
         $this->Cell(35, 6, '', 1, 0, 'C');
         $this->Cell(50, 6, '', 1, 0, 'C');
-        $this->Cell(30, 6, number_format($total_tallos), 1, 1, 'C');
+        $this->Cell(30, 6, number_format($total_tallos_pedido), 1, 1, 'C');
 
         $this->Ln(5);
     }
@@ -458,7 +461,7 @@ $pdf->agregarTablaCargamento(
     $productos,
     $fecha_despacho,
     $agencia,
-    $total_cajas_pedido,
+    $total_piezas_pedido,
     $total_tallos_pedido
 );
 

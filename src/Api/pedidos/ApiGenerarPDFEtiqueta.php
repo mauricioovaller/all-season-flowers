@@ -209,8 +209,8 @@ $sqlEmpresa = "SELECT
                 'Finca Villa Clemencia Vrd. Prado' AS direccion_empresa,
                 'Facatativa, Cundinamarca, Colombia' AS ciudad_empresa,
                 '(+057) 3114677282 - 3023090940' AS telefono_empresa,
-                'freshfloral.erikajulie@gmail.com' AS email_empresa,
-                'REGISTRO ICA 123456' AS registro_ica
+                ' freshfloral.erikajuley@gmail.com' AS email_empresa,
+                'REGISTRO ICA EXP250201' AS registro_ica
                 FROM DUAL";
 
 $stmtEmpresa = $enlace->prepare($sqlEmpresa);

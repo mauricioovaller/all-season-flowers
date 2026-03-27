@@ -1,4 +1,5 @@
 <?php
+//src/Api/pedidos/ApiGenerarPDFFactura.php
 require_once($_SERVER['DOCUMENT_ROOT'] . "/DatenBankenApp/fpdf/fpdf.php");
 include $_SERVER['DOCUMENT_ROOT'] . "/DatenBankenApp/AllSeasonFlowers/conexionBaseDatos/conexionbd.php";
 $enlace->set_charset("utf8mb4");
@@ -30,7 +31,7 @@ $sqlEncabezado = "SELECT
                     'Finca Villa Clemencia Vrd. Prado' AS direccion_empresa,
                     '(+057) 3114677282 - 3023090940' AS telefono_empresa,
                     'Facatativa, Cundinamarca, Colombia' AS ciudad_empresa,
-                    'freshfloral.erikajulie@gmail.com' AS email_empresa,
+                    'freshfloral.erikajuley@gmail.com' AS email_empresa,
                     cli.NOMBRE AS cliente_nombre,
                     CONCAT(cli.Direc1, ', ', cli.CIUDAD, ', ', cli.ESTADO, ', ', cli.PAIS) AS direccion_cliente,
                     cli.TEL1 AS telefono_cliente,
@@ -275,7 +276,7 @@ class PDF extends FPDF
         $this->Cell(100, 5, '', 0, 0, 'L');
         $this->Cell(30, 5, 'Email:', 0, 0, 'L');
         $this->SetFont('Helvetica', '', 9);
-        $this->Cell(25, 5, 'freshfloral.erikajulie@gmail.com', 0, 1, 'L');
+        $this->Cell(25, 5, ' freshfloral.erikajuley@gmail.com', 0, 1, 'L');
 
         $this->Ln(5);
 

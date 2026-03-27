@@ -1,4 +1,4 @@
-// src/components/layout/Header.jsx (VERSIÓN ACTUALIZADA CON SweetAlert2)
+// src/components/layout/Header.jsx
 import React from 'react';
 import Swal from 'sweetalert2';
 import { Search, Bell, User, Menu, LogOut } from 'lucide-react';
@@ -37,12 +37,22 @@ const Header = () => {
           timerProgressBar: true,
           willClose: () => {
             // Redirigir a la página de autenticación externa
-            // CAMBIA ESTA URL POR LA CORRECTA DE TU SISTEMA
             window.location.href = "https://portal.datenbankensoluciones.com.co/";
           }
         });
       }
     });
+  };
+
+  const scrollToMobileMenu = () => {
+    // Encontrar el menú móvil (primer elemento con clase lg:hidden que no sea el botón)
+    const mobileMenu = document.querySelector('.lg\\:hidden.bg-white');
+    if (mobileMenu) {
+      mobileMenu.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start'
+      });
+    }
   };
 
   return (
@@ -95,8 +105,12 @@ const Header = () => {
 
           {/* Iconos de usuario - CON BOTÓN DE SALIR */}
           <div className="flex items-center space-x-2 lg:space-x-3">
-            {/* Botón menú móvil */}
-            <button className="lg:hidden p-2 rounded-lg hover:bg-gray-100 transition-colors">
+            {/* Botón menú móvil - ACTUALIZADO CON FUNCIONALIDAD */}
+            <button 
+              onClick={scrollToMobileMenu}
+              className="lg:hidden p-2 rounded-lg hover:bg-gray-100 transition-colors"
+              title="Ver menú de navegación"
+            >
               <Menu className="w-6 h-6 text-gray-600" />
             </button>
 

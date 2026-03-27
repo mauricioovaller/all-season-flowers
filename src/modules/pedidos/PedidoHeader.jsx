@@ -1,5 +1,5 @@
+// src/modules/pedidos/PedidoHeader.jsx
 import React, { useState } from "react"; // <-- Añadir useState aquí
-
 export default function PedidoHeader({
   header,
   onChange,

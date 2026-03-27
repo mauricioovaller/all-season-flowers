@@ -70,7 +70,7 @@ $sql = "SELECT
             COALESCE(aer.NOMAEROLINEA, 'UNITED PARCEL SERVICE') AS aerolinea,
             COALESCE(age.NOMAGENCIA, 'K&M Handling') AS agencia,
             'ESTADOS UNIDOS' AS destino_pais,
-            CONCAT(cli.CIUDAD, ', ', cli.ESTADO, ', ', cli.PAIS) AS destino_completo,
+            CONCAT(cli.Direc1,', ', cli.CIUDAD, ', ', cli.ESTADO, ', ', cli.PAIS) AS destino_completo,
             SUM(deq.Cantidad) AS TotalPiezas,
             SUM(deq.Cantidad * teq.EquivFull) AS EquivalenciaFulles,
             SUM(deq.Cantidad * (dpr.Tallos_Ramo * dpr.Ramos_Caja)) AS TotalTallos,

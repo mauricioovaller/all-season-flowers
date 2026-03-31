@@ -1,163 +1,188 @@
 <?php
-// src/Api/pedidos/ApiGetDevolucionEspecifica.php
+/**
+ * ApiGetDevolucionEspecifica.php - API para obtener datos específicos de una devolución de compra
+ * 
+ * Este endpoint obtiene los datos completos de una devolución de compra específica,
+ * incluyendo encabezado y detalles con información de devolución.
+ * 
+ * @package AllSeasonFlowers
+ * @category API
+ * @subpackage DevolucionesCompras
+ */
+
 header("Content-Type: application/json");
 
+// Validar método HTTP
 if ($_SERVER["REQUEST_METHOD"] !== "POST") {
+    http_response_code(405);
     echo json_encode(["success" => false, "message" => "Método no permitido"]);
     exit;
 }
 
+// Incluir conexión a base de datos
 include $_SERVER['DOCUMENT_ROOT'] . "/DatenBankenApp/AllSeasonFlowers/conexionBaseDatos/conexionbd.php";
 
 if ($enlace->connect_error) {
-    echo json_encode(["success" => false, "message" => "Error de conexión"]);
+    http_response_code(500);
+    echo json_encode(["success" => false, "message" => "Error de conexión a la base de datos"]);
     exit;
 }
 
+// Obtener y validar datos JSON
 $json = file_get_contents("php://input");
 $data = json_decode($json, true);
 
-if (!$data || !isset($data["idFactura"]) || !is_numeric($data["idFactura"])) {
-    echo json_encode(["success" => false, "message" => "ID de factura no válido"]);
+if (!$data || !isset($data["idCompra"]) || !is_numeric($data["idCompra"])) {
+    http_response_code(400);
+    echo json_encode(["success" => false, "message" => "ID de compra no válido"]);
     exit;
 }
 
-$idFactura = intval($data["idFactura"]);
+$idCompra = intval($data["idCompra"]);
 
 try {
-    // Obtener datos del encabezado de la factura (campos de devolución)
+    // 1. Obtener datos del encabezado de la compra (campos de devolución)
     $sqlEnc = "SELECT 
-                  IdDevolucion,
-                  FechaDevolucion,
-                  ObservacionesDevolucion,
-                  IdMoneda,
-                  TRM
-               FROM SAS_EncabPedido 
-               WHERE IdEncabPedido = ?";
+                  ec.IdDevolucion,
+                  ec.FechaDevolucion,
+                  ec.ObservacionesDevolucion,
+                  ec.IdMoneda,
+                  ec.TRM,
+                  ec.IdProveedor,
+                  p.Proveedor AS nombreProveedor,
+                  ec.PO_Proveedor,
+                  ec.Estado
+               FROM SAS_EncabCompra ec
+               LEFT JOIN GEN_Proveedores p ON ec.IdProveedor = p.IdProveedor
+               WHERE ec.IdEncabCompra = ?";
+    
     $stmtEnc = $enlace->prepare($sqlEnc);
     if (!$stmtEnc) {
         throw new Exception("Error preparando consulta encabezado: " . $enlace->error);
     }
-    $stmtEnc->bind_param("i", $idFactura);
+    $stmtEnc->bind_param("i", $idCompra);
     $stmtEnc->execute();
-    $stmtEnc->bind_result($idDevolucion, $fechaDevolucion, $observaciones, $idMoneda, $trm);
+    
+    $stmtEnc->bind_result(
+        $idDevolucion, $fechaDevolucion, $observaciones, $idMoneda, $trm,
+        $idProveedor, $nombreProveedor, $poProveedor, $estado
+    );
+    
     if (!$stmtEnc->fetch()) {
-        throw new Exception("Factura no encontrada");
+        throw new Exception("Compra no encontrada");
     }
     $stmtEnc->close();
 
-    // Obtener el detalle con los campos de devolución
+    // 2. Obtener el detalle con los campos de devolución
     $sqlDet = "SELECT 
-                dp.IdDetProducto,
-                dp.IdProducto,
-                p.NOMPRODUCTO AS nombreProducto,
-                dp.IdVariedad,
-                v.NOMVARIEDAD AS nombreVariedad,
-                dp.IdGrado,
-                g.NOMGRADO AS nombreGrado,
-                dp.IdUnidad,
-                u.DescripUnidad AS nombreUnidad,
-                dp.Tallos_Ramo,
-                dp.Ramos_Caja,
-                IF(dp.IdUnidad = 4, e.Cantidad * (dp.Tallos_Ramo * dp.Ramos_Caja), e.Cantidad * dp.Ramos_Caja) AS tallosFacturados,
-                dp.Precio_Venta,
-                dp.Descripcion,
-                dp.IdPredio,
-                pr.NombrePredio AS nombrePredio,
-                dp.TallosDevolucion,
-                dp.MotivoDevolucion,
-                dp.Flete,
-                dp.Fumigacion,
-                dp.Otros
-            FROM SAS_DetProducto dp
-            LEFT JOIN SAS_DetEmpaque e ON dp.IdDetEmpaque = e.IdDetEmpaque
-            LEFT JOIN GEN_Productos p ON dp.IdProducto = p.IdProducto
-            LEFT JOIN GEN_Variedades v ON dp.IdVariedad = v.IdVariedad
-            LEFT JOIN GEN_Grados g ON dp.IdGrado = g.IdGrado
-            LEFT JOIN GEN_Unidades u ON dp.IdUnidad = u.IdUnidades
-            LEFT JOIN GEN_Predios pr ON dp.IdPredio = pr.IdPredio
-            WHERE dp.IdEncabPedido = ?
-            ORDER BY dp.IdDetProducto";
+                  dpc.IdDetProducto,
+                  dpc.IdProducto,
+                  p.NOMPRODUCTO AS nombreProducto,
+                  dpc.IdVariedad,
+                  v.NOMVARIEDAD AS nombreVariedad,
+                  dpc.IdGrado,
+                  g.NOMGRADO AS nombreGrado,
+                  dpc.IdUnidad,
+                  u.DescripUnidad AS nombreUnidad,
+                  dpc.Tallos_Ramo,
+                  IF(dpc.IdUnidad = 4, 
+                     ec.Cantidad * (dpc.Tallos_Ramo * IFNULL(dpc.Ramos_Caja, 1)), 
+                     ec.Cantidad * IFNULL(dpc.Ramos_Caja, 1)
+                  ) AS tallosComprados,
+                  dpc.Precio_Compra,
+                  dpc.IdPredio,
+                  pr.NombrePredio AS nombrePredio,
+                  dpc.TallosDevolucion,
+                  dpc.MotivoDevolucion
+               FROM SAS_DetProductoCompra dpc
+               LEFT JOIN SAS_DetEmpaqueCompra ec ON dpc.IdDetEmpaque = ec.IdDetEmpaque
+               LEFT JOIN GEN_Productos p ON dpc.IdProducto = p.IdProducto
+               LEFT JOIN GEN_Variedades v ON dpc.IdVariedad = v.IdVariedad
+               LEFT JOIN GEN_Grados g ON dpc.IdGrado = g.IdGrado
+               LEFT JOIN GEN_Unidades u ON dpc.IdUnidad = u.IdUnidades
+               LEFT JOIN GEN_Predios pr ON dpc.IdPredio = pr.IdPredio
+               WHERE dpc.IdEncabCompra = ?
+               ORDER BY dpc.IdDetProducto";
 
     $stmtDet = $enlace->prepare($sqlDet);
     if (!$stmtDet) {
         throw new Exception("Error preparando consulta detalle: " . $enlace->error);
     }
-    $stmtDet->bind_param("i", $idFactura);
+    $stmtDet->bind_param("i", $idCompra);
     $stmtDet->execute();
 
     $stmtDet->bind_result(
-        $idDetProducto,
-        $idProducto,
-        $nombreProducto,
-        $idVariedad,
-        $nombreVariedad,
-        $idGrado,
-        $nombreGrado,
-        $idUnidad,
-        $nombreUnidad,
-        $tallosRamo,
-        $ramosCaja,
-        $tallosFacturados,
-        $precioVenta,
-        $descripcion,
-        $idPredio,
-        $nombrePredio,
-        $tallosDevolucion,
-        $motivoDevolucion,
-        $flete,
-        $fumigacion,
-        $otros
+        $idDetProducto, $idProducto, $nombreProducto, $idVariedad, $nombreVariedad,
+        $idGrado, $nombreGrado, $idUnidad, $nombreUnidad, $tallosRamo,
+        $tallosComprados, $precioCompra, $idPredio, $nombrePredio,
+        $tallosDevolucion, $motivoDevolucion
     );
 
-    $detalle = [];
-
+    $detalles = [];
     while ($stmtDet->fetch()) {
-        $detalle[] = [
+        $detalles[] = [
             "idDetProducto" => $idDetProducto,
             "idProducto" => $idProducto,
-            "producto" => $nombreProducto,
+            "nombreProducto" => $nombreProducto,
             "idVariedad" => $idVariedad,
-            "variedad" => $nombreVariedad,
+            "nombreVariedad" => $nombreVariedad,
             "idGrado" => $idGrado,
-            "grado" => $nombreGrado,
+            "nombreGrado" => $nombreGrado,
             "idUnidad" => $idUnidad,
-            "unidad" => $nombreUnidad,
+            "nombreUnidad" => $nombreUnidad,
             "tallosRamo" => $tallosRamo,
-            "ramosCaja" => $ramosCaja,
-            "tallosFacturados" => intval($tallosFacturados),
-            "precioUnitario" => floatval($precioVenta),
-            "descripcion" => $descripcion,
+            "tallosComprados" => $tallosComprados,
+            "precioCompra" => $precioCompra,
             "idPredio" => $idPredio,
-            "predio" => $nombrePredio,
-            "tallosDevolucion" => intval($tallosDevolucion ?? 0),
-            "motivo" => $motivoDevolucion ?? "",
-            "flete" => floatval($flete ?? 0),
-            "fumigacion" => floatval($fumigacion ?? 0),
-            "otros" => floatval($otros ?? 0)
+            "nombrePredio" => $nombrePredio,
+            "tallosDevolucion" => $tallosDevolucion ?: 0,
+            "motivo" => $motivoDevolucion ?: ""
         ];
     }
-
     $stmtDet->close();
-    $enlace->close();
 
+    // 3. Calcular totales
+    $totalProductos = count($detalles);
+    $totalTallosComprados = array_sum(array_column($detalles, "tallosComprados"));
+    $totalTallosDevolucion = array_sum(array_column($detalles, "tallosDevolucion"));
+
+    // 4. Respuesta exitosa
+    http_response_code(200);
     echo json_encode([
         "success" => true,
         "encabezado" => [
             "idDevolucion" => $idDevolucion,
-            "numeroDevolucion" => "DEV-" . str_pad($idDevolucion, 6, "0", STR_PAD_LEFT),
             "fechaDevolucion" => $fechaDevolucion,
             "observaciones" => $observaciones,
             "idMoneda" => $idMoneda,
-            "trm" => floatval($trm)
+            "trm" => $trm,
+            "idProveedor" => $idProveedor,
+            "nombreProveedor" => $nombreProveedor,
+            "poProveedor" => $poProveedor,
+            "estado" => $estado,
+            "numeroDevolucion" => "DEV-" . str_pad($idDevolucion, 6, "0", STR_PAD_LEFT)
         ],
-        "detalle" => $detalle,
-        "total" => count($detalle)
+        "detalle" => $detalles,
+        "totales" => [
+            "totalProductos" => $totalProductos,
+            "totalTallosComprados" => $totalTallosComprados,
+            "totalTallosDevolucion" => $totalTallosDevolucion
+        ]
     ]);
 
 } catch (Exception $e) {
-    error_log("Error en ApiGetDevolucionEspecifica.php: " . $e->getMessage());
-    if (isset($enlace)) $enlace->close();
-    echo json_encode(["success" => false, "message" => $e->getMessage()]);
+    // Log de error y respuesta de error
+    error_log("Error en ApiGetDevolucionEspecifica.php (Compras): " . $e->getMessage());
+    
+    http_response_code(500);
+    echo json_encode([
+        "success" => false, 
+        "message" => "Error al obtener devolución específica: " . $e->getMessage()
+    ]);
+} finally {
+    // Cerrar conexión
+    if (isset($enlace)) {
+        $enlace->close();
+    }
 }
 ?>

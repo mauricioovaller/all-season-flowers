@@ -12,7 +12,8 @@ import {
   guardarDevolucion,
   getDevolucionEspecifica,
   obtenerUltimoNumeroDevolucion,
-  generarPDFDevolucion
+  generarPDFDevolucion,
+  eliminarDevolucion
 } from "../../services/devoluciones/devolucionesService";
 
 function todayISODate() {
@@ -400,6 +401,58 @@ export default function Devoluciones() {
     }
   };
 
+  // Función para eliminar una devolución
+  const handleEliminar = async () => {
+    if (!header.idDevolucion) {
+      Swal.fire("Aviso", "No hay una devolución para eliminar", "info");
+      return;
+    }
+
+    const confirmacion = await Swal.fire({
+      title: '¿Está seguro?',
+      text: "Esta acción eliminará permanentemente la devolución. ¿Desea continuar?",
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+      cancelButtonColor: '#3085d6',
+      confirmButtonText: 'Sí, eliminar',
+      cancelButtonText: 'Cancelar'
+    });
+
+    if (!confirmacion.isConfirmed) {
+      return;
+    }
+
+    try {
+      Swal.fire({
+        title: 'Eliminando devolución...',
+        text: 'Por favor espere',
+        allowOutsideClick: false,
+        didOpen: () => Swal.showLoading(),
+      });
+
+      const resultado = await eliminarDevolucion(header.idDevolucion);
+      
+      if (resultado.success) {
+        Swal.fire({
+          icon: 'success',
+          title: '¡Eliminada!',
+          text: resultado.message,
+          timer: 2000,
+          showConfirmButton: false
+        });
+        
+        // Resetear formulario
+        handleNew();
+      } else {
+        throw new Error(resultado.message || "Error al eliminar");
+      }
+    } catch (err) {
+      console.error(err);
+      Swal.fire("Error", err.message || "No se pudo eliminar la devolución", "error");
+    }
+  };
+
   // Función para cerrar el visor
   const handleCerrarVisor = () => {
     setMostrarVisor(false);
@@ -518,6 +571,22 @@ export default function Devoluciones() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
               </svg>
               <span>PDF</span>
+            </div>
+          </button>
+
+          <button
+            onClick={handleEliminar}
+            disabled={!header.idDevolucion}
+            className={`rounded-lg px-3 py-2 transition font-medium text-sm flex-1 ${header.idDevolucion
+              ? "bg-red-600 text-white hover:bg-red-700"
+              : "bg-gray-300 text-gray-500 cursor-not-allowed"
+              }`}
+          >
+            <div className="flex items-center justify-center gap-1">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
+              <span>Eliminar</span>
             </div>
           </button>
         </div>

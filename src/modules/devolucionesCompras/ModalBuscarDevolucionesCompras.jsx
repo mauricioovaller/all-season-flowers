@@ -1,11 +1,11 @@
-// src/modules/devoluciones/ModalBuscarDevoluciones.jsx
+// src/modules/devolucionesCompras/ModalBuscarDevolucionesCompras.jsx
 import React, { useState, useEffect, useCallback } from "react";
-import { buscarDevoluciones } from "../../services/devoluciones/devolucionesService";
+import { buscarDevolucionesCompras } from "../../services/devolucionesCompras/devolucionesComprasService";
 
-export default function ModalBuscarDevoluciones({ isOpen, onClose, onSeleccionarDevolucion }) {
+export default function ModalBuscarDevolucionesCompras({ isOpen, onClose, onSeleccionarDevolucion }) {
     const [filtros, setFiltros] = useState({
         filtroNumero: "",
-        filtroCliente: "",
+        filtroProveedor: "",
         filtroFecha: ""
     });
     const [devoluciones, setDevoluciones] = useState([]);
@@ -16,7 +16,7 @@ export default function ModalBuscarDevoluciones({ isOpen, onClose, onSeleccionar
         try {
             setCargando(true);
             setError(null);
-            const res = await buscarDevoluciones(filtros);
+            const res = await buscarDevolucionesCompras(filtros);
             if (res.success) {
                 setDevoluciones(res.devoluciones || []);
             } else {
@@ -34,6 +34,8 @@ export default function ModalBuscarDevoluciones({ isOpen, onClose, onSeleccionar
             buscar();
         }
     }, [isOpen, buscar]);
+
+
 
     const handleFiltroChange = (campo, valor) => {
         setFiltros(prev => ({ ...prev, [campo]: valor }));
@@ -56,7 +58,7 @@ export default function ModalBuscarDevoluciones({ isOpen, onClose, onSeleccionar
             <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col">
                 <div className="p-6 border-b">
                     <div className="flex justify-between items-center mb-4">
-                        <h2 className="text-2xl font-bold text-gray-800">Buscar Devoluciones</h2>
+                        <h2 className="text-2xl font-bold text-gray-800">Buscar Devoluciones Compras</h2>
                         <button onClick={onClose} className="text-gray-500 hover:text-gray-700 text-2xl">×</button>
                     </div>
 
@@ -72,13 +74,13 @@ export default function ModalBuscarDevoluciones({ isOpen, onClose, onSeleccionar
                             />
                         </div>
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Cliente</label>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Proveedor</label>
                             <input
                                 type="text"
-                                value={filtros.filtroCliente}
-                                onChange={(e) => handleFiltroChange("filtroCliente", e.target.value)}
+                                value={filtros.filtroProveedor}
+                                onChange={(e) => handleFiltroChange("filtroProveedor", e.target.value)}
                                 className="w-full border rounded-lg px-3 py-2 text-sm"
-                                placeholder="Nombre del cliente"
+                                placeholder="Nombre del proveedor"
                             />
                         </div>
                         <div>
@@ -104,7 +106,7 @@ export default function ModalBuscarDevoluciones({ isOpen, onClose, onSeleccionar
                                 Buscar
                             </button>
                             <button
-                                onClick={() => setFiltros({ filtroNumero: "", filtroCliente: "", filtroFecha: "" })}
+                                onClick={() => setFiltros({ filtroNumero: "", filtroProveedor: "", filtroFecha: "" })}
                                 className="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 transition"
                             >
                                 Limpiar
@@ -132,7 +134,7 @@ export default function ModalBuscarDevoluciones({ isOpen, onClose, onSeleccionar
                         <div className="space-y-3">
                             {devoluciones.map((dev) => (
                                 <div
-                                    key={dev.idFactura}
+                                    key={dev.idCompra}
                                     className="border rounded-lg p-4 hover:bg-gray-50 transition cursor-pointer"
                                     onClick={() => handleSeleccionar(dev)}
                                 >
@@ -143,21 +145,21 @@ export default function ModalBuscarDevoluciones({ isOpen, onClose, onSeleccionar
                                                     {dev.numeroDevolucion}
                                                 </span>
                                                 <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
-                                                    Factura: {dev.numeroFactura}
+                                                    Compra: {dev.numeroCompra}
                                                 </span>
                                             </div>
                                             <div className="grid grid-cols-3 gap-4 text-sm">
                                                 <div>
-                                                    <span className="text-gray-500">Cliente:</span>
-                                                    <p className="font-medium">{dev.cliente}</p>
+                                                    <span className="text-gray-500">Proveedor:</span>
+                                                    <p className="font-medium">{dev.nombreProveedor}</p>
                                                 </div>
                                                 <div>
                                                     <span className="text-gray-500">Fecha Devolución:</span>
                                                     <p className="font-medium">{formatFecha(dev.fechaDevolucion)}</p>
                                                 </div>
                                                 <div>
-                                                    <span className="text-gray-500">Fecha Factura:</span>
-                                                    <p className="font-medium">{formatFecha(dev.fechaFactura)}</p>
+                                                    <span className="text-gray-500">Fecha Compra:</span>
+                                                    <p className="font-medium">{formatFecha(dev.fechaCompra)}</p>
                                                 </div>
                                             </div>
                                             {dev.observaciones && (

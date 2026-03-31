@@ -1,49 +1,66 @@
 <?php
-// src/Api/devoluciones/ApiGuardarDevolucion.php
+/**
+ * ApiGuardarDevolucion.php - API para guardar devoluciones de compras
+ * 
+ * Este endpoint maneja la creación y actualización de devoluciones para compras.
+ * Actualiza los campos de devolución en SAS_EncabCompra y SAS_DetProductoCompra.
+ * 
+ * @package AllSeasonFlowers
+ * @category API
+ * @subpackage DevolucionesCompras
+ */
+
 header("Content-Type: application/json");
 
+// Validar método HTTP
 if ($_SERVER["REQUEST_METHOD"] !== "POST") {
+    http_response_code(405);
     echo json_encode(["success" => false, "message" => "Método no permitido"]);
     exit;
 }
 
+// Incluir conexión a base de datos
 include $_SERVER['DOCUMENT_ROOT'] . "/DatenBankenApp/AllSeasonFlowers/conexionBaseDatos/conexionbd.php";
 
 if ($enlace->connect_error) {
-    echo json_encode(["success" => false, "message" => "Error de conexión"]);
+    http_response_code(500);
+    echo json_encode(["success" => false, "message" => "Error de conexión a la base de datos"]);
     exit;
 }
 
+// Obtener y validar datos JSON
 $json = file_get_contents("php://input");
 $data = json_decode($json, true);
 
 if (!$data) {
-    echo json_encode(["success" => false, "message" => "No se recibieron datos"]);
+    http_response_code(400);
+    echo json_encode(["success" => false, "message" => "No se recibieron datos válidos"]);
     exit;
 }
 
 // Validar campos requeridos
-$idFactura = isset($data["idFactura"]) ? intval($data["idFactura"]) : 0;
+$idCompra = isset($data["idCompra"]) ? intval($data["idCompra"]) : 0;
 $fechaDevolucion = $data["fechaDevolucion"] ?? "";
 $observaciones = $data["observaciones"] ?? "";
 $detalles = $data["detalles"] ?? [];
 
-if (!$idFactura || empty($fechaDevolucion) || empty($detalles)) {
-    echo json_encode(["success" => false, "message" => "Faltan datos requeridos"]);
+if (!$idCompra || empty($fechaDevolucion) || empty($detalles)) {
+    http_response_code(400);
+    echo json_encode(["success" => false, "message" => "Faltan datos requeridos: idCompra, fechaDevolucion o detalles"]);
     exit;
 }
 
-// Iniciar transacción
+// Iniciar transacción para garantizar integridad de datos
 $enlace->begin_transaction();
 
 try {
-    // 1. Verificar si la factura ya tiene un IdDevolucion asignado
-    $sqlCheck = "SELECT IdDevolucion FROM SAS_EncabPedido WHERE IdEncabPedido = ?";
+    // 1. Verificar si la compra ya tiene un IdDevolucion asignado
+    $sqlCheck = "SELECT IdDevolucion FROM SAS_EncabCompra WHERE IdEncabCompra = ?";
     $stmtCheck = $enlace->prepare($sqlCheck);
     if (!$stmtCheck) {
         throw new Exception("Error preparando consulta de verificación: " . $enlace->error);
     }
-    $stmtCheck->bind_param("i", $idFactura);
+    $stmtCheck->bind_param("i", $idCompra);
     $stmtCheck->execute();
     $stmtCheck->bind_result($idDevolucionExistente);
     $stmtCheck->fetch();
@@ -56,7 +73,7 @@ try {
         $esNueva = false;
     } else {
         // Es nueva: obtener el siguiente número
-        $queryUltimo = "SELECT MAX(IdDevolucion) as ultimo FROM SAS_EncabPedido";
+        $queryUltimo = "SELECT MAX(IdDevolucion) as ultimo FROM SAS_EncabCompra";
         $result = $enlace->query($queryUltimo);
         if (!$result) {
             throw new Exception("Error al obtener último número: " . $enlace->error);
@@ -66,33 +83,33 @@ try {
         $esNueva = true;
     }
 
-    // Formatear para mostrar (solo para respuesta)
+    // Formatear número de devolución para mostrar
     $numeroDevolucionFormateado = "DEV-" . str_pad($idDevolucion, 6, "0", STR_PAD_LEFT);
 
-    // 2. Actualizar el encabezado de la factura (SAS_EncabPedido)
+    // 2. Actualizar el encabezado de la compra (SAS_EncabCompra)
     if ($esNueva) {
-        // Incluir IdDevolucion
-        $sqlUpdateEnc = "UPDATE SAS_EncabPedido 
+        // Incluir IdDevolucion para nueva devolución
+        $sqlUpdateEnc = "UPDATE SAS_EncabCompra 
                          SET IdDevolucion = ?, 
                              FechaDevolucion = ?, 
                              ObservacionesDevolucion = ? 
-                         WHERE IdEncabPedido = ?";
+                         WHERE IdEncabCompra = ?";
         $stmtEnc = $enlace->prepare($sqlUpdateEnc);
         if (!$stmtEnc) {
             throw new Exception("Error preparando actualización de encabezado (nueva): " . $enlace->error);
         }
-        $stmtEnc->bind_param("issi", $idDevolucion, $fechaDevolucion, $observaciones, $idFactura);
+        $stmtEnc->bind_param("issi", $idDevolucion, $fechaDevolucion, $observaciones, $idCompra);
     } else {
-        // No modificar IdDevolucion
-        $sqlUpdateEnc = "UPDATE SAS_EncabPedido 
+        // No modificar IdDevolucion para devolución existente
+        $sqlUpdateEnc = "UPDATE SAS_EncabCompra 
                          SET FechaDevolucion = ?, 
                              ObservacionesDevolucion = ? 
-                         WHERE IdEncabPedido = ?";
+                         WHERE IdEncabCompra = ?";
         $stmtEnc = $enlace->prepare($sqlUpdateEnc);
         if (!$stmtEnc) {
             throw new Exception("Error preparando actualización de encabezado (existente): " . $enlace->error);
         }
-        $stmtEnc->bind_param("ssi", $fechaDevolucion, $observaciones, $idFactura);
+        $stmtEnc->bind_param("ssi", $fechaDevolucion, $observaciones, $idCompra);
     }
 
     $stmtEnc->execute();
@@ -101,31 +118,26 @@ try {
     }
     $stmtEnc->close();
 
-    // 3. Actualizar cada detalle (SAS_DetProducto)
+    // 3. Actualizar cada detalle de producto (SAS_DetProductoCompra)
     foreach ($detalles as $det) {
         $idDetProducto = isset($det["idDetProducto"]) ? intval($det["idDetProducto"]) : 0;
         $tallosDevolucion = isset($det["tallosDevolucion"]) ? intval($det["tallosDevolucion"]) : 0;
         $motivo = $det["motivo"] ?? "";
-        $flete = isset($det["flete"]) ? floatval($det["flete"]) : 0;
-        $fumigacion = isset($det["fumigacion"]) ? floatval($det["fumigacion"]) : 0;
-        $otros = isset($det["otros"]) ? floatval($det["otros"]) : 0;
 
         if (!$idDetProducto) {
-            throw new Exception("Detalle sin ID de producto");
+            throw new Exception("Detalle sin ID de producto válido");
         }
 
-        $sqlUpdateDet = "UPDATE SAS_DetProducto 
+        // Actualizar solo los campos de devolución (no existen Flete, Fumigacion, Otros en compras)
+        $sqlUpdateDet = "UPDATE SAS_DetProductoCompra 
                          SET TallosDevolucion = ?, 
-                             MotivoDevolucion = ?, 
-                             Flete = ?, 
-                             Fumigacion = ?, 
-                             Otros = ? 
+                             MotivoDevolucion = ? 
                          WHERE IdDetProducto = ?";
         $stmtDet = $enlace->prepare($sqlUpdateDet);
         if (!$stmtDet) {
             throw new Exception("Error preparando actualización de detalle: " . $enlace->error);
         }
-        $stmtDet->bind_param("isdddi", $tallosDevolucion, $motivo, $flete, $fumigacion, $otros, $idDetProducto);
+        $stmtDet->bind_param("isi", $tallosDevolucion, $motivo, $idDetProducto);
         $stmtDet->execute();
         if ($stmtDet->errno) {
             throw new Exception("Error actualizando detalle ID $idDetProducto: " . $stmtDet->error);
@@ -133,20 +145,33 @@ try {
         $stmtDet->close();
     }
 
+    // Confirmar transacción
     $enlace->commit();
 
+    // Respuesta exitosa
+    http_response_code(200);
     echo json_encode([
         "success" => true,
-        "message" => $esNueva ? "Devolución guardada correctamente" : "Devolución actualizada correctamente",
+        "message" => $esNueva ? "Devolución de compra guardada correctamente" : "Devolución de compra actualizada correctamente",
         "idDevolucion" => $idDevolucion,
-        "numeroDevolucion" => $numeroDevolucionFormateado
+        "numeroDevolucion" => $numeroDevolucionFormateado,
+        "idCompra" => $idCompra
     ]);
 
 } catch (Exception $e) {
+    // Revertir transacción en caso de error
     $enlace->rollback();
-    error_log("Error en ApiGuardarDevolucion.php: " . $e->getMessage());
-    echo json_encode(["success" => false, "message" => $e->getMessage()]);
+    error_log("Error en ApiGuardarDevolucion.php (Compras): " . $e->getMessage());
+    
+    http_response_code(500);
+    echo json_encode([
+        "success" => false, 
+        "message" => "Error interno del servidor: " . $e->getMessage()
+    ]);
 } finally {
-    if (isset($enlace)) $enlace->close();
+    // Cerrar conexión
+    if (isset($enlace)) {
+        $enlace->close();
+    }
 }
 ?>

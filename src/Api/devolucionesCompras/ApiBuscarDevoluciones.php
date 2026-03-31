@@ -1,84 +1,108 @@
 <?php
-// src/Api/pedidos/ApiBuscarDevoluciones.php
+/**
+ * ApiBuscarDevoluciones.php - API para buscar devoluciones de compras
+ * 
+ * Este endpoint permite buscar devoluciones de compras con filtros por número,
+ * proveedor, fecha y estado. Retorna compras que tienen IdDevolucion asignado.
+ * 
+ * @package AllSeasonFlowers
+ * @category API
+ * @subpackage DevolucionesCompras
+ */
+
 header("Content-Type: application/json");
 
+// Validar método HTTP
 if ($_SERVER["REQUEST_METHOD"] !== "POST") {
+    http_response_code(405);
     echo json_encode(["success" => false, "message" => "Método no permitido"]);
     exit;
 }
 
+// Incluir conexión a base de datos
 include $_SERVER['DOCUMENT_ROOT'] . "/DatenBankenApp/AllSeasonFlowers/conexionBaseDatos/conexionbd.php";
 
 if ($enlace->connect_error) {
-    echo json_encode(["success" => false, "message" => "Error de conexión"]);
+    http_response_code(500);
+    echo json_encode(["success" => false, "message" => "Error de conexión a la base de datos"]);
     exit;
 }
 
+// Obtener y validar datos JSON
 $json = file_get_contents("php://input");
 $data = json_decode($json, true);
 
 if (!$data) {
+    http_response_code(400);
     echo json_encode(["success" => false, "message" => "No se recibieron datos JSON válidos"]);
     exit;
 }
 
+// Obtener filtros con valores por defecto
 $filtroNumero = $data["filtroNumero"] ?? "";
-$filtroCliente = $data["filtroCliente"] ?? "";
+$filtroProveedor = $data["filtroProveedor"] ?? "";
 $filtroFecha = $data["filtroFecha"] ?? "";
-$filtroEstado = $data["filtroEstado"] ?? ""; // Podría usarse para filtrar por estado de la devolución (si tuviera campo, pero por ahora no)
+$filtroEstado = $data["filtroEstado"] ?? "";
 
 try {
-    // Construir consulta base: facturas que tienen IdDevolucion no nulo
+    // Construir consulta base: compras que tienen IdDevolucion no nulo
     $sql = "SELECT 
-                ec.IdEncabCompra AS idFactura,
+                ec.IdEncabCompra AS idCompra,
                 ec.IdDevolucion,
-                ec.IdEncabCompra AS Factura,
-                ec.FechaSolicitud AS fechaFactura,
+                ec.IdEncabCompra AS numeroCompra,
+                ec.FechaSolicitud AS fechaCompra,
                 ec.FechaDevolucion,
                 ec.ObservacionesDevolucion,
                 p.Proveedor AS nombreProveedor,
                 ec.IdProveedor,
                 ec.Estado,
-                ec.PO_Proveedor
+                ec.PO_Proveedor,
+                c.NomComprador AS nombreComprador
             FROM SAS_EncabCompra ec
             INNER JOIN GEN_Proveedores p ON ec.IdProveedor = p.IdProveedor
+            LEFT JOIN GEN_Compradores c ON ec.IdComprador = c.IdComprador
             WHERE ec.IdDevolucion IS NOT NULL 
-              AND ec.IdDevolucion > 0";
+              AND ec.IdDevolucion > 0
+              AND ec.Anulado = 0";
     
     $params = [];
     $types = "";
     
+    // Aplicar filtros dinámicos
     if (!empty($filtroNumero)) {
-        if (is_numeric($filtroNumero)) {
-            $sql .= " AND ep.IdDevolucion = ?";
-            $params[] = $filtroNumero;
-            $types .= "i";
-        } else {
-            $sql .= " AND ep.IdDevolucion LIKE ?";
-            $params[] = "%" . $filtroNumero . "%";
-            $types .= "s";
-        }
+        $sql .= " AND (ec.IdEncabCompra LIKE ? OR ec.PO_Proveedor LIKE ? OR ec.IdDevolucion LIKE ?)";
+        $params[] = "%$filtroNumero%";
+        $params[] = "%$filtroNumero%";
+        $params[] = "%$filtroNumero%";
+        $types .= "sss";
     }
     
-    if (!empty($filtroCliente)) {
-        $sql .= " AND c.NOMBRE LIKE ?";
-        $params[] = "%" . $filtroCliente . "%";
+    if (!empty($filtroProveedor)) {
+        $sql .= " AND p.Proveedor LIKE ?";
+        $params[] = "%$filtroProveedor%";
         $types .= "s";
     }
     
     if (!empty($filtroFecha)) {
-        $sql .= " AND DATE(ep.FechaDevolucion) = ?";
+        $sql .= " AND ec.FechaDevolucion = ?";
         $params[] = $filtroFecha;
         $types .= "s";
     }
     
-    $sql .= " ORDER BY ep.IdDevolucion DESC LIMIT 100";
+    if (!empty($filtroEstado)) {
+        $sql .= " AND ec.Estado = ?";
+        $params[] = $filtroEstado;
+        $types .= "s";
+    }
+    
+    $sql .= " ORDER BY ec.FechaDevolucion DESC, ec.IdDevolucion DESC";
     
     $stmt = $enlace->prepare($sql);
     if (!$stmt) {
         throw new Exception("Error preparando consulta: " . $enlace->error);
     }
     
+    // Vincular parámetros si existen
     if (!empty($params)) {
         $stmt->bind_param($types, ...$params);
     }
@@ -86,48 +110,66 @@ try {
     $stmt->execute();
     
     $stmt->bind_result(
-        $idFactura,
+        $idCompra,
         $idDevolucion,
-        $facturaNumero,
-        $fechaFactura,
+        $numeroCompra,
+        $fechaCompra,
         $fechaDevolucion,
-        $observaciones,
+        $observacionesDevolucion,
         $nombreProveedor,
         $idProveedor,
         $estado,
-        $poProveedor
+        $poProveedor,
+        $nombreComprador
     );
     
     $devoluciones = [];
-    
     while ($stmt->fetch()) {
         $devoluciones[] = [
-            "idFactura" => $idFactura,
+            "idCompra" => $idCompra,
             "idDevolucion" => $idDevolucion,
-            "numeroDevolucion" => "DEV-" . str_pad($idDevolucion, 6, "0", STR_PAD_LEFT),
-            "numeroFactura" => $facturaNumero ? "FACT-" . str_pad($facturaNumero, 6, "0", STR_PAD_LEFT) : "Sin factura",
-            "fechaFactura" => $fechaFactura,
+            "numeroCompra" => $numeroCompra,
+            "fechaCompra" => $fechaCompra,
             "fechaDevolucion" => $fechaDevolucion,
-            "proveedor" => $nombreProveedor,
+            "observacionesDevolucion" => $observacionesDevolucion,
+            "nombreProveedor" => $nombreProveedor,
             "idProveedor" => $idProveedor,
-            "observaciones" => $observaciones,
             "estado" => $estado,
-            "poProveedor" => $poProveedor
+            "poProveedor" => $poProveedor,
+            "nombreComprador" => $nombreComprador,
+            "numeroDevolucion" => "DEV-" . str_pad($idDevolucion, 6, "0", STR_PAD_LEFT)
         ];
     }
     
     $stmt->close();
-    $enlace->close();
     
+    // Respuesta exitosa
+    http_response_code(200);
     echo json_encode([
         "success" => true,
         "devoluciones" => $devoluciones,
-        "total" => count($devoluciones)
+        "total" => count($devoluciones),
+        "filtrosAplicados" => [
+            "numero" => !empty($filtroNumero),
+            "proveedor" => !empty($filtroProveedor),
+            "fecha" => !empty($filtroFecha),
+            "estado" => !empty($filtroEstado)
+        ]
     ]);
     
 } catch (Exception $e) {
-    error_log("Error en ApiBuscarDevoluciones.php: " . $e->getMessage());
-    if (isset($enlace)) $enlace->close();
-    echo json_encode(["success" => false, "message" => "Error interno del servidor"]);
+    // Log de error y respuesta de error
+    error_log("Error en ApiBuscarDevoluciones.php (Compras): " . $e->getMessage());
+    
+    http_response_code(500);
+    echo json_encode([
+        "success" => false, 
+        "message" => "Error al buscar devoluciones: " . $e->getMessage()
+    ]);
+} finally {
+    // Cerrar conexión
+    if (isset($enlace)) {
+        $enlace->close();
+    }
 }
 ?>

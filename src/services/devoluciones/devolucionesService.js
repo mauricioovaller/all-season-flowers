@@ -156,3 +156,27 @@ export async function generarPDFDevolucion(idFactura) {
     throw err;
   }
 }
+
+/**
+ * Elimina una devolución (anula los campos de devolución en encabezado y detalle)
+ * @param {number} idDevolucion - ID de la devolución a eliminar
+ * @returns {Promise<Object>} { success, message, idDevolucion, idFactura }
+ */
+export async function eliminarDevolucion(idDevolucion) {
+  try {
+    const res = await fetch(`${API_URL}/ApiEliminarDevolucion.php`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ idDevolucion }),
+    });
+    
+    if (!res.ok) {
+      throw new Error(`Error HTTP: ${res.status}`);
+    }
+    
+    return await res.json();
+  } catch (err) {
+    console.error("Error al eliminar devolución:", err);
+    throw err;
+  }
+}

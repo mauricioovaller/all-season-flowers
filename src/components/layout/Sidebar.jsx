@@ -50,6 +50,7 @@ const Sidebar = ({ onModuleChange, currentModule }) => {
     { id: 'compras', label: 'Compras', icon: <ShoppingCart className="w-5 h-5" />, category: 'operativos', priority: 2 },
     { id: 'pedidos', label: 'Pedidos', icon: <CreditCard className="w-5 h-5" />, category: 'operativos', priority: 2 },
     { id: 'devolucion-venta', label: 'Devoluciones Ventas', icon: <Undo2 className="w-5 h-5" />, category: 'operativos', priority: 2 },
+    { id: 'devolucion-compra', label: 'Devoluciones Compras', icon: <Undo2 className="w-5 h-5" />, category: 'operativos', priority: 2 },
 
     // INFORMES
     {

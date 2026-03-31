@@ -1,101 +1,119 @@
 <?php
-// src/Api/devoluciones/ApiGenerarPDFDevolucion.php
+/**
+ * ApiGenerarPDFDevolucion.php - API para generar PDF de devolución de compras
+ * 
+ * Este endpoint genera un PDF con los detalles de una devolución de compra,
+ * incluyendo información del proveedor, productos devueltos y totales.
+ * 
+ * @package AllSeasonFlowers
+ * @category API
+ * @subpackage DevolucionesCompras
+ */
+
 require_once($_SERVER['DOCUMENT_ROOT'] . "/DatenBankenApp/fpdf/fpdf.php");
 include $_SERVER['DOCUMENT_ROOT'] . "/DatenBankenApp/AllSeasonFlowers/conexionBaseDatos/conexionbd.php";
+
+// Configuración de errores y charset
 $enlace->set_charset("utf8mb4");
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
 
+// Validar método HTTP
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    die(json_encode(["error" => "Método no permitido. Usa POST."]));
+    http_response_code(405);
+    die(json_encode(["success" => false, "message" => "Método no permitido. Usa POST."]));
 }
 
+// Obtener y validar datos de entrada
 $input = json_decode(file_get_contents("php://input"), true);
-if (!isset($input['idFactura']) || empty($input['idFactura'])) {
-    die(json_encode(["error" => "ID de factura no válido."]));
+if (!isset($input['idCompra']) || empty($input['idCompra'])) {
+    http_response_code(400);
+    die(json_encode(["success" => false, "message" => "ID de compra no válido."]));
 }
 
-$idFactura = intval($input['idFactura']);
+$idCompra = intval($input['idCompra']);
 
-// 🔴 CONSULTA 1: ENCABEZADO DE DEVOLUCIÓN (desde la factura con datos de devolución)
+// CONSULTA 1: ENCABEZADO DE DEVOLUCIÓN (desde la compra con datos de devolución)
 $sqlEncabezado = "SELECT
-                    enc.IdEncabCompra,
-                    enc.IdDevolucion,
-                    CONCAT('DEV-', LPAD(enc.IdDevolucion, 6, '0')) AS numero_devolucion,
-                    enc.FechaDevolucion,
-                    enc.ObservacionesDevolucion,
-                    CONCAT('FACT-', LPAD(enc.IdEncabCompra, 6, '0')) AS factura_asociada,
-                    enc.IdEncabCompra AS factura_numero,
-                    enc.FechaEntrega AS fecha_factura,
-                    pro.Proveedor AS proveedor_nombre,
-                    pro.Direccion AS direccion_proveedor,
-                    pro.Ciudad AS ciudad_proveedor,
-                    pro.Telefono AS telefono_proveedor,
-                    '' AS AWB,
-                    '' AS AWB_HIJA,
-                    '' AS AWB_NIETA,
-                    '' AS aerolinea,
-                    enc.IVA AS tiene_iva,
-                    enc.TRM,
-                    m.Moneda AS moneda
-                FROM SAS_EncabCompra enc
-                INNER JOIN GEN_Proveedores pro ON enc.IdProveedor = pro.IdProveedor
-                LEFT JOIN GEN_Monedas m ON enc.IdMoneda = m.IdMoneda
-                WHERE enc.IdEncabCompra = ? AND enc.IdDevolucion IS NOT NULL";
+                    ec.IdEncabCompra,
+                    ec.IdDevolucion,
+                    CONCAT('DEV-', LPAD(ec.IdDevolucion, 6, '0')) AS numero_devolucion,
+                    ec.FechaDevolucion,
+                    ec.ObservacionesDevolucion,
+                    CONCAT('COMP-', LPAD(ec.IdEncabCompra, 6, '0')) AS compra_asociada,
+                    ec.IdEncabCompra AS compra_numero,
+                    ec.FechaEntrega AS fecha_compra,
+                    p.Proveedor AS proveedor_nombre,
+                    p.Direccion AS direccion_proveedor,
+                    p.CIUDAD AS ciudad_proveedor,
+                    p.Telefono AS telefono_proveedor,
+                    ec.IVA AS tiene_iva,
+                    ec.TRM,
+                    m.Moneda AS moneda,
+                    c.NomComprador AS nombre_comprador
+                FROM SAS_EncabCompra ec
+                INNER JOIN GEN_Proveedores p ON ec.IdProveedor = p.IdProveedor
+                LEFT JOIN GEN_Monedas m ON ec.IdMoneda = m.IdMoneda
+                LEFT JOIN GEN_Compradores c ON ec.IdComprador = c.IdComprador
+                WHERE ec.IdEncabCompra = ? AND ec.IdDevolucion IS NOT NULL AND ec.Anulado = 0";
 
 $stmtEnc = $enlace->prepare($sqlEncabezado);
-$stmtEnc->bind_param("i", $idFactura);
+if (!$stmtEnc) {
+    http_response_code(500);
+    die(json_encode(["success" => false, "message" => "Error preparando consulta de encabezado: " . $enlace->error]));
+}
+
+$stmtEnc->bind_param("i", $idCompra);
 $stmtEnc->execute();
 $stmtEnc->bind_result(
     $idEncabCompra,
     $idDevolucion,
-    $numero_devolucion,
+    $numeroDevolucion,
     $fechaDevolucion,
     $observacionesDevolucion,
-    $factura_asociada,
-    $factura_numero,
-    $fecha_factura,
-    $proveedor_nombre,
-    $direccion_proveedor,
-    $ciudad_proveedor,
-    $telefono_proveedor,
-    $awb,
-    $awb_hija,
-    $awb_nieta,
-    $aerolinea,
-    $tiene_iva,
+    $compraAsociada,
+    $compraNumero,
+    $fechaCompra,
+    $proveedorNombre,
+    $direccionProveedor,
+    $ciudadProveedor,
+    $telefonoProveedor,
+    $tieneIva,
     $trm,
-    $moneda
+    $moneda,
+    $nombreComprador
 );
 
 if (!$stmtEnc->fetch()) {
-    die(json_encode(["error" => "Devolución no encontrada para esta factura."]));
+    http_response_code(404);
+    die(json_encode(["success" => false, "message" => "No se encontró la devolución para la compra especificada."]));
 }
 $stmtEnc->close();
 
-// 🔴 CONSULTA 2: DETALLE DE PRODUCTOS CON DATOS DE DEVOLUCIÓN
+// CONSULTA 2: DETALLE DE PRODUCTOS DEVUELTOS (solo campos que existen en compras)
 $sqlDetalle = "SELECT
-                dp.IdDetProducto,
+                dpc.IdDetProducto,
                 p.NOMPRODUCTO AS producto,
                 v.NOMVARIEDAD AS variedad,
                 g.NOMGRADO AS grado,
-                dp.TallosDevolucion,
-                dp.Precio_Compra AS precio_unitario,
-                dp.MotivoDevolucion,
-                dp.Flete,
-                dp.Fumigacion,
-                dp.Otros,
-                (dp.TallosDevolucion * dp.Precio_Compra) AS subtotal_producto,
-                ((dp.TallosDevolucion * dp.Precio_Compra) + dp.Flete + dp.Fumigacion + dp.Otros) AS total_linea
-            FROM SAS_DetProductoCompra dp
-            LEFT JOIN GEN_Productos p ON dp.IdProducto = p.IdProducto
-            LEFT JOIN GEN_Variedades v ON dp.IdVariedad = v.IdVariedad
-            LEFT JOIN GEN_Grados g ON dp.IdGrado = g.IdGrado
-            WHERE dp.IdEncabCompra = ? AND dp.TallosDevolucion > 0
-            ORDER BY dp.IdDetProducto";
+                dpc.TallosDevolucion,
+                dpc.Precio_Compra AS precio_unitario,
+                dpc.MotivoDevolucion,
+                (dpc.TallosDevolucion * dpc.Precio_Compra) AS total_linea
+            FROM SAS_DetProductoCompra dpc
+            LEFT JOIN GEN_Productos p ON dpc.IdProducto = p.IdProducto
+            LEFT JOIN GEN_Variedades v ON dpc.IdVariedad = v.IdVariedad
+            LEFT JOIN GEN_Grados g ON dpc.IdGrado = g.IdGrado
+            WHERE dpc.IdEncabCompra = ? AND dpc.TallosDevolucion > 0
+            ORDER BY dpc.IdDetProducto";
 
 $stmtDet = $enlace->prepare($sqlDetalle);
-$stmtDet->bind_param("i", $idFactura);
+if (!$stmtDet) {
+    http_response_code(500);
+    die(json_encode(["success" => false, "message" => "Error preparando consulta de detalle: " . $enlace->error]));
+}
+
+$stmtDet->bind_param("i", $idCompra);
 $stmtDet->execute();
 $stmtDet->bind_result(
     $idDetProducto,
@@ -105,18 +123,10 @@ $stmtDet->bind_result(
     $tallosDevueltos,
     $precioUnitario,
     $motivo,
-    $flete,
-    $fumigacion,
-    $otros,
-    $subtotalProducto,
     $totalLinea
 );
 
 $detalle = [];
-$totalSubtotal = 0;
-$totalFlete = 0;
-$totalFumigacion = 0;
-$totalOtros = 0;
 $totalGeneral = 0;
 
 while ($stmtDet->fetch()) {
@@ -127,112 +137,93 @@ while ($stmtDet->fetch()) {
         'tallos' => $tallosDevueltos,
         'precio' => $precioUnitario,
         'motivo' => $motivo,
-        'flete' => $flete,
-        'fumigacion' => $fumigacion,
-        'otros' => $otros,
-        'subtotal' => $subtotalProducto,
         'total' => $totalLinea
     ];
     $detalle[] = $item;
-
-    $totalSubtotal += $subtotalProducto;
-    $totalFlete += $flete;
-    $totalFumigacion += $fumigacion;
-    $totalOtros += $otros;
+    
     $totalGeneral += $totalLinea;
 }
 $stmtDet->close();
 
-// Calcular IVA si aplica
-$iva = 0;
-if ($tiene_iva == 1) {
-    $iva = $totalSubtotal * 0.19;
+// Si no hay detalles con tallos devueltos, mostrar mensaje
+if (empty($detalle)) {
+    http_response_code(400);
+    die(json_encode(["success" => false, "message" => "No hay productos devueltos en esta compra."]));
 }
-$totalFinal = $totalGeneral + $iva;
 
-// Preparar fecha formateada
-$fechaFormateada = date('d-M-y', strtotime($fechaDevolucion));
-
-// Clase PDF personalizada (similar a la de factura)
-class PDF_Devolucion extends FPDF
+// CLASE PDF PERSONALIZADA PARA DEVOLUCIONES DE COMPRAS
+class PDF_DevolucionCompra extends FPDF
 {
     function Header()
     {
-        global $fechaFormateada, $numero_devolucion, $factura_asociada, $proveedor_nombre, $direccion_proveedor, $ciudad_proveedor, $telefono_proveedor, $awb, $awb_hija, $awb_nieta, $aerolinea, $observacionesDevolucion;
-
-        // Logo
-        $this->Image($_SERVER['DOCUMENT_ROOT'] . "/DatenBankenApp/AllSeasonFlowers/img/LogoAllSeason.jpg", 10, 8, 50);
-
+        global $numeroDevolucion, $fechaDevolucion, $proveedorNombre, $direccionProveedor, 
+               $ciudadProveedor, $telefonoProveedor, $observacionesDevolucion, 
+               $compraAsociada, $fechaCompra, $tieneIva, $trm, $moneda, $nombreComprador;
+        
+        // Logo (si existe)
+        $logoPath = $_SERVER['DOCUMENT_ROOT'] . "/DatenBankenApp/AllSeasonFlowers/assets/logo.png";
+        if (file_exists($logoPath)) {
+            $this->Image($logoPath, 10, 8, 30);
+        }
+        
         // Título
-        $this->SetY(10);
-        $this->SetX(70);
         $this->SetFont('Helvetica', 'B', 16);
-        $this->Cell(0, 10, utf8_decode('DEVOLUCIÓN / NOTA CRÉDITO COMPRA'), 0, 1, 'C');
-
-        // Número de devolución y fecha
-        $this->SetX(70);
-        $this->SetFont('Helvetica', 'B', 10);
-        $this->Cell(25, 6, utf8_decode('No. Devolución:'), 0, 0, 'R');
+        $this->Cell(0, 10, utf8_decode('NOTA DE DEVOLUCIÓN DE COMPRA'), 0, 1, 'C');
+        
+        $this->SetFont('Helvetica', 'B', 12);
+        $this->Cell(0, 6, $numeroDevolucion, 0, 1, 'C');
+        
         $this->SetFont('Helvetica', '', 10);
-        $this->Cell(25, 6, $numero_devolucion, 0, 0, 'L');
+        $this->Cell(0, 5, 'Fecha: ' . $fechaDevolucion, 0, 1, 'C');
+        
+        $this->Ln(5);
+        
+        // Información de la empresa
         $this->SetFont('Helvetica', 'B', 10);
-        $this->Cell(25);
-        $this->SetFont('Helvetica', '', 10);
-        $this->Cell(0, 6, $fechaFormateada, 0, 1, 'L');
-
-        // Factura asociada
-        $this->SetX(70);
+        $this->Cell(0, 5, 'ALL SEASON FLOWERS', 0, 1, 'L');
+        $this->SetFont('Helvetica', '', 9);
+        $this->Cell(0, 4, 'Carrera 10 # 9 - 45, Bogotá D.C.', 0, 1, 'L');
+        $this->Cell(0, 4, 'Tel: (57) 1 123 4567 | Email: info@allseasonflowers.com', 0, 1, 'L');
+        
+        $this->Ln(3);
+        $this->addSeparatorLine();
+        
+        // Información del proveedor
         $this->SetFont('Helvetica', 'B', 10);
-        $this->Cell(50, 6, 'Factura:', 0, 0, 'R');
+        $this->Cell(30, 5, 'Proveedor:', 0, 0, 'L');
         $this->SetFont('Helvetica', '', 10);
-        $this->Cell(0, 6, $factura_asociada, 0, 1, 'L');
-
-        $this->Ln(10);
-
-        // Datos del cliente
-        $this->SetFont('Helvetica', 'B', 10);
-        $this->Cell(30, 5, 'Cliente:', 0, 0, 'L');
-        $this->SetFont('Helvetica', '', 10);
-        $this->Cell(0, 5, utf8_decode($cliente_nombre), 0, 1, 'L');
-
+        $this->Cell(0, 5, utf8_decode($proveedorNombre), 0, 1, 'L');
+        
         $this->SetFont('Helvetica', 'B', 10);
         $this->Cell(30, 5, utf8_decode('Dirección:'), 0, 0, 'L');
         $this->SetFont('Helvetica', '', 10);
-        $this->Cell(0, 5, utf8_decode($direccion_cliente), 0, 1, 'L');
-
+        $this->Cell(0, 5, utf8_decode($direccionProveedor), 0, 1, 'L');
+        
         $this->SetFont('Helvetica', 'B', 10);
         $this->Cell(30, 5, 'Ciudad:', 0, 0, 'L');
         $this->SetFont('Helvetica', '', 10);
-        $this->Cell(0, 5, utf8_decode($ciudad_cliente), 0, 1, 'L');
-
+        $this->Cell(0, 5, utf8_decode($ciudadProveedor), 0, 1, 'L');
+        
         $this->SetFont('Helvetica', 'B', 10);
         $this->Cell(30, 5, utf8_decode('Teléfono:'), 0, 0, 'L');
         $this->SetFont('Helvetica', '', 10);
-        $this->Cell(0, 5, $telefono_cliente, 0, 1, 'L');
-
+        $this->Cell(0, 5, $telefonoProveedor, 0, 1, 'L');
+        
         $this->Ln(3);
-
-        // Información de envío
+        
+        // Información de la compra asociada
         $this->SetFont('Helvetica', 'B', 10);
-        $this->Cell(20, 5, 'AWB:', 0, 0, 'L');
+        $this->Cell(40, 5, 'Compra asociada:', 0, 0, 'L');
         $this->SetFont('Helvetica', '', 10);
-        $this->Cell(50, 5, $awb, 0, 0, 'L');
+        $this->Cell(0, 5, $compraAsociada . ' (Fecha: ' . $fechaCompra . ')', 0, 1, 'L');
+        
         $this->SetFont('Helvetica', 'B', 10);
-        $this->Cell(25, 5, 'AWB Hija:', 0, 0, 'L');
+        $this->Cell(40, 5, 'Comprador:', 0, 0, 'L');
         $this->SetFont('Helvetica', '', 10);
-        $this->Cell(50, 5, $awb_hija, 0, 1, 'L');
-
-        $this->SetFont('Helvetica', 'B', 10);
-        $this->Cell(20, 5, 'AWB Nieta:', 0, 0, 'L');
-        $this->SetFont('Helvetica', '', 10);
-        $this->Cell(50, 5, $awb_nieta, 0, 0, 'L');
-        $this->SetFont('Helvetica', 'B', 10);
-        $this->Cell(25, 5, utf8_decode('Aerolínea:'), 0, 0, 'L');
-        $this->SetFont('Helvetica', '', 10);
-        $this->Cell(0, 5, utf8_decode($aerolinea), 0, 1, 'L');
-
+        $this->Cell(0, 5, utf8_decode($nombreComprador ?: 'No especificado'), 0, 1, 'L');
+        
         $this->Ln(5);
-
+        
         // Observaciones de devolución
         if (!empty($observacionesDevolucion)) {
             $this->SetFont('Helvetica', 'B', 10);
@@ -242,14 +233,14 @@ class PDF_Devolucion extends FPDF
             $this->Ln(2);
         }
     }
-
+    
     function Footer()
     {
         $this->SetY(-15);
         $this->SetFont('Helvetica', 'I', 8);
         $this->Cell(0, 10, 'Página ' . $this->PageNo() . '/{nb}', 0, 0, 'C');
     }
-
+    
     function addSeparatorLine()
     {
         $this->SetLineWidth(0.1);
@@ -260,7 +251,7 @@ class PDF_Devolucion extends FPDF
 }
 
 // Crear PDF
-$pdf = new PDF_Devolucion('P', 'mm', 'Letter');
+$pdf = new PDF_DevolucionCompra('P', 'mm', 'Letter');
 $pdf->SetMargins(10, 10, 10);
 $pdf->AliasNbPages();
 $pdf->AddPage();
@@ -269,27 +260,21 @@ $pdf->AddPage();
 $pdf->SetFont('Helvetica', 'B', 8);
 $pdf->SetFillColor(220, 220, 220);
 
-// Definir anchos de columnas (ajusta según necesidad)
-$anchoProd = 30;
-$anchoVar = 20;
-$anchoGrado = 15;
-$anchoTallos = 15;
-$anchoPrecio = 15;
-$anchoMotivo = 40;
-$anchoFlete = 12;
-$anchoFumi = 12;
-$anchoOtros = 12;
+// Definir anchos de columnas (ajustados para compras - sin Flete, Fumigacion, Otros)
+$anchoProd = 35;
+$anchoVar = 25;
+$anchoGrado = 20;
+$anchoTallos = 20;
+$anchoPrecio = 20;
+$anchoMotivo = 50;
 $anchoTotal = 20;
 
 $pdf->Cell($anchoProd, 6, 'Producto', 1, 0, 'C', true);
 $pdf->Cell($anchoVar, 6, 'Variedad', 1, 0, 'C', true);
 $pdf->Cell($anchoGrado, 6, 'Grado', 1, 0, 'C', true);
-$pdf->Cell($anchoTallos, 6, 'Tallos', 1, 0, 'C', true);
+$pdf->Cell($anchoTallos, 6, 'Tallos Dev.', 1, 0, 'C', true);
 $pdf->Cell($anchoPrecio, 6, 'Precio U', 1, 0, 'C', true);
 $pdf->Cell($anchoMotivo, 6, 'Motivo', 1, 0, 'C', true);
-$pdf->Cell($anchoFlete, 6, 'Flete', 1, 0, 'C', true);
-$pdf->Cell($anchoFumi, 6, 'Fumig.', 1, 0, 'C', true);
-$pdf->Cell($anchoOtros, 6, 'Otros', 1, 0, 'C', true);
 $pdf->Cell($anchoTotal, 6, 'Total', 1, 1, 'C', true);
 
 $pdf->SetFont('Helvetica', '', 7);
@@ -299,69 +284,54 @@ foreach ($detalle as $item) {
     // Verificar salto de página
     if ($pdf->GetY() > 250) {
         $pdf->AddPage();
-        // Redibujar encabezados
+        // Redibujar encabezados de tabla en nueva página
         $pdf->SetFont('Helvetica', 'B', 8);
         $pdf->SetFillColor(220, 220, 220);
         $pdf->Cell($anchoProd, 6, 'Producto', 1, 0, 'C', true);
         $pdf->Cell($anchoVar, 6, 'Variedad', 1, 0, 'C', true);
         $pdf->Cell($anchoGrado, 6, 'Grado', 1, 0, 'C', true);
-        $pdf->Cell($anchoTallos, 6, 'Tallos', 1, 0, 'C', true);
+        $pdf->Cell($anchoTallos, 6, 'Tallos Dev.', 1, 0, 'C', true);
         $pdf->Cell($anchoPrecio, 6, 'Precio U', 1, 0, 'C', true);
         $pdf->Cell($anchoMotivo, 6, 'Motivo', 1, 0, 'C', true);
-        $pdf->Cell($anchoFlete, 6, 'Flete', 1, 0, 'C', true);
-        $pdf->Cell($anchoFumi, 6, 'Fumig.', 1, 0, 'C', true);
-        $pdf->Cell($anchoOtros, 6, 'Otros', 1, 0, 'C', true);
         $pdf->Cell($anchoTotal, 6, 'Total', 1, 1, 'C', true);
         $pdf->SetFont('Helvetica', '', 7);
+        $pdf->SetFillColor(255, 255, 255);
     }
-
-    $pdf->Cell($anchoProd, 5, utf8_decode(substr($item['producto'], 0, 15)), 1, 0, 'L');
-    $pdf->Cell($anchoVar, 5, utf8_decode(substr($item['variedad'], 0, 10)), 1, 0, 'L');
-    $pdf->Cell($anchoGrado, 5, utf8_decode($item['grado']), 1, 0, 'L');
-    $pdf->Cell($anchoTallos, 5, $item['tallos'], 1, 0, 'C');
-    $pdf->Cell($anchoPrecio, 5, '$' . number_format($item['precio'], 2), 1, 0, 'R');
-    $pdf->Cell($anchoMotivo, 5, utf8_decode(substr($item['motivo'], 0, 12)), 1, 0, 'L');
-    $pdf->Cell($anchoFlete, 5, '$' . number_format($item['flete'], 2), 1, 0, 'R');
-    $pdf->Cell($anchoFumi, 5, '$' . number_format($item['fumigacion'], 2), 1, 0, 'R');
-    $pdf->Cell($anchoOtros, 5, '$' . number_format($item['otros'], 2), 1, 0, 'R');
-    $pdf->Cell($anchoTotal, 5, '$' . number_format($item['total'], 2), 1, 1, 'R');
+    
+    $pdf->Cell($anchoProd, 6, utf8_decode(substr($item['producto'], 0, 20)), 1, 0, 'L', true);
+    $pdf->Cell($anchoVar, 6, utf8_decode(substr($item['variedad'], 0, 15)), 1, 0, 'L', true);
+    $pdf->Cell($anchoGrado, 6, utf8_decode(substr($item['grado'], 0, 10)), 1, 0, 'C', true);
+    $pdf->Cell($anchoTallos, 6, $item['tallos'], 1, 0, 'C', true);
+    $pdf->Cell($anchoPrecio, 6, '$' . number_format($item['precio'], 2), 1, 0, 'R', true);
+    $pdf->Cell($anchoMotivo, 6, utf8_decode(substr($item['motivo'], 0, 25)), 1, 0, 'L', true);
+    $pdf->Cell($anchoTotal, 6, '$' . number_format($item['total'], 2), 1, 1, 'R', true);
 }
 
-// Línea separadora
-$pdf->addSeparatorLine();
+$pdf->Ln(5);
 
 // Totales
 $pdf->SetFont('Helvetica', 'B', 9);
-$pdf->Cell(135, 6, '', 0, 0, 'L');
-$pdf->Cell(36, 6, 'Subtotal:', 0, 0, 'R');
-$pdf->Cell(20, 6, '$' . number_format($totalSubtotal, 2), 0, 1, 'R');
+$pdf->Cell($anchoProd + $anchoVar + $anchoGrado + $anchoTallos + $anchoPrecio + $anchoMotivo, 6, 'TOTAL GENERAL:', 0, 0, 'R');
+$pdf->Cell($anchoTotal, 6, '$' . number_format($totalGeneral, 2), 1, 1, 'R');
 
-$pdf->Cell(135, 6, '', 0, 0, 'L');
-$pdf->Cell(36, 6, 'Flete:', 0, 0, 'R');
-$pdf->Cell(20, 6, '$' . number_format($totalFlete, 2), 0, 1, 'R');
+// Información adicional
+$pdf->Ln(10);
+$pdf->SetFont('Helvetica', '', 9);
+$pdf->MultiCell(0, 5, utf8_decode("Nota: Esta devolución corresponde a la compra $compraAsociada con fecha $fechaCompra. Los valores están expresados en $moneda con TRM de $trm."), 0, 'L');
 
-$pdf->Cell(135, 6, '', 0, 0, 'L');
-$pdf->Cell(36, 6, utf8_decode('Fumigación:'), 0, 0, 'R');
-$pdf->Cell(20, 6, '$' . number_format($totalFumigacion, 2), 0, 1, 'R');
-
-$pdf->Cell(135, 6, '', 0, 0, 'L');
-$pdf->Cell(36, 6, 'Otros:', 0, 0, 'R');
-$pdf->Cell(20, 6, '$' . number_format($totalOtros, 2), 0, 1, 'R');
-
-if ($tiene_iva == 1) {
-    $pdf->Cell(135, 6, '', 0, 0, 'L');
-    $pdf->Cell(36, 6, 'IVA (19%):', 0, 0, 'R');
-    $pdf->Cell(20, 6, '$' . number_format($iva, 2), 0, 1, 'R');
+if ($tieneIva) {
+    $pdf->SetFont('Helvetica', 'B', 9);
+    $pdf->Cell(0, 5, utf8_decode('(*) Incluye IVA'), 0, 1, 'L');
 }
 
-$pdf->SetFont('Helvetica', 'B', 11);
-$pdf->Cell(135, 8, '', 0, 0, 'L');
-$pdf->Cell(36, 8, 'TOTAL:', 0, 0, 'R');
-$pdf->Cell(20, 8, '$' . number_format($totalFinal, 2), 0, 1, 'R');
+// Firmas
+$pdf->Ln(15);
+$pdf->SetFont('Helvetica', '', 9);
+$pdf->Cell(95, 5, utf8_decode('___________________________'), 0, 0, 'C');
+$pdf->Cell(95, 5, utf8_decode('___________________________'), 0, 1, 'C');
+$pdf->Cell(95, 5, 'Responsable All Season Flowers', 0, 0, 'C');
+$pdf->Cell(95, 5, 'Recibido por Proveedor', 0, 1, 'C');
 
-$pdf->Ln(5);
-$pdf->SetFont('Helvetica', 'I', 8);
-$pdf->Cell(0, 5, 'Moneda: ' . utf8_decode($moneda) . ' - TRM: ' . number_format($trm, 2), 0, 1, 'R');
-
-// Salida del PDF
-$pdf->Output('I', 'Devolucion_' . $numero_devolucion . '.pdf');
+// Generar PDF
+$pdf->Output('I', "Devolucion_Compra_$numeroDevolucion.pdf");
+?>

@@ -6,6 +6,7 @@ import Sidebar from './components/layout/Sidebar';
 import Dashboard from './pages/Dashboard/Dashboard';
 import Pedidos from './modules/pedidos/Pedidos';
 import Devoluciones from './modules/devoluciones/Devoluciones';
+import DevolucionesCompras from './modules/devolucionesCompras/DevolucionesCompras';
 import Compras from './modules/compras/Compras';
 import Clientes from './pages/Clientes/Clientes';
 import Productos from './pages/Productos/Productos';
@@ -26,6 +27,8 @@ function App() {
         return <Pedidos />;
       case 'devolucion-venta':
         return <Devoluciones />;
+      case 'devolucion-compra':
+        return <DevolucionesCompras />;
       case 'compras':
         return <Compras />;
       case 'clientes':

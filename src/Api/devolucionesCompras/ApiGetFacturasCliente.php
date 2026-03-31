@@ -1,8 +1,20 @@
 <?php
-// src/Api/pedidos/ApiGetFacturasCliente.php
+/**
+ * ApiGetFacturasCliente.php - API para obtener compras de un proveedor
+ * 
+ * Este endpoint obtiene todas las compras de un proveedor específico
+ * para poder seleccionar una compra y procesar su devolución.
+ * 
+ * @package AllSeasonFlowers
+ * @category API
+ * @subpackage DevolucionesCompras
+ */
+
 header("Content-Type: application/json");
 
+// Validar método HTTP
 if ($_SERVER["REQUEST_METHOD"] !== "POST") {
+    http_response_code(405);
     echo json_encode(["success" => false, "message" => "Método no permitido"]);
     exit;
 }
@@ -11,104 +23,113 @@ if ($_SERVER["REQUEST_METHOD"] !== "POST") {
 include $_SERVER['DOCUMENT_ROOT'] . "/DatenBankenApp/AllSeasonFlowers/conexionBaseDatos/conexionbd.php";
 
 if ($enlace->connect_error) {
-    echo json_encode(["success" => false, "message" => "Error de conexión: " . $enlace->connect_error]);
+    http_response_code(500);
+    echo json_encode(["success" => false, "message" => "Error de conexión a la base de datos"]);
     exit;
 }
 
-// Leer el ID del cliente
+// Obtener y validar datos JSON
 $json = file_get_contents("php://input");
 $data = json_decode($json, true);
 
-if (!$data || !isset($data["idCliente"]) || !is_numeric($data["idCliente"])) {
-    echo json_encode(["success" => false, "message" => "ID de cliente no válido"]);
+if (!$data || !isset($data["idProveedor"]) || !is_numeric($data["idProveedor"])) {
+    http_response_code(400);
+    echo json_encode(["success" => false, "message" => "ID de proveedor no válido"]);
     exit;
 }
 
-$idCliente = intval($data["idCliente"]);
+$idProveedor = intval($data["idProveedor"]);
 
 try {
-    // Consulta para obtener todas las facturas del cliente
+    // Consulta para obtener todas las compras del proveedor
     // Incluye las que ya tienen devolución (IdDevolucion no NULL)
     $sql = "SELECT 
-                ep.IdEncabPedido,
-                ep.Factura,
-                ep.FechaSolicitud,
-                ep.IdMoneda,
-                ep.TRM,
-                ep.IdDevolucion,
-                c.NOMBRE AS nombreCliente,
+                ec.IdEncabCompra,
+                ec.IdEncabCompra AS numeroCompra,
+                ec.FechaSolicitud,
+                ec.IdMoneda,
+                ec.TRM,
+                ec.IdDevolucion,
+                p.Proveedor AS nombreProveedor,
                 m.Moneda AS nombreMoneda,
-                COALESCE(ep.AWB, 'SG') AS guiaMaster
-            FROM SAS_EncabPedido ep
-            INNER JOIN GEN_Clientes c ON ep.IdCliente = c.IdCliente
-            INNER JOIN GEN_Monedas m ON ep.IdMoneda = m.IdMoneda
-            WHERE ep.IdCliente = ?
-            AND ep.Factura IS NOT NULL          -- Solo registros que tienen número de factura
-            AND ep.Factura > 0                   -- Número de factura válido
-            ORDER BY ep.FechaSolicitud DESC, ep.IdEncabPedido DESC";
+                ec.PO_Proveedor,
+                ec.Estado,
+                c.NomComprador AS nombreComprador
+            FROM SAS_EncabCompra ec
+            INNER JOIN GEN_Proveedores p ON ec.IdProveedor = p.IdProveedor
+            INNER JOIN GEN_Monedas m ON ec.IdMoneda = m.IdMoneda
+            LEFT JOIN GEN_Compradores c ON ec.IdComprador = c.IdComprador
+            WHERE ec.IdProveedor = ?
+            AND ec.Anulado = 0                    -- Solo compras no anuladas            
+            ORDER BY ec.FechaSolicitud DESC, ec.IdEncabCompra DESC";
 
     $stmt = $enlace->prepare($sql);
     if (!$stmt) {
         throw new Exception("Error preparando consulta: " . $enlace->error);
     }
 
-    $stmt->bind_param("i", $idCliente);
+    $stmt->bind_param("i", $idProveedor);
     $stmt->execute();
 
-    // Vincular resultados
     $stmt->bind_result(
-        $idEncabPedido,
-        $numeroFactura,
-        $fechaFactura,
+        $idEncabCompra,
+        $numeroCompra,
+        $fechaSolicitud,
         $idMoneda,
         $trm,
         $idDevolucion,
-        $nombreCliente,
+        $nombreProveedor,
         $nombreMoneda,
-        $guiaMaster,
+        $poProveedor,
+        $estado,
+        $nombreComprador
     );
 
-    $facturas = [];
-
+    $compras = [];
     while ($stmt->fetch()) {
-        // Determinar si ya tiene devolución
-        $tieneDevolucion = ($idDevolucion !== null && $idDevolucion > 0);
-
-        $facturas[] = [
-            "idEncabPedido" => $idEncabPedido,
-            "numeroFactura" => $numeroFactura,
-            "numeroFacturaFormateado" => "FACT-" . str_pad($numeroFactura, 6, "0", STR_PAD_LEFT),
-            "fechaFactura" => $fechaFactura,
-            "cliente" => $nombreCliente,
-            "idCliente" => $idCliente,
-            "moneda" => $nombreMoneda,
-            "guia" => $guiaMaster,
+        $compras[] = [
+            "idCompra" => $idEncabCompra,
+            "numeroCompra" => $numeroCompra,
+            "fecha" => $fechaSolicitud,
             "idMoneda" => $idMoneda,
-            "trm" => floatval($trm),
-            "tieneDevolucion" => $tieneDevolucion,
-            "idDevolucion" => $tieneDevolucion ? $idDevolucion : null
+            "nombreMoneda" => $nombreMoneda,
+            "trm" => $trm,
+            "idDevolucion" => $idDevolucion,
+            "nombreProveedor" => $nombreProveedor,
+            "poProveedor" => $poProveedor,
+            "estado" => $estado,
+            "nombreComprador" => $nombreComprador,
+            "tieneDevolucion" => ($idDevolucion !== null && $idDevolucion > 0)
         ];
     }
 
     $stmt->close();
-    $enlace->close();
 
+    // Respuesta exitosa
+    http_response_code(200);
     echo json_encode([
         "success" => true,
-        "facturas" => $facturas,
-        "total" => count($facturas)
+        "compras" => $compras,
+        "total" => count($compras),
+        "proveedor" => [
+            "idProveedor" => $idProveedor,
+            "nombreProveedor" => $nombreProveedor ?? "Desconocido"
+        ]
     ]);
 
 } catch (Exception $e) {
-    error_log("Error en ApiGetFacturasCliente.php: " . $e->getMessage());
-
+    // Log de error y respuesta de error
+    error_log("Error en ApiGetFacturasCliente.php (Compras): " . $e->getMessage());
+    
+    http_response_code(500);
+    echo json_encode([
+        "success" => false, 
+        "message" => "Error al obtener compras del proveedor: " . $e->getMessage()
+    ]);
+} finally {
+    // Cerrar conexión
     if (isset($enlace)) {
         $enlace->close();
     }
-
-    echo json_encode([
-        "success" => false,
-        "message" => "Error interno del servidor"
-    ]);
 }
 ?>

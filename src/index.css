@@ -1,3 +1,36 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* =============================================
+   All Season Flowers — Animaciones Dashboard
+   ============================================= */
+
+@keyframes asf-float {
+  0%,  100% { transform: translateY(0px)  rotate(0deg);   }
+  33%       { transform: translateY(-10px) rotate(1.5deg); }
+  66%       { transform: translateY(-5px)  rotate(-1deg);  }
+}
+.asf-float {
+  animation: asf-float 5s ease-in-out infinite;
+}
+
+@keyframes asf-gradient-shift {
+  0%,  100% { background-position: 0%   50%; }
+  50%       { background-position: 100% 50%; }
+}
+.asf-gradient-text {
+  background: linear-gradient(
+    135deg,
+    #ffffff  0%,
+    #86efac 25%,
+    #34d399 50%,
+    #6ee7b7 75%,
+    #ffffff 100%
+  );
+  background-size: 300% 300%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: asf-gradient-shift 5s ease infinite;
+}

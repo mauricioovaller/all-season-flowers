@@ -1,14 +1,19 @@
 {
   "mcpServers": {
     "mysql": {
-      "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-mysql", "mysql://${MYSQL_USER}:${MYSQL_PASS}@${MYSQL_HOST}:${MYSQL_PORT}/${MYSQL_DB}"],
+      "command": "node",
+      "args": [
+        "C:/Users/lenovo/AppData/Roaming/npm/node_modules/@benborla29/mcp-server-mysql/dist/index.js"
+      ],
       "env": {
-        "MYSQL_HOST": "${MYSQL_HOST}",
-        "MYSQL_PORT": "${MYSQL_PORT}",
-        "MYSQL_USER": "${MYSQL_USER}",
-        "MYSQL_PASS": "${MYSQL_PASS}",
-        "MYSQL_DB": "${MYSQL_DB}"
+        "MYSQL_HOST": "www.datenbankensoluciones.com.co",
+        "MYSQL_PORT": "3306",
+        "MYSQL_USER": "datenban_Lectura_AllSeason",
+        "MYSQL_PASS": "skjHA8{-,h72lK?%",
+        "MYSQL_DB": "datenban_AllSeasonFlowers",
+        "ALLOW_INSERT_OPERATION": "false",
+        "ALLOW_UPDATE_OPERATION": "false",
+        "ALLOW_DELETE_OPERATION": "false"
       }
     }
   }

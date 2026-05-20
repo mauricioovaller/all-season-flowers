@@ -48,7 +48,8 @@ export default function ModalBuscarDevolucionesCompras({ isOpen, onClose, onSele
 
     const formatFecha = (fecha) => {
         if (!fecha) return "";
-        return new Date(fecha).toLocaleDateString('es-CO');
+        // Corrigiendo desfase de zona horaria
+        return new Date(fecha + 'T00:00:00').toLocaleDateString('es-CO');
     };
 
     if (!isOpen) return null;

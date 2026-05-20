@@ -76,18 +76,18 @@ try {
     }
 
     $stmt->execute();
-    $result = $stmt->get_result();
-    $existe = ($result && $result->num_rows > 0);
+    $stmt->bind_result($idProveedor);
+    $existe = $stmt->fetch();
+    $stmt->close();
 
     // Respuesta exitosa
     echo json_encode([
         "success" => true,
-        "existe" => $existe,
+        "existe" => $existe ? true : false,
         "nit" => $nit,
         "message" => $existe ? "NIT ya existe en la base de datos" : "NIT disponible"
     ]);
-
-    $stmt->close();
+    $enlace->close();
 } catch (Exception $e) {
     // Manejo de errores
     http_response_code(500);
@@ -97,9 +97,4 @@ try {
         "message" => "Error en la validación",
         "error" => $e->getMessage()
     ]);
-} finally {
-    // Cerrar conexión
-    if (isset($enlace) && $enlace) {
-        $enlace->close();
-    }
 }

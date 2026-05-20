@@ -1,0 +1,1508 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Propuesta Comercial — Módulo Almacén & Nómina | DatenBanken Soluciones</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        :root {
+            --color: #6d28d9;
+            --color-cl: #8b5cf6;
+            --color-bg: #ede9fe;
+            --naranja: #ea580c;
+            --verde-ok: #16a34a;
+            --rojo-no: #dc2626;
+            --gris-osc: #1e293b;
+            --gris-med: #475569;
+            --gris-cl: #f1f5f9;
+            --borde: #e2e8f0;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #f8fafc;
+            color: var(--gris-osc);
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .pagina {
+            max-width: 860px;
+            margin: 32px auto;
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 4px 32px rgba(0, 0, 0, .10);
+            overflow: hidden;
+        }
+
+        /* ── ENCABEZADO ─────────────────────────────────── */
+        .header {
+            background: linear-gradient(135deg, var(--color) 0%, #3b0764 100%);
+            padding: 40px 48px 32px;
+            color: #fff;
+            position: relative;
+        }
+
+        .header::after {
+            content: '';
+            position: absolute;
+            bottom: -1px;
+            left: 0;
+            right: 0;
+            height: 32px;
+            background: #fff;
+            clip-path: ellipse(55% 100% at 50% 100%);
+        }
+
+        .header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+
+        .logo-area h1 {
+            font-size: 22px;
+            font-weight: 800;
+            letter-spacing: -.5px;
+        }
+
+        .logo-area p {
+            font-size: 12px;
+            opacity: .75;
+            margin-top: 2px;
+        }
+
+        .doc-info {
+            text-align: right;
+            font-size: 12px;
+            opacity: .85;
+        }
+
+        .doc-info strong {
+            font-size: 18px;
+            font-weight: 700;
+            display: block;
+            opacity: 1;
+        }
+
+        .header-titulo {
+            margin-top: 28px;
+        }
+
+        .header-titulo h2 {
+            font-size: 26px;
+            font-weight: 800;
+            line-height: 1.25;
+        }
+
+        .header-titulo p {
+            font-size: 14px;
+            opacity: .8;
+            margin-top: 6px;
+        }
+
+        .tag {
+            display: inline-block;
+            background: rgba(255, 255, 255, .18);
+            border: 1px solid rgba(255, 255, 255, .3);
+            border-radius: 20px;
+            padding: 4px 14px;
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: .5px;
+            text-transform: uppercase;
+            margin-top: 10px;
+            margin-right: 6px;
+        }
+
+        /* ── CUERPO ─────────────────────────────────────── */
+        .cuerpo {
+            padding: 40px 48px 48px;
+        }
+
+        /* Datos del cliente */
+        .datos-cliente {
+            background: var(--gris-cl);
+            border-radius: 10px;
+            padding: 20px 24px;
+            margin-bottom: 36px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px 32px;
+        }
+
+        .datos-cliente .campo {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .datos-cliente .campo label {
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: .6px;
+            color: var(--gris-med);
+            margin-bottom: 1px;
+        }
+
+        .datos-cliente .campo span {
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--gris-osc);
+            border-bottom: 1.5px dashed var(--borde);
+            padding-bottom: 3px;
+            min-height: 22px;
+        }
+
+        /* Banner cliente existente */
+        .banner-cliente {
+            background: linear-gradient(135deg, var(--color-bg) 0%, #fff 100%);
+            border: 1.5px solid var(--color-cl);
+            border-radius: 10px;
+            padding: 14px 20px;
+            margin-bottom: 32px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 13px;
+            color: var(--gris-osc);
+        }
+
+        .banner-cliente .ico {
+            font-size: 22px;
+            flex-shrink: 0;
+        }
+
+        .banner-cliente strong {
+            color: var(--color);
+        }
+
+        /* Secciones */
+        .seccion {
+            margin-bottom: 44px;
+        }
+
+        .seccion-titulo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 18px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid var(--color-bg);
+        }
+
+        .seccion-titulo .icono {
+            width: 32px;
+            height: 32px;
+            background: var(--color-bg);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 17px;
+            flex-shrink: 0;
+        }
+
+        .seccion-titulo h3 {
+            font-size: 17px;
+            font-weight: 700;
+            color: var(--color);
+        }
+
+        /* Separador de módulo */
+        .modulo-separador {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin: 36px 0 20px;
+        }
+
+        .modulo-separador .ms-badge {
+            background: var(--color);
+            color: #fff;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: .5px;
+            text-transform: uppercase;
+            padding: 4px 14px;
+            border-radius: 20px;
+            white-space: nowrap;
+        }
+
+        .modulo-separador::after {
+            content: '';
+            flex: 1;
+            height: 1.5px;
+            background: var(--borde);
+        }
+
+        /* Bloque de problema */
+        .bloque-problema {
+            background: linear-gradient(135deg, #fff7ed 0%, #fff 100%);
+            border-left: 4px solid var(--naranja);
+            border-radius: 0 10px 10px 0;
+            padding: 20px 24px;
+            margin-bottom: 16px;
+        }
+
+        .bloque-problema p {
+            color: var(--gris-med);
+            margin-bottom: 12px;
+        }
+
+        .bloque-problema ul {
+            list-style: none;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+
+        .bloque-problema ul li {
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+            font-size: 13px;
+            color: var(--gris-osc);
+        }
+
+        .bloque-problema ul li::before {
+            content: '✗';
+            color: var(--naranja);
+            font-weight: 700;
+            flex-shrink: 0;
+            margin-top: 1px;
+        }
+
+        /* Módulos funcionales */
+        .grid-funciones {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px;
+        }
+
+        .funcion {
+            border: 1px solid var(--borde);
+            border-radius: 10px;
+            padding: 16px 18px;
+        }
+
+        .funcion:hover {
+            box-shadow: 0 2px 12px rgba(109, 40, 217, .10);
+        }
+
+        .funcion-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 8px;
+        }
+
+        .funcion-icono {
+            font-size: 20px;
+            width: 36px;
+            height: 36px;
+            background: var(--color-bg);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .funcion-header h4 {
+            font-size: 13.5px;
+            font-weight: 700;
+            color: var(--gris-osc);
+        }
+
+        .funcion p {
+            font-size: 12.5px;
+            color: var(--gris-med);
+            line-height: 1.5;
+        }
+
+        .funcion .badge {
+            display: inline-block;
+            background: var(--color-bg);
+            color: var(--color);
+            border-radius: 4px;
+            padding: 1px 8px;
+            font-size: 11px;
+            font-weight: 600;
+            margin-top: 6px;
+        }
+
+        /* KPIs de beneficio */
+        .grid-kpi {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+
+        .kpi {
+            background: var(--color-bg);
+            border-radius: 10px;
+            padding: 20px 16px;
+            text-align: center;
+        }
+
+        .kpi .valor {
+            font-size: 30px;
+            font-weight: 800;
+            color: var(--color);
+            line-height: 1;
+        }
+
+        .kpi .etiqueta {
+            font-size: 12px;
+            color: var(--gris-med);
+            margin-top: 6px;
+            font-weight: 500;
+        }
+
+        /* Tabla comparativa */
+        .tabla-comp {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+
+        .tabla-comp thead tr {
+            background: var(--color);
+            color: #fff;
+        }
+
+        .tabla-comp thead th {
+            padding: 10px 14px;
+            text-align: left;
+            font-weight: 600;
+        }
+
+        .tabla-comp tbody tr:nth-child(even) {
+            background: var(--gris-cl);
+        }
+
+        .tabla-comp tbody td {
+            padding: 10px 14px;
+            border-bottom: 1px solid var(--borde);
+            color: var(--gris-osc);
+            vertical-align: top;
+        }
+
+        .tabla-comp .si {
+            color: var(--verde-ok);
+            font-weight: 700;
+        }
+
+        .tabla-comp .no {
+            color: var(--rojo-no);
+            font-weight: 700;
+        }
+
+        /* Inversión */
+        .tabla-inversion {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13.5px;
+        }
+
+        .tabla-inversion thead tr {
+            background: var(--color);
+            color: #fff;
+        }
+
+        .tabla-inversion thead th {
+            padding: 10px 16px;
+            text-align: left;
+            font-weight: 600;
+        }
+
+        .tabla-inversion tbody td {
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--borde);
+            vertical-align: top;
+        }
+
+        .tabla-inversion tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        .tabla-inversion .monto {
+            font-weight: 700;
+            color: var(--color);
+            white-space: nowrap;
+        }
+
+        .tabla-inversion .nota {
+            font-size: 11.5px;
+            color: var(--gris-med);
+            margin-top: 3px;
+        }
+
+        .tabla-inversion tbody tr:nth-child(even) {
+            background: var(--gris-cl);
+        }
+
+        .total-row td {
+            background: var(--gris-osc) !important;
+            color: #fff !important;
+            font-weight: 700;
+            font-size: 15px;
+        }
+
+        .total-row .monto {
+            color: var(--color-cl) !important;
+            font-size: 17px;
+        }
+
+        .pack-row td {
+            background: #3b0764 !important;
+            color: #fff !important;
+            font-weight: 700;
+            font-size: 15px;
+        }
+
+        .pack-row .monto {
+            color: #c4b5fd !important;
+            font-size: 17px;
+        }
+
+        .pack-row .ahorro {
+            font-size: 11px;
+            font-weight: 400;
+            color: #a5f3c0;
+            display: block;
+            margin-top: 3px;
+        }
+
+        .nota-iva {
+            font-size: 11.5px;
+            color: var(--gris-med);
+            margin-top: 8px;
+            font-style: italic;
+        }
+
+        /* Ventajas */
+        .grid-ventajas {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px;
+        }
+
+        .ventaja {
+            display: flex;
+            gap: 12px;
+            align-items: flex-start;
+            padding: 14px;
+            border: 1px solid var(--borde);
+            border-radius: 10px;
+        }
+
+        .ventaja .ving {
+            font-size: 22px;
+            flex-shrink: 0;
+        }
+
+        .ventaja h4 {
+            font-size: 13px;
+            font-weight: 700;
+            margin-bottom: 3px;
+            color: var(--gris-osc);
+        }
+
+        .ventaja p {
+            font-size: 12px;
+            color: var(--gris-med);
+        }
+
+        /* Cronograma */
+        .cronograma {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+
+        .cronograma thead tr {
+            background: var(--color);
+            color: #fff;
+        }
+
+        .cronograma thead th {
+            padding: 10px 14px;
+            text-align: left;
+            font-weight: 600;
+        }
+
+        .cronograma tbody tr:nth-child(even) {
+            background: var(--gris-cl);
+        }
+
+        .cronograma tbody td {
+            padding: 10px 14px;
+            border-bottom: 1px solid var(--borde);
+            vertical-align: top;
+        }
+
+        .semana-badge {
+            display: inline-block;
+            background: var(--color-bg);
+            color: var(--color);
+            border-radius: 4px;
+            padding: 1px 8px;
+            font-size: 11px;
+            font-weight: 700;
+        }
+
+        /* Condiciones */
+        .condiciones {
+            background: var(--gris-cl);
+            border-radius: 10px;
+            padding: 20px 24px;
+        }
+
+        .condiciones ul {
+            list-style: none;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+
+        .condiciones ul li {
+            font-size: 13px;
+            color: var(--gris-osc);
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+        }
+
+        .condiciones ul li::before {
+            content: '→';
+            color: var(--color);
+            font-weight: 700;
+            flex-shrink: 0;
+        }
+
+        /* PIE */
+        .footer {
+            background: var(--gris-osc);
+            color: #fff;
+            padding: 24px 48px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+            font-size: 12px;
+        }
+
+        .footer .firma strong {
+            font-size: 14px;
+            font-weight: 700;
+            display: block;
+            color: var(--color-cl);
+        }
+
+        .footer .vigencia {
+            text-align: right;
+            opacity: .75;
+        }
+
+        /* ── PRINT / PDF ─────────────────────────────────── */
+        /* Forzar que Chrome/Edge preserven colores y fondos al generar PDF */
+        * {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+            color-adjust: exact !important;
+        }
+
+        @page {
+            size: A4;
+            margin: 10mm 12mm;
+        }
+
+        @media print {
+            body {
+                background: #fff !important;
+                font-size: 12px;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+
+            .pagina {
+                max-width: 100%;
+                margin: 0;
+                border-radius: 0;
+                box-shadow: none;
+            }
+
+            /* Preservar gradiente del encabezado */
+            .header {
+                background: linear-gradient(135deg, #6d28d9 0%, #3b0764 100%) !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+
+            /* Quitar curva decorativa (no imprime bien) */
+            .header::after {
+                display: none;
+            }
+
+            /* Evitar cortes dentro de bloques clave */
+            .seccion {
+                break-inside: avoid;
+            }
+
+            .funcion {
+                break-inside: avoid;
+            }
+
+            .kpi {
+                break-inside: avoid;
+            }
+
+            .ventaja {
+                break-inside: avoid;
+            }
+
+            .datos-cliente {
+                break-inside: avoid;
+            }
+
+            .bloque-problema {
+                break-inside: avoid;
+            }
+
+            .banner-cliente {
+                break-inside: avoid;
+            }
+
+            .tabla-comp tr {
+                break-inside: avoid;
+            }
+
+            .tabla-inversion tr {
+                break-inside: avoid;
+            }
+
+            .cronograma tr {
+                break-inside: avoid;
+            }
+
+            /* Fondos de tarjetas y badges */
+            .kpi {
+                background: #ede9fe !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+
+            .badge {
+                background: #ede9fe !important;
+                color: #6d28d9 !important;
+            }
+
+            .funcion-icono {
+                background: #ede9fe !important;
+            }
+
+            .seccion-titulo .icono {
+                background: #ede9fe !important;
+            }
+
+            .semana-badge {
+                background: #ede9fe !important;
+                color: #6d28d9 !important;
+            }
+
+            .ms-badge {
+                background: #6d28d9 !important;
+                color: #fff !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+
+            .bloque-problema {
+                background: linear-gradient(135deg, #fff7ed 0%, #fff 100%) !important;
+                border-left: 4px solid #ea580c !important;
+            }
+
+            .banner-cliente {
+                background: #ede9fe !important;
+                border: 1.5px solid #8b5cf6 !important;
+            }
+
+            .datos-cliente {
+                background: #f1f5f9 !important;
+            }
+
+            .condiciones {
+                background: #f1f5f9 !important;
+            }
+
+            /* Encabezados de tablas */
+            .tabla-comp thead tr,
+            .tabla-inversion thead tr,
+            .cronograma thead tr {
+                background: #6d28d9 !important;
+                color: #fff !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+
+            /* Filas de totales */
+            .total-row td {
+                background: #1e293b !important;
+                color: #fff !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+
+            .total-row .monto {
+                color: #8b5cf6 !important;
+            }
+
+            .pack-row td {
+                background: #3b0764 !important;
+                color: #fff !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+
+            .pack-row .monto {
+                color: #c4b5fd !important;
+            }
+
+            .pack-row .ahorro {
+                color: #a5f3c0 !important;
+            }
+
+            /* Pie de página */
+            .footer {
+                background: #1e293b !important;
+                color: #fff !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+
+            .footer .firma strong {
+                color: #8b5cf6 !important;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="pagina">
+
+        <!-- ══ ENCABEZADO ══════════════════════════════════════ -->
+        <div class="header">
+            <div class="header-top">
+                <div class="logo-area">
+                    <h1>
+                        <svg width="28" height="28" viewBox="0 0 28 28"
+                            style="vertical-align:middle;margin-right:8px;display:inline-block" fill="none"
+                            xmlns="http://www.w3.org/2000/svg">
+                            <rect width="28" height="28" rx="7" fill="rgba(255,255,255,0.22)" />
+                            <text x="14" y="19" text-anchor="middle" font-family="Inter,sans-serif" font-size="11"
+                                font-weight="800" fill="white">DB</text>
+                        </svg>DatenBanken Soluciones
+                    </h1>
+                    <p>Ampliación del Sistema de Gestión · Sector Floricultor</p>
+                </div>
+                <div class="doc-info">
+                    <strong>COTIZACIÓN</strong>
+                    No. 2026-037<br>
+                    Bogotá, 7 de mayo de 2026<br>
+                    Vigencia: 30 días
+                </div>
+            </div>
+            <div class="header-titulo">
+                <h2>Propuesta de Ampliación<br>Módulo de Almacén de Insumos &amp; Módulo de Nómina</h2>
+                <p>Nuevas funcionalidades integradas a su sistema actual de gestión floricultora</p>
+                <span class="tag">📦 Almacén de Insumos</span>
+                <span class="tag">👥 Nómina y Pagos Masivos</span>
+            </div>
+        </div>
+
+        <!-- ══ CUERPO ══════════════════════════════════════════ -->
+        <div class="cuerpo">
+
+            <!-- Datos del cliente -->
+            <div class="datos-cliente">
+                <div class="campo">
+                    <label>Empresa</label>
+                    <span>&nbsp;</span>
+                </div>
+                <div class="campo">
+                    <label>NIT</label>
+                    <span>&nbsp;</span>
+                </div>
+                <div class="campo">
+                    <label>Persona de contacto</label>
+                    <span>Yordan Sebastian Cuervo</span>
+                </div>
+                <div class="campo">
+                    <label>Ciudad / Municipio</label>
+                    <span>&nbsp;</span>
+                </div>
+                <div class="campo">
+                    <label>Correo electrónico</label>
+                    <span>&nbsp;</span>
+                </div>
+                <div class="campo">
+                    <label>Teléfono</label>
+                    <span>315 659 4090</span>
+                </div>
+            </div>
+
+            <!-- Banner cliente existente -->
+            <div class="banner-cliente">
+                <div class="ico">🔗</div>
+                <div>
+                    <strong>Cliente con sistema activo.</strong> Esta propuesta corresponde a la
+                    <strong>ampliación</strong> de la plataforma web de gestión floricultora ya instalada y en
+                    funcionamiento. Los dos nuevos módulos se integran directamente a la aplicación existente,
+                    compartiendo la misma base de datos, usuarios y accesos.
+                </div>
+            </div>
+
+            <!-- ══════════════════════════════════════════════════════ -->
+            <!-- MÓDULO 1: ALMACÉN DE INSUMOS Y MATERIALES             -->
+            <!-- ══════════════════════════════════════════════════════ -->
+
+            <div class="modulo-separador">
+                <span class="ms-badge">📦 Módulo 1 · Almacén de Insumos y Materiales</span>
+            </div>
+
+            <!-- ── 1A. EL PROBLEMA ─────────────────────────────────── -->
+            <div class="seccion">
+                <div class="seccion-titulo">
+                    <div class="icono">⚠️</div>
+                    <h3>¿Cuál es el problema que resuelve este módulo?</h3>
+                </div>
+                <div class="bloque-problema">
+                    <p>El proceso de armar ramos y despachar flor consume una cantidad significativa de materiales e
+                        insumos: cauchos, capuchones, láminas de envoltura, papel, cajas de cartón, zuncho, grapas,
+                        separadores, productos químicos para hidratación y control de plagas, entre otros. Sin un
+                        control sistematizado, la empresa enfrenta problemas como los siguientes:</p>
+                    <ul>
+                        <li>Desconocimiento del stock real disponible de cada insumo</li>
+                        <li>Materiales que se agotan sin previo aviso, interrumpiendo la producción</li>
+                        <li>No existe un registro formal de a quién o a qué proceso se entregan los insumos</li>
+                        <li>Compras innecesarias por no saber cuánto hay en bodega</li>
+                        <li>Imposibilidad de cruzar el costo de insumos con el costo de producción de los ramos</li>
+                        <li>Pérdidas por vencimiento de productos químicos al no tener control de rotación</li>
+                        <li>Inventario manejado de memoria o en hojas de cálculo desactualizadas</li>
+                        <li>Sin trazabilidad: no se sabe quién tomó qué, cuándo ni para qué proceso</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- ── 1B. QUÉ INCLUYE ─────────────────────────────────── -->
+            <div class="seccion">
+                <div class="seccion-titulo">
+                    <div class="icono">📋</div>
+                    <h3>¿Qué incluye el Módulo de Almacén?</h3>
+                </div>
+                <div class="grid-funciones">
+
+                    <div class="funcion">
+                        <div class="funcion-header">
+                            <div class="funcion-icono">🗂️</div>
+                            <h4>Catálogo de Insumos y Materiales</h4>
+                        </div>
+                        <p>Registro maestro de todos los materiales: nombre, categoría (embalaje, químicos, consumibles,
+                            etc.), unidad de medida (unidades, rollos, kilos, litros), stock mínimo configurable y
+                            proveedor asociado.</p>
+                        <span class="badge">Base organizada</span>
+                    </div>
+
+                    <div class="funcion">
+                        <div class="funcion-header">
+                            <div class="funcion-icono">📥</div>
+                            <h4>Registro de Entradas (Ingresos)</h4>
+                        </div>
+                        <p>Cada vez que llega un pedido de materiales se registra: proveedor, fecha, cantidad
+                            ingresada, costo unitario y número de factura o remisión. El inventario se actualiza
+                            automáticamente al guardar.</p>
+                        <span class="badge">Stock siempre al día</span>
+                    </div>
+
+                    <div class="funcion">
+                        <div class="funcion-header">
+                            <div class="funcion-icono">📤</div>
+                            <h4>Registro de Salidas (Consumo)</h4>
+                        </div>
+                        <p>Cuando se retiran materiales de bodega se registra: la cantidad, el área o proceso al que
+                            se destinan (armado de ramos, despacho, mantenimiento), la fecha y el responsable de la
+                            salida. Total trazabilidad de cada unidad que sale.</p>
+                        <span class="badge">Trazabilidad completa</span>
+                    </div>
+
+                    <div class="funcion">
+                        <div class="funcion-header">
+                            <div class="funcion-icono">📊</div>
+                            <h4>Inventario en Tiempo Real (Kardex)</h4>
+                        </div>
+                        <p>Consulte el stock actual de cualquier insumo en segundos: cuánto hay, cuánto ha entrado,
+                            cuánto ha salido, y el historial completo de movimientos ordenado por fecha. Un kardex
+                            digital siempre actualizado.</p>
+                        <span class="badge">Decisión sin incertidumbre</span>
+                    </div>
+
+                    <div class="funcion">
+                        <div class="funcion-header">
+                            <div class="funcion-icono">🔔</div>
+                            <h4>Alertas de Stock Mínimo</h4>
+                        </div>
+                        <p>El sistema identifica automáticamente los materiales cuyo stock ha caído por debajo del
+                            mínimo configurado. Un panel de alertas visible en el módulo le indica qué insumos
+                            necesitan reposición antes de que se agoten.</p>
+                        <span class="badge">Cero paros de producción</span>
+                    </div>
+
+                    <div class="funcion">
+                        <div class="funcion-header">
+                            <div class="funcion-icono">📄</div>
+                            <h4>Reportes de Movimientos e Inventario</h4>
+                        </div>
+                        <p>Genere reportes por rango de fechas: entradas del período, salidas por área, inventario
+                            valorizado (stock × costo promedio). Exportables en PDF para compartir con gerencia o
+                            auditoría interna.</p>
+                        <span class="badge">Reportes listos en segundos</span>
+                    </div>
+
+                    <div class="funcion">
+                        <div class="funcion-header">
+                            <div class="funcion-icono">🏭</div>
+                            <h4>Gestión de Proveedores de Insumos</h4>
+                        </div>
+                        <p>Administre el directorio de proveedores de materiales (cauchos, capuchones, cartón,
+                            productos químicos, etc.) de forma independiente a los proveedores de flor. Cada entrada
+                            queda vinculada al proveedor correspondiente, permitiendo analizar compras por
+                            proveedor y negociar mejores condiciones.</p>
+                        <span class="badge">Trazabilidad por proveedor</span>
+                    </div>
+
+                    <div class="funcion">
+                        <div class="funcion-header">
+                            <div class="funcion-icono">💰</div>
+                            <h4>Valorización de Inventario</h4>
+                        </div>
+                        <p>Conozca en todo momento cuánto dinero tiene inmovilizado en bodega. El sistema calcula el
+                            costo promedio ponderado de cada insumo y presenta el valor total del inventario, dato
+                            clave para el análisis financiero del negocio.</p>
+                        <span class="badge">Visibilidad financiera real</span>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- ── 1C. BENEFICIOS ──────────────────────────────────── -->
+            <div class="seccion">
+                <div class="seccion-titulo">
+                    <div class="icono">⚡</div>
+                    <h3>Beneficios del Módulo de Almacén</h3>
+                </div>
+                <div class="grid-kpi">
+                    <div class="kpi">
+                        <div class="valor">100%</div>
+                        <div class="etiqueta">Visibilidad del stock<br>de insumos en tiempo real</div>
+                    </div>
+                    <div class="kpi">
+                        <div class="valor">−80%</div>
+                        <div class="etiqueta">Tiempo dedicado a<br>conteos manuales de bodega</div>
+                    </div>
+                    <div class="kpi">
+                        <div class="valor">Cero</div>
+                        <div class="etiqueta">Insumos agotados sin<br>previo aviso (alertas activas)</div>
+                    </div>
+                </div>
+                <table class="tabla-comp">
+                    <thead>
+                        <tr>
+                            <th>Proceso</th>
+                            <th>Sin el módulo</th>
+                            <th>Con el módulo</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Saber cuántas cajas de cartón quedan en bodega</td>
+                            <td class="no">Hay que ir a contar físicamente</td>
+                            <td class="si">Consulta en pantalla en segundos</td>
+                        </tr>
+                        <tr>
+                            <td>Detectar que un insumo está por agotarse</td>
+                            <td class="no">Se descubre cuando ya no hay</td>
+                            <td class="si">Alerta automática antes de llegar a cero</td>
+                        </tr>
+                        <tr>
+                            <td>Saber cuánto costó el material del mes</td>
+                            <td class="no">Suma manual de facturas, horas de trabajo</td>
+                            <td class="si">Reporte de valorización instantáneo</td>
+                        </tr>
+                        <tr>
+                            <td>Saber a qué proceso se fue determinado insumo</td>
+                            <td class="no">Sin registro, imposible saberlo</td>
+                            <td class="si">Historial de salidas con área y fecha</td>
+                        </tr>
+                        <tr>
+                            <td>Planificar la compra de insumos</td>
+                            <td class="no">Basado en intuición o costumbre</td>
+                            <td class="si">Basado en consumo real histórico + alertas</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- ══════════════════════════════════════════════════════ -->
+            <!-- MÓDULO 2: NÓMINA                                      -->
+            <!-- ══════════════════════════════════════════════════════ -->
+
+            <div class="modulo-separador">
+                <span class="ms-badge">👥 Módulo 2 · Control de Nómina y Pagos Masivos</span>
+            </div>
+
+            <!-- ── 2A. EL PROBLEMA ─────────────────────────────────── -->
+            <div class="seccion">
+                <div class="seccion-titulo">
+                    <div class="icono">⚠️</div>
+                    <h3>¿Cuál es el problema que resuelve este módulo?</h3>
+                </div>
+                <div class="bloque-problema">
+                    <p>En una empresa floricultora con varios empleados entre personal de producción, bodega y
+                        administración, el cálculo de nómina manual es propenso a errores, consume horas cada
+                        quincena y genera dificultades al momento de reportar pagos a los bancos:</p>
+                    <ul>
+                        <li>Cálculo manual del salario en hojas de cálculo, propenso a errores</li>
+                        <li>Las novedades (incapacidades, permisos, horas extra) se aplican de manera inconsistente</li>
+                        <li>No existe un registro histórico de lo que se pagó a cada empleado</li>
+                        <li>Los comprobantes de pago se hacen a mano o no se generan</li>
+                        <li>Generar los archivos para pago masivo bancario requiere digitación manual y revisión doble
+                        </li>
+                        <li>Riesgo de errores en descuentos de salud y pensión, generando problemas con entidades</li>
+                        <li>Sin visibilidad del costo total de nómina por período para toma de decisiones gerenciales
+                        </li>
+                        <li>Si cambia el salario mínimo o el auxilio de transporte, actualizar todo es complejo</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- ── 2B. QUÉ INCLUYE ─────────────────────────────────── -->
+            <div class="seccion">
+                <div class="seccion-titulo">
+                    <div class="icono">📋</div>
+                    <h3>¿Qué incluye el Módulo de Nómina?</h3>
+                </div>
+                <div class="grid-funciones">
+
+                    <div class="funcion">
+                        <div class="funcion-header">
+                            <div class="funcion-icono">👤</div>
+                            <h4>Gestión de Empleados</h4>
+                        </div>
+                        <p>Registro completo del colaborador: nombre, cédula, cargo, fecha de ingreso, tipo de
+                            contrato, salario base, beneficios aplicables (auxilio de transporte) y datos del medio de
+                            pago: banco, tipo de cuenta y número de cuenta.</p>
+                        <span class="badge">Información centralizada</span>
+                    </div>
+
+                    <div class="funcion">
+                        <div class="funcion-header">
+                            <div class="funcion-icono">📅</div>
+                            <h4>Períodos de Nómina Flexibles</h4>
+                        </div>
+                        <p>Calcule nómina por cualquier rango de fechas: quincenal, mensual o el período que maneje
+                            su empresa. El sistema calcula automáticamente los días laborados dentro del período
+                            seleccionado y aplica las novedades registradas.</p>
+                        <span class="badge">Quincenal o mensual</span>
+                    </div>
+
+                    <div class="funcion">
+                        <div class="funcion-header">
+                            <div class="funcion-icono">📐</div>
+                            <h4>Motor de Cálculo Automático</h4>
+                        </div>
+                        <p>Con base en el salario base y el período, el sistema calcula automáticamente el valor
+                            a devengar, los descuentos de seguridad social (salud 4% y pensión 4% a cargo del
+                            empleado), y el neto a pagar. Los porcentajes son configurables según normativa vigente.</p>
+                        <span class="badge">Cálculo sin errores</span>
+                    </div>
+
+                    <div class="funcion">
+                        <div class="funcion-header">
+                            <div class="funcion-icono">📝</div>
+                            <h4>Registro de Novedades</h4>
+                        </div>
+                        <p>Agregue novedades que afectan el devengado de cada empleado en el período:
+                            <strong>ausentismos</strong>
+                            (incapacidades médicas, licencias, permisos no remunerados, ausencias injustificadas) y
+                            <strong>tiempo extra</strong> (horas extra diurnas, nocturnas, dominicales y festivas con
+                            sus respectivos recargos según la ley laboral colombiana).
+                        </p>
+                        <span class="badge">Ausentismos y horas extra</span>
+                    </div>
+
+                    <div class="funcion">
+                        <div class="funcion-header">
+                            <div class="funcion-icono">📜</div>
+                            <h4>Comprobante de Pago en PDF</h4>
+                        </div>
+                        <p>Por cada empleado y cada período, el sistema genera un comprobante de pago en PDF con el
+                            detalle del devengado (salario, auxilio de transporte, horas extra), los descuentos
+                            aplicados y el valor neto girado. Listo para imprimir o enviar al empleado.</p>
+                        <span class="badge">Respaldo documental</span>
+                    </div>
+
+                    <div class="funcion">
+                        <div class="funcion-header">
+                            <div class="funcion-icono">🏦</div>
+                            <h4>Archivos para Pago Masivo Bancario</h4>
+                        </div>
+                        <p>Al cierre del período, genere el archivo en el formato requerido por la entidad bancaria
+                            (Bancolombia, Davivienda, Banco de Bogotá, Banco Agrario, entre otros) para cargar la
+                            nómina masiva. Un solo archivo con todos los empleados, listo para subir al portal del
+                            banco, sin digitar nada manualmente.</p>
+                        <span class="badge">Pago masivo en un clic</span>
+                    </div>
+
+                    <div class="funcion">
+                        <div class="funcion-header">
+                            <div class="funcion-icono">📈</div>
+                            <h4>Histórico de Nóminas</h4>
+                        </div>
+                        <p>Consulte cualquier nómina pagada en el pasado: quién cobró qué en cada período, novedades
+                            aplicadas, totales del período. Respaldo completo ante auditorías laborales o revisiones
+                            internas sin necesidad de guardar carpetas físicas.</p>
+                        <span class="badge">Historial permanente</span>
+                    </div>
+
+                    <div class="funcion">
+                        <div class="funcion-header">
+                            <div class="funcion-icono">📊</div>
+                            <h4>Resumen Gerencial de Nómina</h4>
+                        </div>
+                        <p>Vista consolidada del costo total de nómina por período: total devengado, total deducciones,
+                            total neto a pagar y distribución por empleado. Información clave para la planeación
+                            financiera y el control de costos laborales de la empresa.</p>
+                        <span class="badge">Visibilidad del costo laboral</span>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- ── 2C. BENEFICIOS ──────────────────────────────────── -->
+            <div class="seccion">
+                <div class="seccion-titulo">
+                    <div class="icono">⚡</div>
+                    <h3>Beneficios del Módulo de Nómina</h3>
+                </div>
+                <div class="grid-kpi">
+                    <div class="kpi">
+                        <div class="valor">−85%</div>
+                        <div class="etiqueta">Tiempo para liquidar<br>nómina cada período</div>
+                    </div>
+                    <div class="kpi">
+                        <div class="valor">Cero</div>
+                        <div class="etiqueta">Errores en descuentos de<br>seguridad social</div>
+                    </div>
+                    <div class="kpi">
+                        <div class="valor">1 clic</div>
+                        <div class="etiqueta">Para generar archivo de<br>pago masivo bancario</div>
+                    </div>
+                </div>
+                <table class="tabla-comp">
+                    <thead>
+                        <tr>
+                            <th>Proceso</th>
+                            <th>Sin el módulo</th>
+                            <th>Con el módulo</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Liquidar el salario de un empleado</td>
+                            <td class="no">Cálculo manual en Excel, 10–20 min por persona</td>
+                            <td class="si">Automático al seleccionar período, segundos</td>
+                        </tr>
+                        <tr>
+                            <td>Aplicar una incapacidad médica</td>
+                            <td class="no">Ajuste manual en la hoja de cálculo</td>
+                            <td class="si">Se registra como novedad y el cálculo se actualiza</td>
+                        </tr>
+                        <tr>
+                            <td>Generar archivo para pago masivo bancario</td>
+                            <td class="no">Digitación manual en el portal del banco, uno a uno</td>
+                            <td class="si">Archivo generado automáticamente, listo para subir</td>
+                        </tr>
+                        <tr>
+                            <td>Entregar comprobante de pago al empleado</td>
+                            <td class="no">No se genera o se hace en Word</td>
+                            <td class="si">PDF generado automáticamente por empleado y período</td>
+                        </tr>
+                        <tr>
+                            <td>Saber el costo total de nómina del mes</td>
+                            <td class="no">Suma manual, tiempo y riesgo de error</td>
+                            <td class="si">Resumen consolidado disponible al instante</td>
+                        </tr>
+                        <tr>
+                            <td>Revisar qué se pagó hace 6 meses</td>
+                            <td class="no">Buscar en carpetas físicas o Excel viejos</td>
+                            <td class="si">Consulta en segundos en el histórico del sistema</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- ══════════════════════════════════════════════════════ -->
+            <!-- CRONOGRAMA DE IMPLEMENTACIÓN                          -->
+            <!-- ══════════════════════════════════════════════════════ -->
+            <div class="seccion">
+                <div class="seccion-titulo">
+                    <div class="icono">🗓️</div>
+                    <h3>Cronograma de Implementación</h3>
+                </div>
+                <table class="cronograma">
+                    <thead>
+                        <tr>
+                            <th>Semana</th>
+                            <th>Módulo</th>
+                            <th>Actividades</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><span class="semana-badge">Semana 1</span></td>
+                            <td>📦 Almacén</td>
+                            <td>Parametrización del catálogo de insumos, diseño de base de datos, módulo de
+                                entradas con registro de proveedores de insumos</td>
+                        </tr>
+                        <tr>
+                            <td><span class="semana-badge">Semana 2</span></td>
+                            <td>📦 Almacén</td>
+                            <td>Módulo de salidas, kardex en tiempo real, alertas de stock mínimo, reportes
+                                e inventario valorizado en PDF</td>
+                        </tr>
+                        <tr>
+                            <td><span class="semana-badge">Semana 3</span></td>
+                            <td>👥 Nómina</td>
+                            <td>Gestión de empleados, configuración de períodos, motor de cálculo
+                                automático de devengados y deducciones</td>
+                        </tr>
+                        <tr>
+                            <td><span class="semana-badge">Semana 4</span></td>
+                            <td>👥 Nómina</td>
+                            <td>Registro de novedades (ausentismos y tiempo extra), generación de
+                                comprobantes de pago en PDF</td>
+                        </tr>
+                        <tr>
+                            <td><span class="semana-badge">Semana 5</span></td>
+                            <td>👥 Nómina</td>
+                            <td>Generación de archivos para pago masivo bancario (formatos por entidad),
+                                histórico de nóminas, resumen gerencial</td>
+                        </tr>
+                        <tr>
+                            <td><span class="semana-badge">Semana 6</span></td>
+                            <td>🔗 Integración</td>
+                            <td>Pruebas completas de los dos módulos en el entorno real del cliente,
+                                correcciones, capacitación al equipo y entrega oficial</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- ══════════════════════════════════════════════════════ -->
+            <!-- INVERSIÓN                                              -->
+            <!-- ══════════════════════════════════════════════════════ -->
+            <div class="seccion">
+                <div class="seccion-titulo">
+                    <div class="icono">💵</div>
+                    <h3>Inversión</h3>
+                </div>
+                <table class="tabla-inversion">
+                    <thead>
+                        <tr>
+                            <th>Módulo</th>
+                            <th>Descripción de entregables</th>
+                            <th>Valor</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>
+                                <strong>📦 Módulo de Almacén de Insumos y Materiales</strong>
+                                <div class="nota">Pago único. Incluye integración al sistema existente, carga
+                                    inicial del catálogo de insumos y capacitación.</div>
+                            </td>
+                            <td>
+                                • Catálogo parametrizable de insumos y materiales<br>
+                                • Registro de entradas con proveedor, costo y factura<br>
+                                • Registro de salidas con área, responsable y fecha<br>
+                                • Kardex en tiempo real por insumo<br>
+                                • Alertas de stock mínimo configurables<br>
+                                • Reportes de movimientos e inventario valorizado en PDF<br>
+                                • Gestión de proveedores propios del almacén de insumos
+                            </td>
+                            <td class="monto">$2.790.000</td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <strong>👥 Módulo de Nómina y Pagos Masivos</strong>
+                                <div class="nota">Pago único. Incluye configuración por entidad bancaria del
+                                    cliente, carga inicial de empleados y capacitación.</div>
+                            </td>
+                            <td>
+                                • Gestión de empleados con datos personales y bancarios<br>
+                                • Motor de cálculo automático (devengados + deducciones)<br>
+                                • Novedades: ausentismos y tiempo extra con recargos legales<br>
+                                • Comprobante de pago en PDF por empleado y período<br>
+                                • Archivo de pago masivo para entidad bancaria (ACH)<br>
+                                • Histórico de nóminas y resumen gerencial por período<br>
+                                • Períodos de nómina flexibles (quincenal / mensual)
+                            </td>
+                            <td class="monto">$4.185.000</td>
+                        </tr>
+                        <tr class="total-row">
+                            <td colspan="2">
+                                <strong>TOTAL si se contratan por separado</strong>
+                            </td>
+                            <td class="monto">$6.975.000</td>
+                        </tr>
+                        <tr class="pack-row">
+                            <td colspan="2">
+                                <strong>🎯 PACK COMPLETO — Los dos módulos juntos</strong>
+                                <span class="ahorro">✔ Ahorro de $651.000 al contratar ambos módulos en un solo
+                                    proyecto</span>
+                            </td>
+                            <td class="monto">$6.324.000</td>
+                        </tr>
+                    </tbody>
+                </table>
+                <p class="nota-iva">* Valores expresados en pesos colombianos (COP). IVA del 19% no incluido si aplica
+                    según régimen tributario del contratante. Forma de pago: <strong>50% para iniciar el
+                        proyecto</strong> y <strong>50% a la entrega y aprobación de ambos módulos funcionando</strong>.
+                    Si se contratan por separado, cada módulo se factura y paga de forma independiente bajo
+                    el mismo esquema 50/50.</p>
+            </div>
+
+            <!-- ── VENTAJAS DE AMPLIAR EL SISTEMA EXISTENTE ─────── -->
+            <div class="seccion">
+                <div class="seccion-titulo">
+                    <div class="icono">🏆</div>
+                    <h3>Ventajas de ampliar su sistema actual</h3>
+                </div>
+                <div class="grid-ventajas">
+                    <div class="ventaja">
+                        <div class="ving">🔗</div>
+                        <div>
+                            <h4>Integración nativa con su plataforma</h4>
+                            <p>Los nuevos módulos se construyen dentro de su aplicación existente. No hay que instalar
+                                un software diferente ni manejar dos sistemas separados. Todo en la misma pantalla,
+                                mismo login y misma base de datos.</p>
+                        </div>
+                    </div>
+                    <div class="ventaja">
+                        <div class="ving">👥</div>
+                        <div>
+                            <h4>Su equipo ya conoce la plataforma</h4>
+                            <p>Al ser una ampliación, el personal ya está familiarizado con la interfaz y la
+                                navegación del sistema. La curva de aprendizaje de los nuevos módulos es mínima,
+                                reduciendo el tiempo de adopción.</p>
+                        </div>
+                    </div>
+                    <div class="ventaja">
+                        <div class="ving">🗄️</div>
+                        <div>
+                            <h4>Una sola base de datos, información consistente</h4>
+                            <p>Los proveedores registrados en compras son los mismos del almacén. Los empleados de
+                                nómina pueden cruzarse con los datos de conductores y ayudantes ya existentes.
+                                No hay duplicación ni inconsistencias entre sistemas.</p>
+                        </div>
+                    </div>
+                    <div class="ventaja">
+                        <div class="ving">💲</div>
+                        <div>
+                            <h4>Costo menor que una solución nueva</h4>
+                            <p>Ampliar el sistema existente es significativamente más económico que contratar
+                                un ERP independiente de almacén o de nómina. No hay licencias de terceros ni
+                                migraciones de datos: todo ya está en su servidor.</p>
+                        </div>
+                    </div>
+                    <div class="ventaja">
+                        <div class="ving">🛡️</div>
+                        <div>
+                            <h4>Soporte continuo con quien conoce su negocio</h4>
+                            <p>El mismo desarrollador que construyó su sistema actual, que conoce sus procesos,
+                                su gente y su operación, es quien implementa y da soporte a estos módulos.
+                                Sin intermediarios ni call centers.</p>
+                        </div>
+                    </div>
+                    <div class="ventaja">
+                        <div class="ving">🚀</div>
+                        <div>
+                            <h4>Implementación ágil: 6 semanas</h4>
+                            <p>Al tener la infraestructura base ya desarrollada (autenticación, diseño, servidor,
+                                APIs), los nuevos módulos se implementan en la mitad del tiempo que tomaría
+                                construir un sistema desde cero.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ── CONDICIONES COMERCIALES ─────────────────────────── -->
+            <div class="seccion">
+                <div class="seccion-titulo">
+                    <div class="icono">📋</div>
+                    <h3>Condiciones Comerciales</h3>
+                </div>
+                <div class="condiciones">
+                    <ul>
+                        <li>Vigencia de esta propuesta: 30 días calendario</li>
+                        <li>Tiempo de entrega Pack Completo: 6 semanas desde inicio</li>
+                        <li>Módulo Almacén solo: entrega en 2 semanas desde inicio</li>
+                        <li>Módulo Nómina solo: entrega en 4 semanas desde inicio</li>
+                        <li>Forma de pago: 50% para iniciar y 50% a la entrega</li>
+                        <li>El soporte mensual existente cubre los nuevos módulos sin costo adicional</li>
+                        <li>Capacitación incluida: hasta 2 horas por módulo (presencial o virtual)</li>
+                        <li>Manual de usuario en PDF incluido como entregable para cada módulo</li>
+                        <li>Los datos del cliente son de su propiedad exclusiva</li>
+                        <li>Módulos se pueden contratar juntos o de forma independiente</li>
+                    </ul>
+                </div>
+            </div>
+
+        </div><!-- /cuerpo -->
+
+        <!-- ══ PIE ═════════════════════════════════════════════ -->
+        <div class="footer">
+            <div class="firma">
+                <strong>José Mauricio Ovalle Romero</strong>
+                Desarrollador de Aplicaciones Empresariales<br>
+                📧 mauricioovalle@hotmail.com &nbsp;|&nbsp; 📞 315 394 4103 &nbsp;|&nbsp;
+                🌐 portal.datenbankensoluciones.com.co
+            </div>
+            <div class="vigencia">
+                Cotización No. 2026-037<br>
+                Fecha: 7 de mayo de 2026<br>
+                Válida hasta: 6 de junio de 2026
+            </div>
+        </div>
+
+    </div><!-- /pagina -->
+</body>
+
+</html>

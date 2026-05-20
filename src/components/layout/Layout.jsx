@@ -13,7 +13,7 @@ const Layout = ({ children, currentModule, onModuleChange }) => {
           currentModule={currentModule}
         />
         {/* Ajuste para móvil: añadir padding-top para evitar que el contenido quede debajo del menú móvil */}
-        <main className="flex-1 p-4 lg:p-6 mt-16 lg:mt-0 lg:ml-0 transition-all duration-300">
+        <main className="flex-1 min-w-0 overflow-x-hidden p-4 lg:p-6 mt-16 lg:mt-0 lg:ml-0 transition-all duration-300">
           {children}
         </main>
       </div>

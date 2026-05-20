@@ -3,7 +3,8 @@ import React, { useState } from 'react';
 import {
   Users, Building, UserCheck, UserCog, Flower2, Sprout, Star, Package,
   Truck, UsersRound, Plane, BarChart3, ShoppingCart, CreditCard,
-  FileText, Download, LayoutDashboard, ChevronLeft, ChevronRight, Home, Undo2, 
+  FileText, Download, LayoutDashboard, ChevronLeft, ChevronRight, Home, Undo2,
+  Wallet, HandCoins, Menu, X
 } from 'lucide-react';
 
 const Sidebar = ({ onModuleChange, currentModule }) => {
@@ -51,6 +52,8 @@ const Sidebar = ({ onModuleChange, currentModule }) => {
     { id: 'pedidos', label: 'Pedidos', icon: <CreditCard className="w-5 h-5" />, category: 'operativos', priority: 2 },
     { id: 'devolucion-venta', label: 'Devoluciones Ventas', icon: <Undo2 className="w-5 h-5" />, category: 'operativos', priority: 2 },
     { id: 'devolucion-compra', label: 'Devoluciones Compras', icon: <Undo2 className="w-5 h-5" />, category: 'operativos', priority: 2 },
+    { id: 'pago-cliente', label: 'Pago Clientes', icon: <Wallet className="w-5 h-5" />, category: 'operativos', priority: 2 },
+    { id: 'pago-proveedor', label: 'Pago Proveedores', icon: <HandCoins className="w-5 h-5" />, category: 'operativos', priority: 2 },
 
     // INFORMES
     {
@@ -71,15 +74,19 @@ const Sidebar = ({ onModuleChange, currentModule }) => {
     if (onModuleChange) {
       onModuleChange(itemId);
     }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const renderMenuItems = (items) => {
     return items.map((item) => {
       if (item.type === 'header') {
         return (
-          <li key={item.id} className={isCollapsed ? 'hidden' : ''}>
-            <div className="px-4 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">
-              {item.label}
+          <li key={item.id} className={isCollapsed ? 'hidden' : 'pt-2'}>
+            <div className="mx-1 mb-1">
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-700/50 border-l-4 border-green-400">
+                <span className="text-green-400">{item.icon}</span>
+                <span className="text-xs font-bold text-gray-300 uppercase tracking-wider">{item.label}</span>
+              </div>
             </div>
           </li>
         );
@@ -94,12 +101,12 @@ const Sidebar = ({ onModuleChange, currentModule }) => {
               flex items-center space-x-3
               ${isCollapsed ? 'justify-center' : ''}
               ${currentModule === item.id 
-                ? 'bg-gradient-to-r from-primary to-secondary text-white shadow-md' 
-                : 'hover:bg-gray-100 text-gray-700'
+                ? 'bg-gradient-to-r from-green-600 to-emerald-600 text-white shadow-md shadow-green-900/40' 
+                : 'text-gray-300 hover:bg-slate-700 hover:text-white'
               }
             `}
           >
-            <span className={`transition-transform group-hover:scale-110 ${currentModule === item.id ? 'text-white' : 'text-gray-600'}`}>
+            <span className={`transition-transform group-hover:scale-110 ${currentModule === item.id ? 'text-white' : 'text-gray-400 group-hover:text-white'}`}>
               {item.icon}
             </span>
             {!isCollapsed && (
@@ -118,39 +125,36 @@ const Sidebar = ({ onModuleChange, currentModule }) => {
     });
   };
 
-  // Filtrar items para móvil (prioridad 1 y 2 primero, luego el resto)
-  const priorityMobileItems = menuItems.filter(item => 
-    item.type !== 'header' && (item.priority === 1 || item.id === 'pedidos')
-  );
-  
-  const secondaryMobileItems = menuItems.filter(item => 
-    item.type !== 'header' && item.priority === 2 && item.id !== 'pedidos'
-  );
-  
-  const otherMobileItems = menuItems.filter(item => 
-    item.type !== 'header' && item.priority === 3
-  );
+  // Filtros por categoría para menú móvil
+  const dashboardMobileItems = menuItems.filter(item => item.category === 'dashboard');
+  const maestrasMobileItems  = menuItems.filter(item => item.category === 'maestras');
+  const operativosMobileItems = menuItems.filter(item => item.category === 'operativos');
+  const informesMobileItems  = menuItems.filter(item => item.category === 'informes');
+  const currentModuleLabel   = menuItems.find(item => item.id === currentModule)?.label || 'Inicio';
 
   return (
     <>
       {/* Sidebar para desktop */}
       <aside className={`
-        hidden lg:flex flex-col bg-white shadow-xl min-h-screen transition-all duration-300
+        hidden lg:flex flex-col bg-slate-800 shadow-2xl min-h-screen transition-all duration-300
         ${isCollapsed ? 'w-20' : 'w-64'}
       `}>
         {/* Header del Sidebar */}
-        <div className="p-4 border-b border-gray-100">
+        <div className="p-4 border-b border-slate-700">
           {!isCollapsed && (
             <div className="flex items-center space-x-3">
-              <div className="w-8 h-8 bg-gradient-to-r from-primary to-secondary rounded-lg flex items-center justify-center">
+              <div className="w-9 h-9 bg-gradient-to-r from-green-500 to-emerald-600 rounded-xl flex items-center justify-center shadow-lg shadow-green-900/40">
                 <span className="text-white font-bold text-sm">AS</span>
               </div>
-              <h2 className="text-lg font-semibold text-gray-800">All Season Flowers</h2>
+              <div>
+                <h2 className="text-sm font-bold text-white leading-tight">All Season Flowers</h2>
+                <p className="text-xs text-green-400 font-medium">Flowers & Ornamentals</p>
+              </div>
             </div>
           )}
           {isCollapsed && (
             <div className="flex justify-center">
-              <div className="w-8 h-8 bg-gradient-to-r from-primary to-secondary rounded-lg flex items-center justify-center">
+              <div className="w-9 h-9 bg-gradient-to-r from-green-500 to-emerald-600 rounded-xl flex items-center justify-center shadow-lg shadow-green-900/40">
                 <span className="text-white font-bold text-sm">AS</span>
               </div>
             </div>
@@ -165,10 +169,10 @@ const Sidebar = ({ onModuleChange, currentModule }) => {
         </nav>
 
         {/* Footer del Sidebar */}
-        <div className="p-4 border-t border-gray-100">
+        <div className="p-4 border-t border-slate-700">
           <button
             onClick={() => setIsCollapsed(!isCollapsed)}
-            className="w-full p-3 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors flex items-center justify-center space-x-2"
+            className="w-full p-3 text-gray-400 hover:bg-slate-700 hover:text-white rounded-lg transition-colors flex items-center justify-center space-x-2"
           >
             {isCollapsed ? (
               <ChevronRight className="w-5 h-5" />
@@ -182,111 +186,135 @@ const Sidebar = ({ onModuleChange, currentModule }) => {
         </div>
       </aside>
 
-      {/* Menú móvil - MEJORADO */}
-      <div className="lg:hidden bg-white border-b border-gray-200 shadow-sm" id="mobile-menu">
-        <div className="container mx-auto px-2 py-3">
-          {/* Título del menú móvil */}
-          <div className="flex items-center justify-between mb-2 px-2">
-            <h3 className="text-sm font-semibold text-gray-700">Navegación</h3>
-            <button 
-              onClick={() => setShowAllMobileItems(!showAllMobileItems)}
-              className="text-xs text-primary font-medium hover:text-secondary"
-            >
-              {showAllMobileItems ? '↑ Ver menos' : '↓ Ver más'}
-            </button>
-          </div>
+      {/* Menú móvil - REDISEÑADO */}
+      <div className="lg:hidden" id="mobile-menu">
 
-          {/* Tarjetas principales (siempre visibles) */}
-          <div className="overflow-x-auto pb-2">
-            <div className="flex space-x-2 px-2 min-w-max">
-              {priorityMobileItems.map((item) => (
-                <button
-                  key={item.id}
-                  onClick={() => handleItemClick(item.id)}
-                  className={`
-                    flex flex-col items-center p-3 rounded-xl transition-all 
-                    min-w-[85px] border
-                    ${currentModule === item.id
-                      ? 'bg-gradient-to-r from-primary to-secondary text-white border-primary shadow-md'
-                      : 'bg-white border-gray-200 hover:bg-gray-50'
-                    }
-                  `}
-                >
-                  <span className="text-xl mb-2">{item.icon}</span>
-                  <span className={`text-xs font-medium text-center leading-tight whitespace-nowrap ${
-                    currentModule === item.id ? 'text-white' : 'text-gray-700'
-                  }`}>
-                    {item.label}
-                  </span>
-                  {item.badge && (
-                    <span className="mt-1 bg-yellow-100 text-yellow-800 text-[10px] px-1.5 py-0.5 rounded-full">
-                      ⚡ PRIO
-                    </span>
-                  )}
-                </button>
-              ))}
+        {/* Barra de cabecera - siempre visible */}
+        <div className="bg-slate-800 shadow-lg px-4 py-3 flex items-center justify-between">
+          <div className="flex items-center space-x-3">
+            <div className="w-8 h-8 bg-gradient-to-r from-green-500 to-emerald-600 rounded-lg flex items-center justify-center shadow shadow-green-900/40 flex-shrink-0">
+              <span className="text-white font-bold text-xs">AS</span>
+            </div>
+            <div className="min-w-0">
+              <span className="text-white text-sm font-bold block leading-tight truncate">All Season Flowers</span>
+              <span className="text-green-400 text-xs font-medium truncate block">{currentModuleLabel}</span>
             </div>
           </div>
-
-          {/* Tarjetas secundarias (visibles al expandir) */}
-          {showAllMobileItems && (
-            <>
-              {/* Segunda fila - secundarios */}
-              <div className="overflow-x-auto pb-2 mt-2">
-                <div className="flex space-x-2 px-2 min-w-max">
-                  {secondaryMobileItems.map((item) => (
-                    <button
-                      key={item.id}
-                      onClick={() => handleItemClick(item.id)}
-                      className={`
-                        flex flex-col items-center p-3 rounded-xl transition-all 
-                        min-w-[85px] border
-                        ${currentModule === item.id
-                          ? 'bg-gradient-to-r from-primary to-secondary text-white border-primary shadow-md'
-                          : 'bg-white border-gray-200 hover:bg-gray-50'
-                        }
-                      `}
-                    >
-                      <span className="text-xl mb-2">{item.icon}</span>
-                      <span className={`text-xs font-medium text-center leading-tight whitespace-nowrap ${
-                        currentModule === item.id ? 'text-white' : 'text-gray-700'
-                      }`}>
-                        {item.label}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Tercera fila - otros */}
-              <div className="overflow-x-auto pb-2 mt-2">
-                <div className="flex space-x-2 px-2 min-w-max">
-                  {otherMobileItems.map((item) => (
-                    <button
-                      key={item.id}
-                      onClick={() => handleItemClick(item.id)}
-                      className={`
-                        flex flex-col items-center p-3 rounded-xl transition-all 
-                        min-w-[85px] border
-                        ${currentModule === item.id
-                          ? 'bg-gradient-to-r from-primary to-secondary text-white border-primary shadow-md'
-                          : 'bg-white border-gray-200 hover:bg-gray-50'
-                        }
-                      `}
-                    >
-                      <span className="text-xl mb-2">{item.icon}</span>
-                      <span className={`text-xs font-medium text-center leading-tight whitespace-nowrap ${
-                        currentModule === item.id ? 'text-white' : 'text-gray-700'
-                      }`}>
-                        {item.label}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </>
-          )}
+          <button
+            onClick={() => setShowAllMobileItems(!showAllMobileItems)}
+            className="flex items-center gap-1.5 bg-slate-700 hover:bg-slate-600 text-gray-200 hover:text-white px-3 py-2 rounded-lg transition-colors flex-shrink-0 ml-3"
+          >
+            {showAllMobileItems ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
+            <span className="text-xs font-semibold">{showAllMobileItems ? 'Cerrar' : 'Menú'}</span>
+          </button>
         </div>
+
+        {/* Panel desplegable con secciones */}
+        {showAllMobileItems && (
+          <div className="bg-slate-900 border-t border-slate-700 px-4 py-4 space-y-5">
+
+            {/* Dashboard */}
+            <div>
+              <div className="flex items-center gap-2 mb-3">
+                <Home className="w-4 h-4 text-green-400" />
+                <span className="text-xs font-bold text-green-400 uppercase tracking-widest">Principal</span>
+                <div className="flex-1 h-px bg-slate-700" />
+              </div>
+              <div className="grid grid-cols-4 gap-2">
+                {dashboardMobileItems.map((item) => (
+                  <button
+                    key={item.id}
+                    onClick={() => { handleItemClick(item.id); setShowAllMobileItems(false); }}
+                    className={`flex flex-col items-center p-3 rounded-xl transition-all ${
+                      currentModule === item.id
+                        ? 'bg-gradient-to-b from-green-600 to-emerald-700 text-white shadow-md shadow-green-900/40'
+                        : 'bg-slate-800 text-gray-300 hover:bg-slate-700 hover:text-white'
+                    }`}
+                  >
+                    <span className="mb-1.5">{item.icon}</span>
+                    <span className="text-[11px] text-center leading-tight font-medium">{item.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Tablas Maestras */}
+            <div>
+              <div className="flex items-center gap-2 mb-3">
+                <FileText className="w-4 h-4 text-green-400" />
+                <span className="text-xs font-bold text-green-400 uppercase tracking-widest">Tablas Maestras</span>
+                <div className="flex-1 h-px bg-slate-700" />
+              </div>
+              <div className="grid grid-cols-4 gap-2">
+                {maestrasMobileItems.map((item) => (
+                  <button
+                    key={item.id}
+                    onClick={() => { handleItemClick(item.id); setShowAllMobileItems(false); }}
+                    className={`flex flex-col items-center p-3 rounded-xl transition-all ${
+                      currentModule === item.id
+                        ? 'bg-gradient-to-b from-green-600 to-emerald-700 text-white shadow-md shadow-green-900/40'
+                        : 'bg-slate-800 text-gray-300 hover:bg-slate-700 hover:text-white'
+                    }`}
+                  >
+                    <span className="mb-1.5">{item.icon}</span>
+                    <span className="text-[11px] text-center leading-tight font-medium">{item.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Módulos Operativos */}
+            <div>
+              <div className="flex items-center gap-2 mb-3">
+                <BarChart3 className="w-4 h-4 text-blue-400" />
+                <span className="text-xs font-bold text-blue-400 uppercase tracking-widest">Módulos Operativos</span>
+                <div className="flex-1 h-px bg-slate-700" />
+              </div>
+              <div className="grid grid-cols-3 gap-2">
+                {operativosMobileItems.map((item) => (
+                  <button
+                    key={item.id}
+                    onClick={() => { handleItemClick(item.id); setShowAllMobileItems(false); }}
+                    className={`flex flex-col items-center p-3 rounded-xl transition-all ${
+                      currentModule === item.id
+                        ? 'bg-gradient-to-b from-green-600 to-emerald-700 text-white shadow-md shadow-green-900/40'
+                        : 'bg-slate-800 text-gray-300 hover:bg-slate-700 hover:text-white'
+                    }`}
+                  >
+                    <span className="mb-1.5">{item.icon}</span>
+                    <span className="text-[11px] text-center leading-tight font-medium">{item.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Informes */}
+            <div>
+              <div className="flex items-center gap-2 mb-3">
+                <Download className="w-4 h-4 text-amber-400" />
+                <span className="text-xs font-bold text-amber-400 uppercase tracking-widest">Informes</span>
+                <div className="flex-1 h-px bg-slate-700" />
+              </div>
+              <div className="grid grid-cols-3 gap-2">
+                {informesMobileItems.map((item) => (
+                  <button
+                    key={item.id}
+                    onClick={() => { handleItemClick(item.id); setShowAllMobileItems(false); }}
+                    className={`flex flex-col items-center p-3 rounded-xl transition-all ${
+                      currentModule === item.id
+                        ? 'bg-gradient-to-b from-green-600 to-emerald-700 text-white shadow-md shadow-green-900/40'
+                        : 'bg-slate-800 text-gray-300 hover:bg-slate-700 hover:text-white'
+                    }`}
+                  >
+                    <span className="mb-1.5">{item.icon}</span>
+                    <span className="text-[11px] text-center leading-tight font-medium">{item.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+          </div>
+        )}
       </div>
     </>
   );

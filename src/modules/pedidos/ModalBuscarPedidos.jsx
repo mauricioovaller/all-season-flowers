@@ -9,7 +9,7 @@ export default function ModalBuscarPedidos({ isOpen, onClose, onSeleccionarPedid
     filtroFecha: "",
     filtroEstado: "todos"
   });
-  
+
   const [pedidos, setPedidos] = useState([]);
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState(null);
@@ -30,13 +30,13 @@ export default function ModalBuscarPedidos({ isOpen, onClose, onSeleccionarPedid
     try {
       setCargando(true);
       setError(null);
-      
+
       const res = await buscarPedidos({
         ...filtros,
         pagina: paginaActual,
         porPagina: pedidosPorPagina
       });
-      
+
       if (res.success) {
         setPedidos(res.pedidos || []);
         // Calcular total de páginas
@@ -80,10 +80,11 @@ export default function ModalBuscarPedidos({ isOpen, onClose, onSeleccionarPedid
     onClose();
   };
 
-  // Formatear fecha para mostrar
+  // Formatear fecha para mostrar - corrigiendo desfase de zona horaria
   const formatFecha = (fechaStr) => {
     if (!fechaStr) return "";
-    const fecha = new Date(fechaStr);
+    // Agregar hora explícita para evitar desfase de zona horaria
+    const fecha = new Date(fechaStr + 'T00:00:00');
     return fecha.toLocaleDateString('es-CO');
   };
 
@@ -234,12 +235,11 @@ export default function ModalBuscarPedidos({ isOpen, onClose, onSeleccionarPedid
                         <span className="font-bold text-lg text-gray-800">
                           {pedido.numeroPedido || `PED-${String(pedido.idPedido).padStart(6, '0')}`}
                         </span>
-                        <span className={`text-xs px-2 py-1 rounded-full ${
-                          pedido.estado === 'Completado' ? 'bg-green-100 text-green-800' :
-                          pedido.estado === 'En Proceso' ? 'bg-yellow-100 text-yellow-800' :
-                          pedido.estado === 'Cancelado' ? 'bg-red-100 text-red-800' :
-                          'bg-blue-100 text-blue-800'
-                        }`}>
+                        <span className={`text-xs px-2 py-1 rounded-full ${pedido.estado === 'Completado' ? 'bg-green-100 text-green-800' :
+                            pedido.estado === 'En Proceso' ? 'bg-yellow-100 text-yellow-800' :
+                              pedido.estado === 'Cancelado' ? 'bg-red-100 text-red-800' :
+                                'bg-blue-100 text-blue-800'
+                          }`}>
                           {pedido.estado || 'Pendiente'}
                         </span>
                       </div>
@@ -298,11 +298,11 @@ export default function ModalBuscarPedidos({ isOpen, onClose, onSeleccionarPedid
               >
                 ← Anterior
               </button>
-              
+
               <span className="text-sm text-gray-600">
                 Página {paginaActual} de {totalPaginas}
               </span>
-              
+
               <button
                 onClick={() => setPaginaActual(p => Math.min(totalPaginas, p + 1))}
                 disabled={paginaActual === totalPaginas}

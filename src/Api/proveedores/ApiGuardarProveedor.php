@@ -46,7 +46,13 @@ try {
     $PAIS = $enlace->real_escape_string($data["PAIS"] ?? 'Colombia');
     $Telefono = $enlace->real_escape_string($data["Telefono"] ?? '');
     $Email = $enlace->real_escape_string($data["Email"] ?? '');
-    $ACTIVO = isset($data["ACTIVO"]) && $data["ACTIVO"] ? 1 : 0;
+    
+    // Determinar si es creación o edición
+    $esCreacion = !isset($data["IdProveedor"]) || empty($data["IdProveedor"]);
+    
+    // Para nuevos registros, siempre ACTIVO = 1
+    // Para ediciones, usar el valor enviado si existe, sino 1
+    $ACTIVO = isset($data["ACTIVO"]) && $data["ACTIVO"] ? 1 : ($esCreacion ? 1 : 0);
     $IVA = isset($data["IVA"]) && $data["IVA"] ? 1 : 0;
 
     // Validar NIT único si se proporciona

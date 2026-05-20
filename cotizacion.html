@@ -1,0 +1,1202 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Propuesta Comercial — Sistema de Gestión | DatenBanken Soluciones</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        :root {
+            --verde: #2d6a4f;
+            --verde-cl: #52b788;
+            --verde-bg: #d8f3dc;
+            --gris-osc: #1e293b;
+            --gris-med: #475569;
+            --gris-cl: #f1f5f9;
+            --borde: #e2e8f0;
+            --naranja: #ea580c;
+            --azul: #1d4ed8;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #f8fafc;
+            color: var(--gris-osc);
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .pagina {
+            max-width: 860px;
+            margin: 32px auto;
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 4px 32px rgba(0, 0, 0, .10);
+            overflow: hidden;
+        }
+
+        /* ── ENCABEZADO ─────────────────────────────────── */
+        .header {
+            background: linear-gradient(135deg, var(--verde) 0%, #1b4332 100%);
+            padding: 40px 48px 32px;
+            color: #fff;
+            position: relative;
+        }
+
+        .header::after {
+            content: '';
+            position: absolute;
+            bottom: -1px;
+            left: 0;
+            right: 0;
+            height: 32px;
+            background: #fff;
+            clip-path: ellipse(55% 100% at 50% 100%);
+        }
+
+        .header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+
+        .logo-area h1 {
+            font-size: 22px;
+            font-weight: 800;
+            letter-spacing: -.5px;
+        }
+
+        .logo-area p {
+            font-size: 12px;
+            opacity: .75;
+            margin-top: 2px;
+        }
+
+        .doc-info {
+            text-align: right;
+            font-size: 12px;
+            opacity: .85;
+        }
+
+        .doc-info strong {
+            font-size: 18px;
+            font-weight: 700;
+            display: block;
+            opacity: 1;
+        }
+
+        .header-titulo {
+            margin-top: 28px;
+        }
+
+        .header-titulo h2 {
+            font-size: 28px;
+            font-weight: 800;
+            line-height: 1.2;
+        }
+
+        .header-titulo p {
+            font-size: 14px;
+            opacity: .8;
+            margin-top: 6px;
+        }
+
+        .tag {
+            display: inline-block;
+            background: rgba(255, 255, 255, .18);
+            border: 1px solid rgba(255, 255, 255, .3);
+            border-radius: 20px;
+            padding: 4px 14px;
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: .5px;
+            text-transform: uppercase;
+            margin-top: 12px;
+        }
+
+        /* ── CUERPO ─────────────────────────────────────── */
+        .cuerpo {
+            padding: 40px 48px 48px;
+        }
+
+        /* Datos del cliente */
+        .datos-cliente {
+            background: var(--gris-cl);
+            border-radius: 10px;
+            padding: 20px 24px;
+            margin-bottom: 36px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px 32px;
+        }
+
+        .datos-cliente .campo {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .datos-cliente .campo label {
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: .6px;
+            color: var(--gris-med);
+            margin-bottom: 1px;
+        }
+
+        .datos-cliente .campo span {
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--gris-osc);
+            border-bottom: 1.5px dashed var(--borde);
+            padding-bottom: 3px;
+            min-height: 22px;
+        }
+
+        /* Secciones */
+        .seccion {
+            margin-bottom: 40px;
+        }
+
+        .seccion-titulo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 18px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid var(--verde-bg);
+        }
+
+        .seccion-titulo .icono {
+            width: 32px;
+            height: 32px;
+            background: var(--verde-bg);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 17px;
+        }
+
+        .seccion-titulo h3 {
+            font-size: 17px;
+            font-weight: 700;
+            color: var(--verde);
+        }
+
+        /* Bloque de problema */
+        .bloque-problema {
+            background: linear-gradient(135deg, #fff7ed 0%, #fff 100%);
+            border-left: 4px solid var(--naranja);
+            border-radius: 0 10px 10px 0;
+            padding: 20px 24px;
+        }
+
+        .bloque-problema p {
+            color: var(--gris-med);
+            margin-bottom: 10px;
+        }
+
+        .bloque-problema ul {
+            list-style: none;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+
+        .bloque-problema ul li {
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+            font-size: 13px;
+            color: var(--gris-osc);
+        }
+
+        .bloque-problema ul li::before {
+            content: '✗';
+            color: var(--naranja);
+            font-weight: 700;
+            flex-shrink: 0;
+            margin-top: 1px;
+        }
+
+        /* Módulos */
+        .grid-modulos {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px;
+        }
+
+        .modulo {
+            border: 1px solid var(--borde);
+            border-radius: 10px;
+            padding: 16px 18px;
+            transition: box-shadow .2s;
+        }
+
+        .modulo:hover {
+            box-shadow: 0 2px 12px rgba(45, 106, 79, .12);
+        }
+
+        .modulo-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 8px;
+        }
+
+        .modulo-icono {
+            font-size: 20px;
+            width: 36px;
+            height: 36px;
+            background: var(--verde-bg);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .modulo-header h4 {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--gris-osc);
+        }
+
+        .modulo p {
+            font-size: 12.5px;
+            color: var(--gris-med);
+            line-height: 1.5;
+        }
+
+        .modulo .badge {
+            display: inline-block;
+            background: var(--verde-bg);
+            color: var(--verde);
+            border-radius: 4px;
+            padding: 1px 8px;
+            font-size: 11px;
+            font-weight: 600;
+            margin-top: 6px;
+        }
+
+        /* KPIs de beneficio */
+        .grid-kpi {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+
+        .kpi {
+            background: var(--verde-bg);
+            border-radius: 10px;
+            padding: 20px 16px;
+            text-align: center;
+        }
+
+        .kpi .valor {
+            font-size: 32px;
+            font-weight: 800;
+            color: var(--verde);
+            line-height: 1;
+        }
+
+        .kpi .etiqueta {
+            font-size: 12px;
+            color: var(--gris-med);
+            margin-top: 6px;
+            font-weight: 500;
+        }
+
+        /* Tabla comparativa */
+        .tabla-comp {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+
+        .tabla-comp thead tr {
+            background: var(--verde);
+            color: #fff;
+        }
+
+        .tabla-comp thead th {
+            padding: 10px 14px;
+            text-align: left;
+            font-weight: 600;
+        }
+
+        .tabla-comp tbody tr:nth-child(even) {
+            background: var(--gris-cl);
+        }
+
+        .tabla-comp tbody td {
+            padding: 10px 14px;
+            border-bottom: 1px solid var(--borde);
+            color: var(--gris-osc);
+            vertical-align: top;
+        }
+
+        .tabla-comp .si {
+            color: #16a34a;
+            font-weight: 700;
+        }
+
+        .tabla-comp .no {
+            color: #dc2626;
+            font-weight: 700;
+        }
+
+        /* Ventajas */
+        .grid-ventajas {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px;
+        }
+
+        .ventaja {
+            display: flex;
+            gap: 12px;
+            align-items: flex-start;
+            padding: 14px;
+            border: 1px solid var(--borde);
+            border-radius: 10px;
+        }
+
+        .ventaja .ving {
+            font-size: 22px;
+            flex-shrink: 0;
+        }
+
+        .ventaja h4 {
+            font-size: 13px;
+            font-weight: 700;
+            margin-bottom: 3px;
+            color: var(--gris-osc);
+        }
+
+        .ventaja p {
+            font-size: 12px;
+            color: var(--gris-med);
+        }
+
+        /* Inversión */
+        .tabla-inversion {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13.5px;
+        }
+
+        .tabla-inversion thead tr {
+            background: var(--verde);
+            color: #fff;
+        }
+
+        .tabla-inversion thead th {
+            padding: 10px 16px;
+            text-align: left;
+            font-weight: 600;
+        }
+
+        .tabla-inversion tbody td {
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--borde);
+            vertical-align: top;
+        }
+
+        .tabla-inversion tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        .tabla-inversion .monto {
+            font-weight: 700;
+            color: var(--verde);
+            white-space: nowrap;
+        }
+
+        .tabla-inversion .nota {
+            font-size: 11.5px;
+            color: var(--gris-med);
+            margin-top: 3px;
+        }
+
+        .tabla-inversion tbody tr:nth-child(even) {
+            background: var(--gris-cl);
+        }
+
+        .total-row td {
+            background: var(--gris-osc) !important;
+            color: #fff !important;
+            font-weight: 700;
+            font-size: 15px;
+        }
+
+        .total-row .monto {
+            color: var(--verde-cl) !important;
+            font-size: 17px;
+        }
+
+        .nota-iva {
+            font-size: 11.5px;
+            color: var(--gris-med);
+            margin-top: 8px;
+            font-style: italic;
+        }
+
+        /* Plan de soporte */
+        .grid-soporte {
+            display: flex;
+            justify-content: center;
+            gap: 16px;
+        }
+
+        .grid-soporte .plan {
+            max-width: 420px;
+            width: 100%;
+        }
+
+        .plan {
+            border: 2px solid var(--borde);
+            border-radius: 12px;
+            overflow: hidden;
+            transition: transform .2s;
+        }
+
+        .plan:hover {
+            transform: translateY(-2px);
+        }
+
+        .plan.recomendado {
+            border-color: var(--verde);
+            position: relative;
+        }
+
+        .plan.recomendado::before {
+            content: '★ RECOMENDADO';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: var(--verde);
+            color: #fff;
+            text-align: center;
+            font-size: 10px;
+            font-weight: 700;
+            padding: 3px;
+            letter-spacing: .5px;
+        }
+
+        .plan-header {
+            background: var(--gris-cl);
+            padding: 18px 16px 14px;
+            text-align: center;
+        }
+
+        .plan.recomendado .plan-header {
+            padding-top: 28px;
+        }
+
+        .plan-header h4 {
+            font-size: 13px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: .5px;
+            color: var(--gris-med);
+        }
+
+        .plan-precio {
+            font-size: 24px;
+            font-weight: 800;
+            color: var(--verde);
+            line-height: 1.1;
+            margin-top: 6px;
+        }
+
+        .plan-precio span {
+            font-size: 12px;
+            font-weight: 400;
+            color: var(--gris-med);
+        }
+
+        .plan-items {
+            padding: 14px 16px;
+            list-style: none;
+        }
+
+        .plan-items li {
+            font-size: 12px;
+            color: var(--gris-osc);
+            padding: 4px 0;
+            border-bottom: 1px solid var(--borde);
+            display: flex;
+            gap: 6px;
+            align-items: flex-start;
+        }
+
+        .plan-items li:last-child {
+            border-bottom: none;
+        }
+
+        .plan-items li::before {
+            content: '✓';
+            color: var(--verde);
+            font-weight: 700;
+            flex-shrink: 0;
+        }
+
+        /* Condiciones */
+        .condiciones {
+            background: var(--gris-cl);
+            border-radius: 10px;
+            padding: 20px 24px;
+        }
+
+        .condiciones ul {
+            list-style: none;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+
+        .condiciones ul li {
+            font-size: 13px;
+            color: var(--gris-osc);
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+        }
+
+        .condiciones ul li::before {
+            content: '→';
+            color: var(--verde);
+            font-weight: 700;
+            flex-shrink: 0;
+        }
+
+        /* PIE */
+        .footer {
+            background: var(--gris-osc);
+            color: #fff;
+            padding: 24px 48px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+            font-size: 12px;
+        }
+
+        .footer .firma strong {
+            font-size: 14px;
+            font-weight: 700;
+            display: block;
+            color: var(--verde-cl);
+        }
+
+        .footer .vigencia {
+            text-align: right;
+            opacity: .75;
+        }
+
+        /* ── PRINT ───────────────────────────────────────── */
+
+        /* Forzar que Chrome preserve colores y fondos al generar PDF */
+        * {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+            color-adjust: exact !important;
+        }
+
+        @page {
+            size: A4;
+            margin: 10mm 12mm;
+        }
+
+        @media print {
+            body {
+                background: #fff;
+                font-size: 12px;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+
+            .pagina {
+                max-width: 100%;
+                margin: 0;
+                border-radius: 0;
+                box-shadow: none;
+            }
+
+            /* Preservar gradiente del encabezado */
+            .header {
+                background: linear-gradient(135deg, #2d6a4f 0%, #1b4332 100%) !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+
+            /* Quitar el clip-path decorativo (no imprime bien) */
+            .header::after {
+                display: none;
+            }
+
+            /* Evitar cortes dentro de bloques */
+            .seccion {
+                break-inside: avoid;
+            }
+
+            .modulo {
+                break-inside: avoid;
+            }
+
+            .kpi {
+                break-inside: avoid;
+            }
+
+            .plan {
+                break-inside: avoid;
+            }
+
+            .ventaja {
+                break-inside: avoid;
+            }
+
+            .datos-cliente {
+                break-inside: avoid;
+            }
+
+            .bloque-problema {
+                break-inside: avoid;
+            }
+
+            .tabla-comp tr {
+                break-inside: avoid;
+            }
+
+            .tabla-inversion tr {
+                break-inside: avoid;
+            }
+
+            /* Salto de página antes de secciones pesadas */
+            .seccion:nth-child(4) {
+                break-before: page;
+            }
+
+            /* Colores de fondo de tarjetas y badges preservados */
+            .kpi {
+                background: #d8f3dc !important;
+            }
+
+            .badge {
+                background: #d8f3dc !important;
+                color: #2d6a4f !important;
+            }
+
+            .modulo-icono {
+                background: #d8f3dc !important;
+            }
+
+            .bloque-problema {
+                background: #fff7ed !important;
+            }
+
+            .datos-cliente {
+                background: #f1f5f9 !important;
+            }
+
+            .condiciones {
+                background: #f1f5f9 !important;
+            }
+
+            /* Fondo del pie de página */
+            .footer {
+                background: #1e293b !important;
+                color: #fff !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+
+            /* Encabezados de tablas */
+            .tabla-comp thead tr,
+            .tabla-inversion thead tr {
+                background: #2d6a4f !important;
+                color: #fff !important;
+            }
+
+            .total-row td {
+                background: #1e293b !important;
+                color: #fff !important;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="pagina">
+
+        <!-- ══ ENCABEZADO ══════════════════════════════════════ -->
+        <div class="header">
+            <div class="header-top">
+                <div class="logo-area">
+                    <h1><svg width="28" height="28" viewBox="0 0 28 28"
+                            style="vertical-align:middle;margin-right:8px;display:inline-block" fill="none"
+                            xmlns="http://www.w3.org/2000/svg">
+                            <rect width="28" height="28" rx="7" fill="rgba(255,255,255,0.22)" /><text x="14" y="19"
+                                text-anchor="middle" font-family="Inter,sans-serif" font-size="11" font-weight="800"
+                                fill="white">DB</text>
+                        </svg>DatenBanken Soluciones</h1>
+                    <p>Sistema de Gestión para el Sector Floricultor</p>
+                </div>
+                <div class="doc-info">
+                    <strong>COTIZACIÓN</strong>
+                    No. 2026-036<br>
+                    Bogotá, 4 de mayo de 2026<br>
+                    Vigencia: 30 días
+                </div>
+            </div>
+            <div class="header-titulo">
+                <h2>Propuesta Comercial<br>Sistema de Gestión Integral</h2>
+                <p>Solución diseñada exclusivamente para empresas del sector floricultor colombiano</p>
+                <span class="tag">🇨🇴 Hecho para la floricultura colombiana</span>
+            </div>
+        </div>
+
+        <!-- ══ CUERPO ══════════════════════════════════════════ -->
+        <div class="cuerpo">
+
+            <!-- Datos del cliente -->
+            <div class="datos-cliente">
+                <div class="campo">
+                    <label>Empresa</label>
+                    <span>FLORES SyM SAS</span>
+                </div>
+                <div class="campo">
+                    <label>NIT</label>
+                    <span>— Por confirmar —</span>
+                </div>
+                <div class="campo">
+                    <label>Persona de contacto</label>
+                    <span>Valentina Pulido</span>
+                </div>
+                <div class="campo">
+                    <label>Ciudad / Municipio</label>
+                    <span>&nbsp;</span>
+                </div>
+                <div class="campo">
+                    <label>Correo electrónico</label>
+                    <span>floressym@gmail.com</span>
+                </div>
+                <div class="campo">
+                    <label>Teléfono</label>
+                    <span>321 981 2918</span>
+                </div>
+            </div>
+
+            <!-- ── 1. EL PROBLEMA ──────────────────────────────── -->
+            <div class="seccion">
+                <div class="seccion-titulo">
+                    <div class="icono">⚠️</div>
+                    <h3>¿Cuál es el problema que resolvemos?</h3>
+                </div>
+                <div class="bloque-problema">
+                    <p>La mayoría de las empresas floricultoras pequeñas trabajan hoy con hojas de cálculo, cuadernos o
+                        sistemas desconectados. Esto genera pérdidas invisibles todos los días:</p>
+                    <ul>
+                        <li>Tiempo perdido llenando manualmente facturas, planillas y fitosanitarios</li>
+                        <li>Errores en cuentas por cobrar y cuentas por pagar</li>
+                        <li>Devoluciones sin registro, generando pérdidas no contabilizadas</li>
+                        <li>Inventario desactualizado o manejado de memoria</li>
+                        <li>No saber cuánto le debe cada cliente ni cuánto se le debe a cada proveedor</li>
+                        <li>Tiempo excesivo en cierre de caja y conciliaciones</li>
+                        <li>Reportes para gerencia que toman horas en construir</li>
+                        <li>Documentos de exportación que se generan a mano en Word o Excel</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- ── 2. QUÉ INCLUYE ──────────────────────────────── -->
+            <div class="seccion">
+                <div class="seccion-titulo">
+                    <div class="icono">📦</div>
+                    <h3>¿Qué incluye el sistema?</h3>
+                </div>
+                <div class="grid-modulos">
+
+                    <div class="modulo">
+                        <div class="modulo-header">
+                            <div class="modulo-icono">📊</div>
+                            <h4>Panel de Control (Dashboard)</h4>
+                        </div>
+                        <p>Visión general del negocio en tiempo real: ventas del día, pedidos activos, cobros pendientes
+                            y estado financiero resumido. Todo en una sola pantalla, sin abrir carpetas ni buscar
+                            archivos.</p>
+                        <span class="badge">Decisiones más rápidas</span>
+                    </div>
+
+                    <div class="modulo">
+                        <div class="modulo-header">
+                            <div class="modulo-icono">🛒</div>
+                            <h4>Gestión de Pedidos y Facturación</h4>
+                        </div>
+                        <p>Registre pedidos de clientes y genere automáticamente la factura, la planilla de empaque, la
+                            etiqueta de caja y el certificado fitosanitario. Sin digitación repetida, sin errores de
+                            transcripción.</p>
+                        <span class="badge">Ahorra hasta 45 min por pedido</span>
+                    </div>
+
+                    <div class="modulo">
+                        <div class="modulo-header">
+                            <div class="modulo-icono">🚚</div>
+                            <h4>Gestión de Compras a Proveedores</h4>
+                        </div>
+                        <p>Registre y controle todas las compras de insumos y flores. Genere órdenes de compra en PDF
+                            listas para enviar al proveedor. Lleve el historial completo por proveedor y producto.</p>
+                        <span class="badge">Control total de insumos</span>
+                    </div>
+
+                    <div class="modulo">
+                        <div class="modulo-header">
+                            <div class="modulo-icono">💰</div>
+                            <h4>Cobros a Clientes</h4>
+                        </div>
+                        <p>Sepa exactamente cuánto le debe cada cliente, cuáles facturas están vencidas y cuáles al día.
+                            Registre cada pago y genere el comprobante automáticamente. Elimina la confusión de "no sé
+                            cuánto me pagó".</p>
+                        <span class="badge">Cartera siempre al día</span>
+                    </div>
+
+                    <div class="modulo">
+                        <div class="modulo-header">
+                            <div class="modulo-icono">🏦</div>
+                            <h4>Pagos a Proveedores</h4>
+                        </div>
+                        <p>Controle cuánto le debe a cada proveedor y cuáles compras tienen saldo pendiente. Registre
+                            pagos y emita comprobantes de pago. Nunca más pague dos veces la misma factura.</p>
+                        <span class="badge">Pagos sin errores</span>
+                    </div>
+
+                    <div class="modulo">
+                        <div class="modulo-header">
+                            <div class="modulo-icono">↩️</div>
+                            <h4>Devoluciones de Ventas</h4>
+                        </div>
+                        <p>Gestione las devoluciones de clientes de forma trazable: cada devolución queda registrada
+                            contra la factura original, con su documento PDF y el impacto en cartera actualizado de
+                            inmediato.</p>
+                        <span class="badge">Sin pérdidas sin registro</span>
+                    </div>
+
+                    <div class="modulo">
+                        <div class="modulo-header">
+                            <div class="modulo-icono">🔄</div>
+                            <h4>Devoluciones a Proveedores</h4>
+                        </div>
+                        <p>Registre insumos o flores devueltas al proveedor con documento oficial. Controle el crédito a
+                            favor y aplíquelo en la próxima compra. Todo queda guardado y con respaldo documental.</p>
+                        <span class="badge">Créditos controlados</span>
+                    </div>
+
+                    <div class="modulo">
+                        <div class="modulo-header">
+                            <div class="modulo-icono">👥</div>
+                            <h4>Gestión de Clientes y Proveedores</h4>
+                        </div>
+                        <p>Base de datos centralizada de clientes (con NIT, dirección, contactos) y proveedores.
+                            Consulte historial de compras y ventas por empresa en segundos. Sin buscar en cuadernos ni
+                            preguntar a memoria.</p>
+                        <span class="badge">Información siempre disponible</span>
+                    </div>
+
+                    <div class="modulo">
+                        <div class="modulo-header">
+                            <div class="modulo-icono">🌺</div>
+                            <h4>Catálogo de Productos y Variedades</h4>
+                        </div>
+                        <p>Administre fácilmente su portafolio de flores: variedades, grados y precios. Actualice un
+                            producto una sola vez y el cambio se refleja en todo el sistema automáticamente.</p>
+                        <span class="badge">Portafolio siempre actualizado</span>
+                    </div>
+
+                    <div class="modulo">
+                        <div class="modulo-header">
+                            <div class="modulo-icono">🚗</div>
+                            <h4>Conductores y Ayudantes de Despacho</h4>
+                        </div>
+                        <p>Registre el equipo de despacho asignado a cada entrega. Lleve control de quién recogió qué
+                            pedido, cuándo y a dónde. Respaldo ante cualquier reclamo del cliente.</p>
+                        <span class="badge">Trazabilidad de entregas</span>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- ── 3. BENEFICIOS CUANTIFICABLES ───────────────── -->
+            <div class="seccion">
+                <div class="seccion-titulo">
+                    <div class="icono">⚡</div>
+                    <h3>Beneficios medibles para su operación</h3>
+                </div>
+                <div class="grid-kpi">
+                    <div class="kpi">
+                        <div class="valor">−75%</div>
+                        <div class="etiqueta">Tiempo en generación<br>de documentos por pedido</div>
+                    </div>
+                    <div class="kpi">
+                        <div class="valor">−90%</div>
+                        <div class="etiqueta">Errores en facturas<br>y documentos de despacho</div>
+                    </div>
+                    <div class="kpi">
+                        <div class="valor">100%</div>
+                        <div class="etiqueta">Trazabilidad de pagos,<br>cobros y devoluciones</div>
+                    </div>
+                </div>
+
+                <table class="tabla-comp">
+                    <thead>
+                        <tr>
+                            <th>Proceso</th>
+                            <th>Sin el sistema</th>
+                            <th>Con el sistema</th>
+                            <th>Lo que se gana</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Generar factura + planilla + fitosanitario + etiqueta</td>
+                            <td>45 – 60 minutos (manual)</td>
+                            <td>Menos de 5 minutos</td>
+                            <td>+40 minutos libres por pedido</td>
+                        </tr>
+                        <tr>
+                            <td>Saber cuánto le debe un cliente</td>
+                            <td>Buscar en cuadernos o preguntar</td>
+                            <td>Consulta inmediata en pantalla</td>
+                            <td>Respuesta en segundos, no en horas</td>
+                        </tr>
+                        <tr>
+                            <td>Cuadre de cuentas por pagar</td>
+                            <td>Hojas de cálculo, errores frecuentes</td>
+                            <td>Automático y siempre actualizado</td>
+                            <td>Evita sobrepagos y deudas olvidadas</td>
+                        </tr>
+                        <tr>
+                            <td>Informe de ventas del mes</td>
+                            <td>2 – 4 horas construyendo el reporte</td>
+                            <td>Disponible en el dashboard al instante</td>
+                            <td>+3 horas libres al cierre de mes</td>
+                        </tr>
+                        <tr>
+                            <td>Registro de una devolución</td>
+                            <td>Nota en papel, sin documento oficial</td>
+                            <td>Documento PDF generado automáticamente</td>
+                            <td>Respaldo legal ante disputas con clientes</td>
+                        </tr>
+                        <tr>
+                            <td>Órden de compra a proveedor</td>
+                            <td>Llamada o mensaje de WhatsApp</td>
+                            <td>PDF oficial enviado desde el sistema</td>
+                            <td>Profesionalismo y trazabilidad garantizados</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- ── 4. VENTAJAS DIFERENCIALES ───────────────────── -->
+            <div class="seccion">
+                <div class="seccion-titulo">
+                    <div class="icono">🏆</div>
+                    <h3>¿Por qué elegir esta solución?</h3>
+                </div>
+                <div class="grid-ventajas">
+                    <div class="ventaja">
+                        <div class="ving">🌿</div>
+                        <div>
+                            <h4>Diseñado exclusivamente para el sector floricultor</h4>
+                            <p>No es un sistema genérico adaptado. Cada módulo, cada documento y cada proceso fue
+                                construido pensando en cómo trabaja una empresa floricultora colombiana: planillas,
+                                fitosanitarios, grados, variedades, despachos.</p>
+                        </div>
+                    </div>
+                    <div class="ventaja">
+                        <div class="ving">📄</div>
+                        <div>
+                            <h4>Documentos legales listos en segundos</h4>
+                            <p>Facturas, órdenes de compra, certificados fitosanitarios, planillas de empaque y
+                                comprobantes de pago se generan en PDF con un clic. Profesionales, numerados y listos
+                                para imprimir o enviar por correo.</p>
+                        </div>
+                    </div>
+                    <div class="ventaja">
+                        <div class="ving">📱</div>
+                        <div>
+                            <h4>Funciona desde cualquier dispositivo</h4>
+                            <p>Acceda desde computador, tablet o celular sin instalar nada. El gerente puede revisar el
+                                estado del negocio desde casa, y el operador puede registrar pedidos desde bodega.</p>
+                        </div>
+                    </div>
+                    <div class="ventaja">
+                        <div class="ving">🔒</div>
+                        <div>
+                            <h4>Sus datos son suyos, seguros y privados</h4>
+                            <p>El sistema se aloja en un servidor dedicado para su empresa. No comparte información con
+                                otras empresas. Sus clientes, precios y movimientos financieros permanecen
+                                confidenciales.</p>
+                        </div>
+                    </div>
+                    <div class="ventaja">
+                        <div class="ving">🚀</div>
+                        <div>
+                            <h4>Listo para usar desde el primer día</h4>
+                            <p>La implementación incluye carga inicial de datos (clientes, productos, variedades,
+                                proveedores) y capacitación al equipo. No hay curva de aprendizaje prolongada.</p>
+                        </div>
+                    </div>
+                    <div class="ventaja">
+                        <div class="ving">💲</div>
+                        <div>
+                            <h4>Sin costos de licencia mensuales por usuario</h4>
+                            <p>A diferencia de los grandes software ERP, este sistema no cobra por cada usuario
+                                adicional ni por módulos extra. El precio es fijo sin sorpresas.</p>
+                        </div>
+                    </div>
+                    <div class="ventaja">
+                        <div class="ving">📈</div>
+                        <div>
+                            <h4>Crece con su negocio</h4>
+                            <p>El sistema está construido para escalar. Si en el futuro necesita nuevos módulos (nómina,
+                                contabilidad, integración con DIAN), se pueden incorporar sin reemplazar lo que ya
+                                existe.</p>
+                        </div>
+                    </div>
+                    <div class="ventaja">
+                        <div class="ving">🤝</div>
+                        <div>
+                            <h4>Soporte en español, conociendo su sector</h4>
+                            <p>No llamará a un call center del extranjero. El soporte es directo con el desarrollador
+                                que conoce su negocio, responde en horas (no días) y entiende el lenguaje de la
+                                floricultura.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ── 5. INVERSIÓN ────────────────────────────────── -->
+            <div class="seccion">
+                <div class="seccion-titulo">
+                    <div class="icono">💵</div>
+                    <h3>Inversión</h3>
+                </div>
+
+                <table class="tabla-inversion">
+                    <thead>
+                        <tr>
+                            <th>Concepto</th>
+                            <th>Descripción</th>
+                            <th>Valor</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Implementación del Sistema</strong><br>
+                                <div class="nota">Pago único. Incluye configuración, carga de datos iniciales y
+                                    capacitación al equipo (hasta 3 personas).</div>
+                            </td>
+                            <td>
+                                • 10 módulos de gestión completamente configurados<br>
+                                • Generación automática de 8 tipos de documentos PDF<br>
+                                • Dashboard con indicadores del negocio<br>
+                                • Carga inicial: clientes, productos, variedades, proveedores<br>
+                                • Capacitación presencial o virtual (hasta 4 horas)<br>
+                                • 30 días de acompañamiento post-entrega sin costo
+                            </td>
+                            <td class="monto">$4.000.000</td>
+                        </tr>
+                        <tr class="total-row">
+                            <td colspan="2"><strong>TOTAL IMPLEMENTACIÓN</strong> (pago único)</td>
+                            <td class="monto">$4.000.000</td>
+                        </tr>
+                    </tbody>
+                </table>
+                <p class="nota-iva">* Valores expresados en pesos colombianos (COP). IVA del 19% no incluido si aplica
+                    según régimen tributario del contratante. Forma de pago: <strong>50% ($2.000.000) para iniciar el
+                        proyecto</strong> y <strong>50% ($2.000.000) a la entrega del sistema funcionando</strong>.</p>
+
+                <!-- Soporte mensual -->
+                <br>
+                <div class="seccion-titulo" style="margin-top:8px;">
+                    <div class="icono">🛡️</div>
+                    <h3>Planes de Soporte Mensual</h3>
+                </div>
+                <div class="grid-soporte">
+
+                    <div class="plan">
+                        <div class="plan-header">
+                            <h4>Plan Básico de Soporte</h4>
+                            <div class="plan-precio">$200.000<span>/mes</span></div>
+                        </div>
+                        <ul class="plan-items">
+                            <li>Corrección de errores del sistema</li>
+                            <li>Actualizaciones de seguridad</li>
+                            <li>Respaldo de base de datos mensual</li>
+                            <li>Hosting del servidor incluido</li>
+                            <li>Atención por WhatsApp — respuesta inmediata en horario laboral</li>
+                            <li>Acceso a mejoras y actualizaciones menores del sistema</li>
+                        </ul>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- ── 6. CONDICIONES ──────────────────────────────── -->
+            <div class="seccion">
+                <div class="seccion-titulo">
+                    <div class="icono">📋</div>
+                    <h3>Condiciones Comerciales</h3>
+                </div>
+                <div class="condiciones">
+                    <ul>
+                        <li>Vigencia de esta propuesta: 30 días calendario</li>
+                        <li>Tiempo estimado de entrega: 2 – 3 semanas desde el inicio del proyecto</li>
+                        <li>Forma de pago: 50% para iniciar el proyecto y 50% a la entrega</li>
+                        <li>El soporte mensual inicia 30 días después de la entrega oficial</li>
+                        <li>El sistema se entrega funcional en servidor en la nube del cliente</li>
+                        <li>La capacitación puede ser presencial o por videollamada (Zoom / Meet)</li>
+                        <li>Se incluye manual de usuario en formato PDF como entregable</li>
+                        <li>Los datos del cliente son de su propiedad exclusiva</li>
+                    </ul>
+                </div>
+            </div>
+
+        </div><!-- /cuerpo -->
+
+        <!-- ══ PIE ═════════════════════════════════════════════ -->
+        <div class="footer">
+            <div class="firma">
+                <strong>José Mauricio Ovalle Romero</strong>
+                Desarrollador de Aplicaciones Empresariales<br>
+                📧 mauricioovalle@hotmail.com &nbsp;|&nbsp; 📞 315 394 4103 &nbsp;|&nbsp; 🌐
+                portal.datenbankensoluciones.com.co
+            </div>
+            <div class="vigencia">
+                Cotización No. 2026-036<br>
+                Fecha: 4 de mayo de 2026<br>
+                Válida hasta: 3 de junio de 2026
+            </div>
+        </div>
+
+    </div><!-- /pagina -->
+</body>
+
+</html>

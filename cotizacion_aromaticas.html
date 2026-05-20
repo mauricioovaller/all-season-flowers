@@ -1,0 +1,1145 @@
+﻿<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Propuesta Comercial — Migración a Web | DatenBanken Soluciones</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        :root {
+            --verde: #1d6a8a;
+            --verde-cl: #4db8d4;
+            --verde-bg: #d0edf5;
+            --gris-osc: #1e293b;
+            --gris-med: #475569;
+            --gris-cl: #f1f5f9;
+            --borde: #e2e8f0;
+            --naranja: #ea580c;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #f8fafc;
+            color: var(--gris-osc);
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .pagina {
+            max-width: 860px;
+            margin: 32px auto;
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 4px 32px rgba(0, 0, 0, .10);
+            overflow: hidden;
+        }
+
+        /* ── ENCABEZADO ─────────────────────────────────── */
+        .header {
+            background: linear-gradient(135deg, var(--verde) 0%, #0f3d52 100%);
+            padding: 40px 48px 32px;
+            color: #fff;
+            position: relative;
+        }
+
+        .header::after {
+            content: '';
+            position: absolute;
+            bottom: -1px;
+            left: 0;
+            right: 0;
+            height: 32px;
+            background: #fff;
+            clip-path: ellipse(55% 100% at 50% 100%);
+        }
+
+        .header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+
+        .logo-area h1 {
+            font-size: 22px;
+            font-weight: 800;
+            letter-spacing: -.5px;
+        }
+
+        .logo-area p {
+            font-size: 12px;
+            opacity: .75;
+            margin-top: 2px;
+        }
+
+        .doc-info {
+            text-align: right;
+            font-size: 12px;
+            opacity: .85;
+        }
+
+        .doc-info strong {
+            font-size: 18px;
+            font-weight: 700;
+            display: block;
+            opacity: 1;
+        }
+
+        .header-titulo {
+            margin-top: 28px;
+        }
+
+        .header-titulo h2 {
+            font-size: 28px;
+            font-weight: 800;
+            line-height: 1.2;
+        }
+
+        .header-titulo p {
+            font-size: 14px;
+            opacity: .8;
+            margin-top: 6px;
+        }
+
+        .tag {
+            display: inline-block;
+            background: rgba(255, 255, 255, .18);
+            border: 1px solid rgba(255, 255, 255, .3);
+            border-radius: 20px;
+            padding: 4px 14px;
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: .5px;
+            text-transform: uppercase;
+            margin-top: 12px;
+        }
+
+        /* ── CUERPO ─────────────────────────────────────── */
+        .cuerpo {
+            padding: 40px 48px 48px;
+        }
+
+        /* Datos del cliente */
+        .datos-cliente {
+            background: var(--gris-cl);
+            border-radius: 10px;
+            padding: 20px 24px;
+            margin-bottom: 36px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px 32px;
+        }
+
+        .datos-cliente .campo {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .datos-cliente .campo label {
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: .6px;
+            color: var(--gris-med);
+            margin-bottom: 1px;
+        }
+
+        .datos-cliente .campo span {
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--gris-osc);
+            border-bottom: 1.5px dashed var(--borde);
+            padding-bottom: 3px;
+            min-height: 22px;
+        }
+
+        /* Secciones */
+        .seccion {
+            margin-bottom: 40px;
+        }
+
+        .seccion-titulo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 18px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid var(--verde-bg);
+        }
+
+        .seccion-titulo .icono {
+            width: 32px;
+            height: 32px;
+            background: var(--verde-bg);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 17px;
+        }
+
+        .seccion-titulo h3 {
+            font-size: 17px;
+            font-weight: 700;
+            color: var(--verde);
+        }
+
+        /* Bloque de problema */
+        .bloque-problema {
+            background: linear-gradient(135deg, #fff7ed 0%, #fff 100%);
+            border-left: 4px solid var(--naranja);
+            border-radius: 0 10px 10px 0;
+            padding: 20px 24px;
+        }
+
+        .bloque-problema p {
+            color: var(--gris-med);
+            margin-bottom: 10px;
+        }
+
+        .bloque-problema ul {
+            list-style: none;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+
+        .bloque-problema ul li {
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+            font-size: 13px;
+            color: var(--gris-osc);
+        }
+
+        .bloque-problema ul li::before {
+            content: '✗';
+            color: var(--naranja);
+            font-weight: 700;
+            flex-shrink: 0;
+            margin-top: 1px;
+        }
+
+        /* Bloque de migracion */
+        .bloque-migracion {
+            background: linear-gradient(135deg, var(--verde-bg) 0%, #fff 100%);
+            border-left: 4px solid var(--verde);
+            border-radius: 0 10px 10px 0;
+            padding: 20px 24px;
+        }
+
+        .bloque-migracion p {
+            color: var(--gris-med);
+            margin-bottom: 10px;
+        }
+
+        .bloque-migracion ul {
+            list-style: none;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+
+        .bloque-migracion ul li {
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+            font-size: 13px;
+            color: var(--gris-osc);
+        }
+
+        .bloque-migracion ul li::before {
+            content: '✓';
+            color: var(--verde);
+            font-weight: 700;
+            flex-shrink: 0;
+            margin-top: 1px;
+        }
+
+        /* Módulos */
+        .grid-modulos {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px;
+        }
+
+        .modulo {
+            border: 1px solid var(--borde);
+            border-radius: 10px;
+            padding: 16px 18px;
+            transition: box-shadow .2s;
+        }
+
+        .modulo:hover {
+            box-shadow: 0 2px 12px rgba(29, 106, 138, .12);
+        }
+
+        .modulo-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 8px;
+        }
+
+        .modulo-icono {
+            font-size: 20px;
+            width: 36px;
+            height: 36px;
+            background: var(--verde-bg);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .modulo-header h4 {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--gris-osc);
+        }
+
+        .modulo p {
+            font-size: 12.5px;
+            color: var(--gris-med);
+            line-height: 1.5;
+        }
+
+        .badge {
+            display: inline-block;
+            background: var(--verde-bg);
+            color: var(--verde);
+            border-radius: 4px;
+            padding: 1px 8px;
+            font-size: 11px;
+            font-weight: 600;
+            margin-top: 6px;
+        }
+
+        /* KPIs */
+        .grid-kpi {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+
+        .kpi {
+            background: var(--verde-bg);
+            border-radius: 10px;
+            padding: 20px 16px;
+            text-align: center;
+        }
+
+        .kpi .valor {
+            font-size: 32px;
+            font-weight: 800;
+            color: var(--verde);
+            line-height: 1;
+        }
+
+        .kpi .etiqueta {
+            font-size: 12px;
+            color: var(--gris-med);
+            margin-top: 6px;
+            font-weight: 500;
+        }
+
+        /* Tabla comparativa */
+        .tabla-comp {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+
+        .tabla-comp thead tr {
+            background: var(--verde);
+            color: #fff;
+        }
+
+        .tabla-comp thead th {
+            padding: 10px 14px;
+            text-align: left;
+            font-weight: 600;
+        }
+
+        .tabla-comp tbody tr:nth-child(even) {
+            background: var(--gris-cl);
+        }
+
+        .tabla-comp tbody td {
+            padding: 10px 14px;
+            border-bottom: 1px solid var(--borde);
+            color: var(--gris-osc);
+            vertical-align: top;
+        }
+
+        /* Ventajas */
+        .grid-ventajas {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px;
+        }
+
+        .ventaja {
+            display: flex;
+            gap: 12px;
+            align-items: flex-start;
+            padding: 14px;
+            border: 1px solid var(--borde);
+            border-radius: 10px;
+        }
+
+        .ventaja .ving {
+            font-size: 22px;
+            flex-shrink: 0;
+        }
+
+        .ventaja h4 {
+            font-size: 13px;
+            font-weight: 700;
+            margin-bottom: 3px;
+            color: var(--gris-osc);
+        }
+
+        .ventaja p {
+            font-size: 12px;
+            color: var(--gris-med);
+        }
+
+        /* Inversión */
+        .tabla-inversion {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13.5px;
+        }
+
+        .tabla-inversion thead tr {
+            background: var(--verde);
+            color: #fff;
+        }
+
+        .tabla-inversion thead th {
+            padding: 10px 16px;
+            text-align: left;
+            font-weight: 600;
+        }
+
+        .tabla-inversion tbody td {
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--borde);
+            vertical-align: top;
+        }
+
+        .tabla-inversion tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        .tabla-inversion .monto {
+            font-weight: 700;
+            color: var(--verde);
+            white-space: nowrap;
+        }
+
+        .tabla-inversion .nota {
+            font-size: 11.5px;
+            color: var(--gris-med);
+            margin-top: 3px;
+        }
+
+        .tabla-inversion tbody tr:nth-child(even) {
+            background: var(--gris-cl);
+        }
+
+        .total-row td {
+            background: var(--gris-osc) !important;
+            color: #fff !important;
+            font-weight: 700;
+            font-size: 15px;
+        }
+
+        .total-row .monto {
+            color: var(--verde-cl) !important;
+            font-size: 17px;
+        }
+
+        .nota-iva {
+            font-size: 11.5px;
+            color: var(--gris-med);
+            margin-top: 8px;
+            font-style: italic;
+        }
+
+        /* Plan soporte */
+        .plan-unico {
+            border: 2px solid var(--verde);
+            border-radius: 12px;
+            overflow: hidden;
+            max-width: 420px;
+            margin: 0 auto;
+        }
+
+        .plan-header {
+            background: var(--verde-bg);
+            padding: 20px 16px;
+            text-align: center;
+        }
+
+        .plan-header h4 {
+            font-size: 13px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: .5px;
+            color: var(--gris-med);
+        }
+
+        .plan-precio {
+            font-size: 28px;
+            font-weight: 800;
+            color: var(--verde);
+            line-height: 1.1;
+            margin-top: 6px;
+        }
+
+        .plan-precio span {
+            font-size: 13px;
+            font-weight: 400;
+            color: var(--gris-med);
+        }
+
+        .plan-items {
+            padding: 14px 20px;
+            list-style: none;
+        }
+
+        .plan-items li {
+            font-size: 13px;
+            color: var(--gris-osc);
+            padding: 6px 0;
+            border-bottom: 1px solid var(--borde);
+            display: flex;
+            gap: 8px;
+            align-items: flex-start;
+        }
+
+        .plan-items li:last-child {
+            border-bottom: none;
+        }
+
+        .plan-items li::before {
+            content: '✓';
+            color: var(--verde);
+            font-weight: 700;
+            flex-shrink: 0;
+        }
+
+        /* Condiciones */
+        .condiciones {
+            background: var(--gris-cl);
+            border-radius: 10px;
+            padding: 20px 24px;
+        }
+
+        .condiciones ul {
+            list-style: none;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+
+        .condiciones ul li {
+            font-size: 13px;
+            color: var(--gris-osc);
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+        }
+
+        .condiciones ul li::before {
+            content: '→';
+            color: var(--verde);
+            font-weight: 700;
+            flex-shrink: 0;
+        }
+
+        /* PIE */
+        .footer {
+            background: var(--gris-osc);
+            color: #fff;
+            padding: 24px 48px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+            font-size: 12px;
+        }
+
+        .footer .firma strong {
+            font-size: 14px;
+            font-weight: 700;
+            display: block;
+            color: var(--verde-cl);
+        }
+
+        .footer .vigencia {
+            text-align: right;
+            opacity: .75;
+        }
+
+        /* ── PRINT ───────────────────────────────────────── */
+        * {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+            color-adjust: exact !important;
+        }
+
+        @page {
+            size: A4;
+            margin: 10mm 12mm;
+        }
+
+        @media print {
+            body {
+                background: #fff;
+                font-size: 12px;
+            }
+
+            .pagina {
+                max-width: 100%;
+                margin: 0;
+                border-radius: 0;
+                box-shadow: none;
+            }
+
+            .header {
+                background: linear-gradient(135deg, #1d6a8a 0%, #0f3d52 100%) !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+
+            .header::after {
+                display: none;
+            }
+
+            .seccion {
+                break-inside: avoid;
+            }
+
+            .modulo {
+                break-inside: avoid;
+            }
+
+            .kpi {
+                break-inside: avoid;
+            }
+
+            .ventaja {
+                break-inside: avoid;
+            }
+
+            .datos-cliente {
+                break-inside: avoid;
+            }
+
+            .bloque-problema {
+                break-inside: avoid;
+            }
+
+            .bloque-migracion {
+                break-inside: avoid;
+            }
+
+            .tabla-comp tr {
+                break-inside: avoid;
+            }
+
+            .tabla-inversion tr {
+                break-inside: avoid;
+            }
+
+            .seccion:nth-child(4) {
+                break-before: page;
+            }
+
+            .kpi {
+                background: #d0edf5 !important;
+            }
+
+            .badge {
+                background: #d0edf5 !important;
+                color: #1d6a8a !important;
+            }
+
+            .modulo-icono {
+                background: #d0edf5 !important;
+            }
+
+            .bloque-problema {
+                background: #fff7ed !important;
+            }
+
+            .bloque-migracion {
+                background: #d0edf5 !important;
+            }
+
+            .datos-cliente {
+                background: #f1f5f9 !important;
+            }
+
+            .condiciones {
+                background: #f1f5f9 !important;
+            }
+
+            .plan-header {
+                background: #d0edf5 !important;
+            }
+
+            .footer {
+                background: #1e293b !important;
+                color: #fff !important;
+            }
+
+            .tabla-comp thead tr,
+            .tabla-inversion thead tr {
+                background: #1d6a8a !important;
+                color: #fff !important;
+            }
+
+            .total-row td {
+                background: #1e293b !important;
+                color: #fff !important;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="pagina">
+
+        <!-- ══ ENCABEZADO ══════════════════════════════════════ -->
+        <div class="header">
+            <div class="header-top">
+                <div class="logo-area">
+                    <h1>
+                        <svg width="28" height="28" viewBox="0 0 28 28"
+                            style="vertical-align:middle;margin-right:8px;display:inline-block" fill="none"
+                            xmlns="http://www.w3.org/2000/svg">
+                            <rect width="28" height="28" rx="7" fill="rgba(255,255,255,0.22)" />
+                            <text x="14" y="19" text-anchor="middle" font-family="Inter,sans-serif" font-size="11"
+                                font-weight="800" fill="white">DB</text>
+                        </svg>DatenBanken Soluciones
+                    </h1>
+                    <p>Desarrollo de Aplicaciones Empresariales</p>
+                </div>
+                <div class="doc-info">
+                    <strong>COTIZACIÓN</strong>
+                    No. 2026-037<br>
+                    Bogotá, 4 de mayo de 2026<br>
+                    Vigencia: 30 días
+                </div>
+            </div>
+            <div class="header-titulo">
+                <h2>Propuesta de Migración<br>de Microsoft Access a Aplicación Web</h2>
+                <p>Modernización del sistema de gestión para el sector de plantas aromáticas</p>
+                <span class="tag">🌿 Migración · Sin pérdida de datos · Acceso desde cualquier lugar</span>
+            </div>
+        </div>
+
+        <!-- ══ CUERPO ══════════════════════════════════════════ -->
+        <div class="cuerpo">
+
+            <!-- Datos del cliente -->
+            <div class="datos-cliente">
+                <div class="campo">
+                    <label>Empresa</label>
+                    <span>Natural Pack SAS</span>
+                </div>
+                <div class="campo">
+                    <label>NIT</label>
+                    <span>901.717.423-9</span>
+                </div>
+                <div class="campo">
+                    <label>Persona de contacto</label>
+                    <span>Clara Gomez</span>
+                </div>
+                <div class="campo">
+                    <label>Ciudad / Municipio</label>
+                    <span>&nbsp;</span>
+                </div>
+                <div class="campo">
+                    <label>Correo electrónico</label>
+                    <span>natupackservice@gmail.com</span>
+                </div>
+                <div class="campo">
+                    <label>Teléfono</label>
+                    <span>&nbsp;</span>
+                </div>
+            </div>
+
+            <!-- ── 1. EL CONTEXTO ─────────────────────────────── -->
+            <div class="seccion">
+                <div class="seccion-titulo">
+                    <div class="icono">🚀</div>
+                    <h3>Su empresa creció — es momento de dar el siguiente paso</h3>
+                </div>
+                <div class="bloque-problema">
+                    <p>El sistema que opera actualmente ha cumplido su propósito: ordenar la operación, estandarizar los
+                        procesos y llevar el control del negocio. Ese es un logro real. Ahora, el crecimiento de la
+                        empresa exige una herramienta a la altura del siguiente nivel:</p>
+                    <ul>
+                        <li>Acceder al sistema desde cualquier lugar, no solo desde un computador</li>
+                        <li>Permitir que varias personas trabajen al mismo tiempo</li>
+                        <li>Contar con respaldo automático en la nube ante cualquier imprevisto</li>
+                        <li>Generar documentos con presentación profesional para sus clientes</li>
+                        <li>Escalar a nuevos usuarios o sedes sin restricciones técnicas</li>
+                        <li>Independizarse de un único equipo físico para operar</li>
+                        <li>Tener una plataforma preparada para seguir creciendo</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- ── 2. LA SOLUCIÓN ─────────────────────────────── -->
+            <div class="seccion">
+                <div class="seccion-titulo">
+                    <div class="icono">✅</div>
+                    <h3>¿Qué hace esta migración por su empresa?</h3>
+                </div>
+                <div class="bloque-migracion">
+                    <p>Tomamos exactamente lo que su sistema en Access ya hace — lo que su equipo ya conoce — y lo
+                        convertimos en una aplicación web moderna, segura y accesible desde cualquier dispositivo:</p>
+                    <ul>
+                        <li>Los datos actuales de clientes y productos migrados al nuevo sistema sin pérdidas</li>
+                        <li>Acceso desde computador, celular o tablet — en cualquier lugar</li>
+                        <li>Documentos PDF profesionales generados automáticamente</li>
+                        <li>Envío de correos directamente desde el sistema con los PDF adjuntos — sin descargar archivos
+                            ni ocupar espacio</li>
+                        <li>Respaldo diario automático en la nube</li>
+                        <li>No depende de ningún computador ni versión de Windows</li>
+                        <li>El equipo sigue operando igual — mismos procesos, mejor herramienta</li>
+                        <li>Listo para crecer: nuevos módulos cuando lo necesite</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- ── 3. QUÉ INCLUYE ──────────────────────────────── -->
+            <div class="seccion">
+                <div class="seccion-titulo">
+                    <div class="icono">📦</div>
+                    <h3>¿Qué módulos tiene el nuevo sistema?</h3>
+                </div>
+                <div class="grid-modulos">
+
+                    <div class="modulo">
+                        <div class="modulo-header">
+                            <div class="modulo-icono">📊</div>
+                            <h4>Panel de Control (Dashboard)</h4>
+                        </div>
+                        <p>Indicadores del negocio en tiempo real: pedidos del día, ventas del mes y documentos
+                            generados. Todo visible desde la pantalla principal sin buscar nada.</p>
+                        <span class="badge">Decisiones en segundos</span>
+                    </div>
+
+                    <div class="modulo">
+                        <div class="modulo-header">
+                            <div class="modulo-icono">🛒</div>
+                            <h4>Gestión de Pedidos y Facturación</h4>
+                        </div>
+                        <p>Registre pedidos de aromáticas con unidades de peso (libra 460g, libra 500g, media libra,
+                            kilogramo). Con un clic genera automáticamente: <strong>Invoice, planilla de despacho,
+                                etiqueta y certificado fitosanitario</strong>.</p>
+                        <span class="badge">Ahorra hasta 45 min por pedido</span>
+                    </div>
+
+                    <div class="modulo">
+                        <div class="modulo-header">
+                            <div class="modulo-icono">&#128101;</div>
+                            <h4>Gestión de Clientes</h4>
+                        </div>
+                        <p>Base de datos centralizada con la información de sus clientes: datos de contacto e historial
+                            de pedidos. Consulta rápida por nombre o NIT. Sin buscar en cuadernos ni archivos dispersos.
+                        </p>
+                        <span class="badge">Información siempre disponible</span>
+                    </div>
+
+                    <div class="modulo">
+                        <div class="modulo-header">
+                            <div class="modulo-icono">&#128231;</div>
+                            <h4>Env&#237;o de Documentos por Correo</h4>
+                        </div>
+                        <p>Env&#237;e el invoice, planilla, fitosanitario y etiqueta directamente desde la
+                            aplicaci&#243;n. Los PDF se generan y adjuntan autom&#225;ticamente &#8212; sin descargar
+                            archivos, sin ocupar espacio, sin pasos intermedios.</p>
+                        <span class="badge">Agilidad total en comunicaci&#243;n</span>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- ── 4. BENEFICIOS ──────────────────────────────── -->
+            <div class="seccion">
+                <div class="seccion-titulo">
+                    <div class="icono">⚡</div>
+                    <h3>Beneficios medibles que obtiene su empresa</h3>
+                </div>
+                <div class="grid-kpi">
+                    <div class="kpi">
+                        <div class="valor">0</div>
+                        <div class="etiqueta">Riesgo de pérdida<br>de datos operativos</div>
+                    </div>
+                    <div class="kpi">
+                        <div class="valor">−75%</div>
+                        <div class="etiqueta">Tiempo en generar<br>documentos por pedido</div>
+                    </div>
+                    <div class="kpi">
+                        <div class="valor">1 clic</div>
+                        <div class="etiqueta">Para enviar invoice + planilla<br>al cliente por correo</div>
+                    </div>
+                </div>
+
+                <table class="tabla-comp">
+                    <thead>
+                        <tr>
+                            <th>Proceso</th>
+                            <th>Con Access (hoy)</th>
+                            <th>Con el nuevo sistema</th>
+                            <th>Lo que gana</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Generar invoice + planilla + etiqueta + fito</td>
+                            <td>Manual o impresión desde Access en un solo computador</td>
+                            <td>Un clic — PDF listo en segundos desde cualquier dispositivo</td>
+                            <td>+40 minutos libres por pedido</td>
+                        </tr>
+                        <tr>
+                            <td>Enviar invoice o planilla al cliente</td>
+                            <td>Descargar el archivo, buscarlo en carpetas y adjuntarlo al correo manualmente</td>
+                            <td>Un clic desde el sistema — el PDF se genera y se envía adjunto sin tocar el computador
+                            </td>
+                            <td>Menos pasos, menos errores, respuesta más rápida al cliente</td>
+                        </tr>
+                        <tr>
+                            <td>Fallo del computador principal</td>
+                            <td>El sistema deja de funcionar completamente hasta repararlo</td>
+                            <td>Sistema intacto en la nube — se continúa desde otro equipo de inmediato</td>
+                            <td>El negocio nunca se detiene</td>
+                        </tr>
+                        <tr>
+                            <td>Consultar el historial de pedidos de un cliente</td>
+                            <td>Solo posible desde el computador donde está instalado Access</td>
+                            <td>Consulta en segundos desde celular o cualquier dispositivo</td>
+                            <td>Respuesta inmediata al cliente en cualquier momento</td>
+                        </tr>
+                        <tr>
+                            <td>Informe de pedidos y ventas del mes</td>
+                            <td>Construirlo manualmente puede tardar horas</td>
+                            <td>Disponible en el dashboard al instante</td>
+                            <td>+2 horas libres al cierre de mes</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- ── 5. VENTAJAS ────────────────────────────────── -->
+            <div class="seccion">
+                <div class="seccion-titulo">
+                    <div class="icono">🏆</div>
+                    <h3>¿Por qué hacer esta migración ahora?</h3>
+                </div>
+                <div class="grid-ventajas">
+                    <div class="ventaja">
+                        <div class="ving">🔄</div>
+                        <div>
+                            <h4>Sus datos existentes se migran completos</h4>
+                            <p>Clientes, productos y el historial de pedidos que ya tiene en Access se transfieren al
+                                nuevo sistema. No empieza de cero — continúa desde donde está.</p>
+                        </div>
+                    </div>
+                    <div class="ventaja">
+                        <div class="ving">👨‍💼</div>
+                        <div>
+                            <h4>Su equipo ya sabe cómo operarlo</h4>
+                            <p>La nueva aplicación replica los mismos procesos que ya conocen. El aprendizaje es mínimo
+                                — es lo mismo que hacen hoy, pero más rápido, desde cualquier lugar y con mejor
+                                presentación.</p>
+                        </div>
+                    </div>
+                    <div class="ventaja">
+                        <div class="ving">📄</div>
+                        <div>
+                            <h4>Documentos profesionales que dan imagen</h4>
+                            <p>Invoices, planillas, etiquetas y fitosanitarios con diseño profesional, numerados
+                                automáticamente y listos para imprimir o enviar por correo. Sus clientes notarán la
+                                diferencia.</p>
+                        </div>
+                    </div>
+                    <div class="ventaja">
+                        <div class="ving">📱</div>
+                        <div>
+                            <h4>Funciona desde cualquier dispositivo</h4>
+                            <p>El gerente puede revisar pedidos desde casa. El vendedor puede confirmar un pedido desde
+                                el campo. Todo conectado en tiempo real, sin depender de un único computador.</p>
+                        </div>
+                    </div>
+                    <div class="ventaja">
+                        <div class="ving">🔒</div>
+                        <div>
+                            <h4>Sus datos protegidos y respaldados</h4>
+                            <p>El sistema se aloja en un servidor seguro con respaldo automático. Si se daña un
+                                computador, si hay un corte de luz o si roban un equipo, sus datos y su operación están
+                                intactos.</p>
+                        </div>
+                    </div>
+                    <div class="ventaja">
+                        <div class="ving">⚖️</div>
+                        <div>
+                            <h4>Diseñado para las unidades del sector</h4>
+                            <p>Libra de 460g, libra de 500g, media libra, kilogramo — las unidades reales con las que su
+                                empresa trabaja, incorporadas nativamente en el sistema sin adaptaciones genéricas.</p>
+                        </div>
+                    </div>
+                    <div class="ventaja">
+                        <div class="ving">💲</div>
+                        <div>
+                            <h4>Inversión única, sin licencias mensuales por usuario</h4>
+                            <p>No hay costos de licencia de Microsoft, no hay pago por usuario adicional, no hay
+                                suscripción a terceros. El sistema es suyo — el único costo recurrente es el soporte
+                                opcional.</p>
+                        </div>
+                    </div>
+                    <div class="ventaja">
+                        <div class="ving">🤝</div>
+                        <div>
+                            <h4>Soporte directo con quien desarrolló el sistema</h4>
+                            <p>No llama a una línea de soporte genérica. El desarrollador conoce su negocio y su
+                                operación. Respuesta inmediata por WhatsApp en horario laboral, sin tickets ni esperas.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ── 6. INVERSIÓN ────────────────────────────────── -->
+            <div class="seccion">
+                <div class="seccion-titulo">
+                    <div class="icono">💵</div>
+                    <h3>Inversión</h3>
+                </div>
+
+                <table class="tabla-inversion">
+                    <thead>
+                        <tr>
+                            <th>Concepto</th>
+                            <th>Descripción</th>
+                            <th>Valor</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>
+                                <strong>Migración y Desarrollo del Sistema Web</strong>
+                                <div class="nota">Pago único. Incluye migración de datos desde Access, configuración
+                                    completa y capacitación.</div>
+                            </td>
+                            <td>
+                                • Módulo completo de Pedidos y Facturación (Invoice, planilla, etiqueta, fito)<br>
+                                • Migración de datos existentes desde Microsoft Access<br>
+                                • Generación automática de documentos PDF con un clic<br>
+                                • Envío de documentos por correo directo desde el sistema<br>
+                                • Catálogo de plantas aromáticas con unidades de peso del sector<br>
+                                • Gestión de clientes y conductores / ayudantes de despacho<br>
+                                • Dashboard con resumen de pedidos y ventas<br>
+                                • Capacitación presencial o virtual al equipo (hasta 3 horas)<br>
+                                • 30 días de acompañamiento post-entrega sin costo adicional
+                            </td>
+                            <td class="monto">$2.500.000</td>
+                        </tr>
+                        <tr class="total-row">
+                            <td colspan="2"><strong>TOTAL MIGRACIÓN</strong> (pago único)</td>
+                            <td class="monto">$2.500.000</td>
+                        </tr>
+                    </tbody>
+                </table>
+                <p class="nota-iva">* Valores expresados en pesos colombianos (COP). IVA del 19% no incluido si aplica
+                    según régimen tributario del contratante. Forma de pago: <strong>50% ($1.250.000) para iniciar el
+                        proyecto</strong> y <strong>50% ($1.250.000) a la entrega del sistema funcionando</strong>.</p>
+
+                <!-- Soporte mensual -->
+                <br>
+                <div class="seccion-titulo" style="margin-top:8px;">
+                    <div class="icono">🛡️</div>
+                    <h3>Plan de Soporte Mensual</h3>
+                </div>
+
+                <div class="plan-unico">
+                    <div class="plan-header">
+                        <h4>Plan Básico de Soporte</h4>
+                        <div class="plan-precio">$180.000<span>/mes</span></div>
+                    </div>
+                    <ul class="plan-items">
+                        <li>Corrección de errores y ajustes del sistema</li>
+                        <li>Actualizaciones de seguridad incluidas</li>
+                        <li>Respaldo mensual de base de datos</li>
+                        <li>Hosting del servidor incluido — sin costos ocultos</li>
+                        <li>Atención directa por WhatsApp — respuesta inmediata en horario laboral</li>
+                        <li>Acceso a mejoras y actualizaciones menores del sistema</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- ── 7. CONDICIONES ─────────────────────────────── -->
+            <div class="seccion">
+                <div class="seccion-titulo">
+                    <div class="icono">📋</div>
+                    <h3>Condiciones Comerciales</h3>
+                </div>
+                <div class="condiciones">
+                    <ul>
+                        <li>Vigencia de esta propuesta: 30 días calendario</li>
+                        <li>Tiempo estimado de entrega: 2 – 3 semanas desde el inicio</li>
+                        <li>Forma de pago: 50% para iniciar y 50% a la entrega</li>
+                        <li>El soporte mensual inicia 30 días después de la entrega oficial</li>
+                        <li>El cliente debe suministrar acceso al archivo de Access actual</li>
+                        <li>El sistema se entrega funcional en servidor en la nube</li>
+                        <li>Capacitación presencial o por videollamada (Zoom / Meet)</li>
+                        <li>Se incluye manual de usuario en PDF como entregable</li>
+                        <li>Los datos del cliente son de su propiedad exclusiva</li>
+                        <li>El soporte mensual es opcional — no es obligatorio contratarlo</li>
+                    </ul>
+                </div>
+            </div>
+
+        </div><!-- /cuerpo -->
+
+        <!-- ══ PIE ═════════════════════════════════════════════ -->
+        <div class="footer">
+            <div class="firma">
+                <strong>José Mauricio Ovalle Romero</strong>
+                Desarrollador de Aplicaciones Empresariales<br>
+                📧 mauricioovalle@hotmail.com &nbsp;|&nbsp; 📞 315 394 4103 &nbsp;|&nbsp; 🌐
+                portal.datenbankensoluciones.com.co
+            </div>
+            <div class="vigencia">
+                Cotización No. 2026-037<br>
+                Fecha: 4 de mayo de 2026<br>
+                Válida hasta: 3 de junio de 2026
+            </div>
+        </div>
+
+    </div><!-- /pagina -->
+</body>
+
+</html>

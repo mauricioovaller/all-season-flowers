@@ -54,12 +54,12 @@ try {
                 enc.AWB,
                 enc.AWB_HIJA,
                 enc.AWB_NIETA,
-                enc.TotalPiezas,
-                enc.EquivalenciaFulles,
-                enc.TotalTallos,
-                enc.ValorVenta,
-                enc.IVA,
-                enc.TotalVenta,
+                0 AS TotalPiezas,
+                0 AS EquivalenciaFulles,
+                0 AS TotalTallos,
+                0 AS ValorVenta,
+                0 AS IVA,
+                0 AS TotalVenta,
                 cli.NOMBRE AS cliente_nombre,
                 aer.NOMAEROLINEA AS aerolinea_nombre,
                 age.NOMAGENCIA AS agencia_nombre,
@@ -80,13 +80,71 @@ try {
         throw new Exception("Error en la consulta: " . $stmt->error);
     }
 
-    $result = $stmt->get_result();
+    // Usar bind_result para obtener los datos (compatible con todas las versiones de PHP)
+    $stmt->bind_result(
+        $IdEncabPedido,
+        $NoPlanilla,
+        $numero_planilla_formateado,
+        $IdConductor,
+        $IdAyudante,
+        $Placa,
+        $Precinto,
+        $Factura,
+        $numero_factura_formateado,
+        $Estado,
+        $fecha_solicitud,
+        $fecha_entrega,
+        $PO_Cliente,
+        $AWB,
+        $AWB_HIJA,
+        $AWB_NIETA,
+        $TotalPiezas,
+        $EquivalenciaFulles,
+        $TotalTallos,
+        $ValorVenta,
+        $IVA,
+        $TotalVenta,
+        $cliente_nombre,
+        $aerolinea_nombre,
+        $agencia_nombre,
+        $conductor_nombre,
+        $ayudante_nombre
+    );
 
-    if ($result->num_rows === 0) {
+    if (!$stmt->fetch()) {
         throw new Exception("No se encontró la planilla con número: $numeroPlanilla");
     }
 
-    $planilla = $result->fetch_assoc();
+    // Construir el array de la planilla
+    $planilla = array(
+        'IdEncabPedido' => $IdEncabPedido,
+        'NoPlanilla' => $NoPlanilla,
+        'numero_planilla_formateado' => $numero_planilla_formateado,
+        'IdConductor' => $IdConductor,
+        'IdAyudante' => $IdAyudante,
+        'Placa' => $Placa,
+        'Precinto' => $Precinto,
+        'Factura' => $Factura,
+        'numero_factura_formateado' => $numero_factura_formateado,
+        'Estado' => $Estado,
+        'fecha_solicitud' => $fecha_solicitud,
+        'fecha_entrega' => $fecha_entrega,
+        'PO_Cliente' => $PO_Cliente,
+        'AWB' => $AWB,
+        'AWB_HIJA' => $AWB_HIJA,
+        'AWB_NIETA' => $AWB_NIETA,
+        'TotalPiezas' => $TotalPiezas,
+        'EquivalenciaFulles' => $EquivalenciaFulles,
+        'TotalTallos' => $TotalTallos,
+        'ValorVenta' => $ValorVenta,
+        'IVA' => $IVA,
+        'TotalVenta' => $TotalVenta,
+        'cliente_nombre' => $cliente_nombre,
+        'aerolinea_nombre' => $aerolinea_nombre,
+        'agencia_nombre' => $agencia_nombre,
+        'conductor_nombre' => $conductor_nombre,
+        'ayudante_nombre' => $ayudante_nombre
+    );
 
     // Formatear datos adicionales
     $planilla['fecha_generacion'] = date('d/m/Y');

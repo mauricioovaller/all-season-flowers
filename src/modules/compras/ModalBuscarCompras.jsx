@@ -9,7 +9,7 @@ export default function ModalBuscarCompras({ isOpen, onClose, onSeleccionarCompr
     filtroFecha: "",
     filtroTipo: "todos"
   });
-  
+
   const [compras, setCompras] = useState([]);
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState(null);
@@ -30,13 +30,13 @@ export default function ModalBuscarCompras({ isOpen, onClose, onSeleccionarCompr
     try {
       setCargando(true);
       setError(null);
-      
+
       const res = await buscarCompras({
         ...filtros,
         pagina: paginaActual,
         porPagina: comprasPorPagina
       });
-      
+
       if (res.success) {
         setCompras(res.compras || []);
         // Calcular total de páginas
@@ -80,10 +80,11 @@ export default function ModalBuscarCompras({ isOpen, onClose, onSeleccionarCompr
     onClose();
   };
 
-  // Formatear fecha para mostrar
+  // Formatear fecha para mostrar - corrigiendo desfase de zona horaria
   const formatFecha = (fechaStr) => {
     if (!fechaStr) return "";
-    const fecha = new Date(fechaStr);
+    // Agregar hora explícita para evitar desfase de zona horaria
+    const fecha = new Date(fechaStr + 'T00:00:00');
     return fecha.toLocaleDateString('es-CO');
   };
 
@@ -247,12 +248,11 @@ export default function ModalBuscarCompras({ isOpen, onClose, onSeleccionarCompr
                         <span className={`text-xs px-2 py-1 rounded-full ${getColorEstado(compra.anulado)}`}>
                           {getTextoEstado(compra.anulado)}
                         </span>
-                        <span className={`text-xs px-2 py-1 rounded-full ${
-                          compra.tipoCompra === 'REGULAR' ? 'bg-blue-100 text-blue-800' :
-                          compra.tipoCompra === 'ADICIONAL' ? 'bg-yellow-100 text-yellow-800' :
-                          compra.tipoCompra === 'ORDEN FIJA' ? 'bg-purple-100 text-purple-800' :
-                          'bg-gray-100 text-gray-800'
-                        }`}>
+                        <span className={`text-xs px-2 py-1 rounded-full ${compra.tipoCompra === 'REGULAR' ? 'bg-blue-100 text-blue-800' :
+                            compra.tipoCompra === 'ADICIONAL' ? 'bg-yellow-100 text-yellow-800' :
+                              compra.tipoCompra === 'ORDEN FIJA' ? 'bg-purple-100 text-purple-800' :
+                                'bg-gray-100 text-gray-800'
+                          }`}>
                           {compra.tipoCompra || 'Regular'}
                         </span>
                       </div>
@@ -296,7 +296,7 @@ export default function ModalBuscarCompras({ isOpen, onClose, onSeleccionarCompr
                       </button>
                     </div>
                   </div>
-                  
+
                   {/* Información adicional */}
                   <div className="mt-3 grid grid-cols-3 gap-2 text-xs text-gray-600">
                     <div>
@@ -327,11 +327,11 @@ export default function ModalBuscarCompras({ isOpen, onClose, onSeleccionarCompr
               >
                 ← Anterior
               </button>
-              
+
               <span className="text-sm text-gray-600">
                 Página {paginaActual} de {totalPaginas}
               </span>
-              
+
               <button
                 onClick={() => setPaginaActual(p => Math.min(totalPaginas, p + 1))}
                 disabled={paginaActual === totalPaginas}

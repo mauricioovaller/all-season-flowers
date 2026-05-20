@@ -1,13 +1,89 @@
 // src/components/layout/Header.jsx
-import React from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import Swal from 'sweetalert2';
-import { Search, Bell, User, Menu, LogOut } from 'lucide-react';
+import {
+  Search, Bell, User, LogOut, X, ChevronRight,
+  Home, Users, Building, UserCheck, UserCog, Flower2, Sprout, Star,
+  Package, Truck, UsersRound, Plane, ShoppingCart, CreditCard, Undo2,
+  Wallet, HandCoins, FileText, BarChart3, Download, LayoutDashboard,
+} from 'lucide-react';
 
-const Header = () => {
+// ── Índice de módulos para búsqueda ─────────────────────────────────────────
+const MODULES = [
+  { id: 'dashboard',                 label: 'Dashboard',              cat: 'Principal',  Icon: Home,            catColor: 'text-green-400 bg-green-400/10'     },
+  { id: 'clientes',                  label: 'Clientes',               cat: 'Maestras',   Icon: Users,           catColor: 'text-emerald-400 bg-emerald-400/10' },
+  { id: 'proveedores',               label: 'Proveedores',            cat: 'Maestras',   Icon: Building,        catColor: 'text-emerald-400 bg-emerald-400/10' },
+  { id: 'ejecutivos-venta',          label: 'Ejec. de Venta',         cat: 'Maestras',   Icon: UserCheck,       catColor: 'text-emerald-400 bg-emerald-400/10' },
+  { id: 'ejecutivos-compra',         label: 'Ejec. de Compra',        cat: 'Maestras',   Icon: UserCog,         catColor: 'text-emerald-400 bg-emerald-400/10' },
+  { id: 'productos',                 label: 'Productos',              cat: 'Maestras',   Icon: Flower2,         catColor: 'text-emerald-400 bg-emerald-400/10' },
+  { id: 'variedades',                label: 'Variedades',             cat: 'Maestras',   Icon: Sprout,          catColor: 'text-emerald-400 bg-emerald-400/10' },
+  { id: 'grados',                    label: 'Grados',                 cat: 'Maestras',   Icon: Star,            catColor: 'text-emerald-400 bg-emerald-400/10' },
+  { id: 'tipos-empaque',             label: 'Empaques',               cat: 'Maestras',   Icon: Package,         catColor: 'text-emerald-400 bg-emerald-400/10' },
+  { id: 'conductores',               label: 'Conductores',            cat: 'Maestras',   Icon: Truck,           catColor: 'text-emerald-400 bg-emerald-400/10' },
+  { id: 'ayudantes',                 label: 'Ayudantes',              cat: 'Maestras',   Icon: UsersRound,      catColor: 'text-emerald-400 bg-emerald-400/10' },
+  { id: 'aerolineas',                label: 'Aerolíneas',             cat: 'Maestras',   Icon: Plane,           catColor: 'text-emerald-400 bg-emerald-400/10' },
+  { id: 'agencias',                  label: 'Agencias',               cat: 'Maestras',   Icon: Building,        catColor: 'text-emerald-400 bg-emerald-400/10' },
+  { id: 'compras',                   label: 'Compras',                cat: 'Operativos', Icon: ShoppingCart,    catColor: 'text-blue-400 bg-blue-400/10'       },
+  { id: 'pedidos',                   label: 'Pedidos',                cat: 'Operativos', Icon: CreditCard,      catColor: 'text-blue-400 bg-blue-400/10'       },
+  { id: 'devolucion-venta',          label: 'Devoluciones Ventas',    cat: 'Operativos', Icon: Undo2,           catColor: 'text-blue-400 bg-blue-400/10'       },
+  { id: 'devolucion-compra',         label: 'Devoluciones Compras',   cat: 'Operativos', Icon: Undo2,           catColor: 'text-blue-400 bg-blue-400/10'       },
+  { id: 'pago-cliente',              label: 'Pagos a Clientes',       cat: 'Operativos', Icon: Wallet,          catColor: 'text-blue-400 bg-blue-400/10'       },
+  { id: 'pago-proveedor',            label: 'Pagos a Proveedores',    cat: 'Operativos', Icon: HandCoins,       catColor: 'text-blue-400 bg-blue-400/10'       },
+  { id: 'estado-cuenta-proveedores', label: 'Cuenta Proveedores',     cat: 'Informes',   Icon: FileText,        catColor: 'text-amber-400 bg-amber-400/10'     },
+  { id: 'estado-cuenta-clientes',    label: 'Cuenta Clientes',        cat: 'Informes',   Icon: FileText,        catColor: 'text-amber-400 bg-amber-400/10'     },
+  { id: 'consolidados-ventas',       label: 'Consolidados Ventas',    cat: 'Informes',   Icon: BarChart3,       catColor: 'text-amber-400 bg-amber-400/10'     },
+  { id: 'consolidados-compras',      label: 'Consolidados Compras',   cat: 'Informes',   Icon: BarChart3,       catColor: 'text-amber-400 bg-amber-400/10'     },
+  { id: 'exportacion-contable',      label: 'Exportación Contable',   cat: 'Informes',   Icon: Download,        catColor: 'text-amber-400 bg-amber-400/10'     },
+  { id: 'tablero-control',           label: 'Tablero de Control',     cat: 'Informes',   Icon: LayoutDashboard, catColor: 'text-amber-400 bg-amber-400/10'     },
+];
+
+const Header = ({ onModuleChange }) => {
+  const [query,    setQuery]    = useState('');
+  const [showDrop, setShowDrop] = useState(false);
+  const desktopRef = useRef(null);
+  const mobileRef  = useRef(null);
+
+  // Cierra el dropdown al hacer clic fuera de ambas barras de búsqueda
+  useEffect(() => {
+    const handler = (e) => {
+      if (
+        !desktopRef.current?.contains(e.target) &&
+        !mobileRef.current?.contains(e.target)
+      ) {
+        setShowDrop(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  const results = query.trim()
+    ? MODULES.filter(m =>
+        m.label.toLowerCase().includes(query.toLowerCase()) ||
+        m.cat.toLowerCase().includes(query.toLowerCase())
+      )
+    : [];
+
+  const handleSelect = (id) => {
+    if (onModuleChange) onModuleChange(id);
+    setQuery('');
+    setShowDrop(false);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleChange = (e) => {
+    setQuery(e.target.value);
+    setShowDrop(true);
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Escape') { setQuery(''); setShowDrop(false); }
+  };
+
   const handleLogout = () => {
     Swal.fire({
       title: '¿Cerrar sesión?',
-      text: "¿Estás seguro de que deseas salir de la aplicación?",
+      text: '¿Estás seguro de que deseas salir de la aplicación?',
       icon: 'question',
       showCancelButton: true,
       confirmButtonColor: '#d33',
@@ -15,19 +91,10 @@ const Header = () => {
       confirmButtonText: 'Sí, salir',
       cancelButtonText: 'Cancelar',
       reverseButtons: true,
-      background: '#fff',
-      iconColor: '#d33',
-      customClass: {
-        confirmButton: 'bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-4 rounded-lg',
-        cancelButton: 'bg-gray-300 hover:bg-gray-400 text-gray-800 font-medium py-2 px-4 rounded-lg'
-      }
     }).then((result) => {
       if (result.isConfirmed) {
-        // Limpiar sesión
         localStorage.clear();
         sessionStorage.clear();
-
-        // Mostrar mensaje de salida
         Swal.fire({
           title: 'Sesión cerrada',
           text: 'Redirigiendo a la página de autenticación...',
@@ -35,34 +102,54 @@ const Header = () => {
           timer: 2000,
           showConfirmButton: false,
           timerProgressBar: true,
-          willClose: () => {
-            // Redirigir a la página de autenticación externa
-            window.location.href = "https://portal.datenbankensoluciones.com.co/";
-          }
+          willClose: () => { window.location.href = 'https://portal.datenbankensoluciones.com.co/'; },
         });
       }
     });
   };
 
-  const scrollToMobileMenu = () => {
-    // Encontrar el menú móvil (primer elemento con clase lg:hidden que no sea el botón)
-    const mobileMenu = document.querySelector('.lg\\:hidden.bg-white');
-    if (mobileMenu) {
-      mobileMenu.scrollIntoView({
-        behavior: 'smooth',
-        block: 'start'
-      });
-    }
-  };
+  // JSX del dropdown (reutilizado en desktop y móvil)
+  const dropdownJSX = showDrop && query.trim() ? (
+    <div className="absolute top-full mt-1.5 left-0 right-0 bg-slate-700 border border-slate-600 rounded-xl shadow-2xl z-50 max-h-64 overflow-y-auto">
+      {results.length > 0 ? (
+        <ul className="py-1.5">
+          {results.map(m => (
+            <li key={m.id}>
+              <button
+                onMouseDown={e => e.preventDefault()}
+                onClick={() => handleSelect(m.id)}
+                className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-slate-600 transition-colors text-left group"
+              >
+                <span className="text-gray-400 group-hover:text-white flex-shrink-0">
+                  <m.Icon className="w-4 h-4" />
+                </span>
+                <span className="flex-1 text-gray-200 text-sm font-medium group-hover:text-white">{m.label}</span>
+                <span className={`text-xs px-2 py-0.5 rounded-full font-medium flex-shrink-0 ${m.catColor}`}>{m.cat}</span>
+                <ChevronRight className="w-3 h-3 text-gray-500 group-hover:text-gray-300 flex-shrink-0" />
+              </button>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <div className="px-4 py-6 text-center">
+          <Search className="w-6 h-6 mx-auto mb-2 text-gray-500" />
+          <p className="text-gray-400 text-sm">
+            Sin resultados para{' '}
+            <span className="text-white font-medium">"{query}"</span>
+          </p>
+        </div>
+      )}
+    </div>
+  ) : null;
 
   return (
-    <header className="bg-white shadow-lg border-b border-gray-200">
-      <div className="container mx-auto px-4 py-3">
-        <div className="flex items-center justify-between">
-          {/* Logo y nombre */}
-          <div className="flex items-center space-x-4">
-            {/* Logo real de la empresa */}
-            <div className="flex items-center justify-center w-48 h-16 bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
+    <header className="bg-slate-800 shadow-xl border-b border-slate-700 sticky top-0 z-40">
+      <div className="px-4 py-3">
+        <div className="flex items-center justify-between gap-3">
+
+          {/* ── Logo + marca ── */}
+          <div className="flex items-center gap-3 flex-shrink-0">
+            <div className="w-12 h-12 bg-white rounded-xl shadow-lg overflow-hidden border border-slate-600 flex-shrink-0 flex items-center justify-center">
               <img
                 src="/DatenBankenApp/AllSeasonFlowers/img/LogoAllSeason.jpg"
                 alt="All Season Flowers"
@@ -72,100 +159,103 @@ const Header = () => {
                   e.target.nextSibling.style.display = 'flex';
                 }}
               />
-              {/* Fallback elegante si el logo no carga */}
               <div
-                className="hidden w-full h-full bg-gradient-to-r from-primary to-secondary rounded-xl items-center justify-center"
+                className="w-full h-full bg-gradient-to-br from-green-500 to-emerald-600 items-center justify-center"
                 style={{ display: 'none' }}
               >
-                <div className="text-white text-center">
-                  <div className="text-lg font-bold">All Season Flowers</div>
-                  <div className="text-sm">Flowers & Ornamentals</div>
-                </div>
+                <span className="text-white font-extrabold text-base">AS</span>
               </div>
             </div>
-
-            {/* Nombre de la empresa */}
-            <div className="hidden xl:block">
-              <h1 className="text-2xl font-bold text-gray-800">All Season Flowers</h1>
-              <p className="text-green-600 text-sm font-medium">Flowers & Ornamentals</p>
+            <div className="hidden sm:block">
+              <p className="text-white font-bold text-sm lg:text-base leading-tight">All Season Flowers</p>
+              <p className="text-green-400 text-xs font-medium">Flowers &amp; Ornamentals</p>
             </div>
           </div>
 
-          {/* Barra de búsqueda (centro) */}
-          <div className="flex-1 max-w-xl mx-4 lg:mx-6 hidden lg:block">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+          {/* ── Buscador desktop ── */}
+          <div className="hidden lg:block flex-1 max-w-lg">
+            <div className="relative" ref={desktopRef}>
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4 pointer-events-none" />
               <input
                 type="text"
-                placeholder="Buscar clientes, productos, ventas..."
-                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-sm"
+                value={query}
+                onChange={handleChange}
+                onFocus={() => query.trim() && setShowDrop(true)}
+                onKeyDown={handleKeyDown}
+                placeholder="Buscar módulo... (ej: clientes, compras, informes)"
+                className="w-full bg-slate-700 text-white placeholder-gray-400 border border-slate-600 rounded-xl pl-9 pr-9 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
               />
+              {query && (
+                <button
+                  onMouseDown={e => e.preventDefault()}
+                  onClick={() => { setQuery(''); setShowDrop(false); }}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
+              {dropdownJSX}
             </div>
           </div>
 
-          {/* Iconos de usuario - CON BOTÓN DE SALIR */}
-          <div className="flex items-center space-x-2 lg:space-x-3">
-            {/* Botón menú móvil - ACTUALIZADO CON FUNCIONALIDAD */}
-            <button 
-              onClick={scrollToMobileMenu}
-              className="lg:hidden p-2 rounded-lg hover:bg-gray-100 transition-colors"
-              title="Ver menú de navegación"
-            >
-              <Menu className="w-6 h-6 text-gray-600" />
-            </button>
-
+          {/* ── Acciones ── */}
+          <div className="flex items-center gap-1 lg:gap-2 flex-shrink-0">
             {/* Notificaciones */}
-            <button className="relative p-2 rounded-lg hover:bg-gray-100 transition-colors">
-              <Bell className="w-5 h-5 text-gray-600" />
-              <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full border border-white"></span>
+            <button className="relative p-2 rounded-lg hover:bg-slate-700 transition-colors" title="Notificaciones">
+              <Bell className="w-5 h-5 text-gray-300" />
+              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border-2 border-slate-800" />
             </button>
 
-            {/* Separador visual */}
-            <div className="hidden lg:block w-px h-6 bg-gray-300"></div>
+            <div className="hidden lg:block w-px h-5 bg-slate-600" />
 
-            {/* Botón de Salir - OCULTO EN MÓVIL (se agregará en menú móvil) */}
-            <button
-              onClick={handleLogout}
-              className="hidden lg:flex items-center space-x-2 p-2 rounded-lg hover:bg-red-50 transition-colors group"
-              title="Cerrar sesión"
-            >
-              <LogOut className="w-5 h-5 text-red-500 group-hover:text-red-600" />
-              <span className="text-sm font-medium text-red-600">Salir</span>
-            </button>
-
-            {/* Perfil de usuario */}
-            <button className="flex items-center space-x-2 p-1 rounded-lg hover:bg-gray-100 transition-colors group">
-              <div className="w-8 h-8 bg-gradient-to-r from-primary to-secondary rounded-full flex items-center justify-center group-hover:scale-105 transition-transform">
+            {/* Usuario */}
+            <div className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-slate-700 transition-colors cursor-default">
+              <div className="w-8 h-8 bg-gradient-to-br from-green-500 to-emerald-600 rounded-full flex items-center justify-center ring-2 ring-green-500/30">
                 <User className="w-4 h-4 text-white" />
               </div>
-              <div className="hidden lg:block text-left">
-                <span className="text-sm font-medium text-gray-700 block">Usuario</span>
-                <span className="text-xs text-gray-500">Administrador</span>
+              <div className="hidden lg:block">
+                <p className="text-white text-xs font-semibold leading-none">Admin</p>
+                <p className="text-gray-400 text-xs mt-0.5">Administrador</p>
               </div>
+            </div>
+
+            <div className="hidden lg:block w-px h-5 bg-slate-600" />
+
+            {/* Cerrar sesión */}
+            <button
+              onClick={handleLogout}
+              className="flex items-center gap-1.5 px-2 lg:px-3 py-2 rounded-lg border border-transparent hover:bg-red-500/15 hover:border-red-500/25 transition-all group"
+              title="Cerrar sesión"
+            >
+              <LogOut className="w-4 h-4 text-red-400 group-hover:text-red-300" />
+              <span className="hidden lg:inline text-sm font-medium text-red-400 group-hover:text-red-300">Salir</span>
             </button>
           </div>
         </div>
 
-        {/* Barra de búsqueda móvil */}
-        <div className="lg:hidden mt-4">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+        {/* ── Buscador móvil ── */}
+        <div className="lg:hidden mt-3">
+          <div className="relative" ref={mobileRef}>
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4 pointer-events-none" />
             <input
               type="text"
-              placeholder="Buscar clientes, productos, ventas..."
-              className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-sm"
+              value={query}
+              onChange={handleChange}
+              onFocus={() => query.trim() && setShowDrop(true)}
+              onKeyDown={handleKeyDown}
+              placeholder="Buscar módulo..."
+              className="w-full bg-slate-700 text-white placeholder-gray-400 border border-slate-600 rounded-xl pl-9 pr-9 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
             />
-          </div>
-
-          {/* Botón de Salir en móvil (debajo de la búsqueda) */}
-          <div className="flex justify-end mt-3">
-            <button
-              onClick={handleLogout}
-              className="flex items-center space-x-2 p-2 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-colors"
-            >
-              <LogOut className="w-4 h-4" />
-              <span className="text-sm font-medium">Cerrar sesión</span>
-            </button>
+            {query && (
+              <button
+                onMouseDown={e => e.preventDefault()}
+                onClick={() => { setQuery(''); setShowDrop(false); }}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
+            {dropdownJSX}
           </div>
         </div>
       </div>

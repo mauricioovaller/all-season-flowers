@@ -53,6 +53,7 @@ $predios = obtenerDatos($enlace, "SELECT IdPredio, NombrePredio FROM GEN_Predios
 $conductores = obtenerDatos($enlace, "SELECT IdConductor, NombreConductor FROM GEN_Conductores ORDER BY NombreConductor");
 $ayudantes = obtenerDatos($enlace, "SELECT IdAyudante, NomAyudante FROM GEN_Ayudantes ORDER BY NomAyudante");
 $responsables = obtenerDatos($enlace, "SELECT IdResponsable, Nombre FROM GEN_Responsables ORDER BY Nombre");
+$mediosPago = obtenerDatos($enlace, "SELECT IdMedioPago, Medio FROM GEN_MedioPago ORDER BY Medio");
 
 echo json_encode([
     'ejecutivos' => $ejecutivos,
@@ -66,7 +67,8 @@ echo json_encode([
     'predios' => $predios,
     'conductores' => $conductores,
     'ayudantes' => $ayudantes,
-    'responsables' => $responsables
+    'responsables' => $responsables,
+    'mediosPago' => $mediosPago
 ]);
 
 $enlace->close();

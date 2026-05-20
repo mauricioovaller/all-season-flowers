@@ -151,44 +151,48 @@ if (empty($detalle)) {
     die(json_encode(["success" => false, "message" => "No hay productos devueltos en esta compra."]));
 }
 
-// CLASE PDF PERSONALIZADA PARA DEVOLUCIONES DE COMPRAS
+// Preparar fecha formateada
+$fechaFormateada = date('d-M-y', strtotime($fechaDevolucion));
+
+// CLASE PDF PERSONALIZADA PARA DEVOLUCIONES DE COMPRAS - DISEÑO UNIFORME CON VENTAS
 class PDF_DevolucionCompra extends FPDF
 {
     function Header()
     {
-        global $numeroDevolucion, $fechaDevolucion, $proveedorNombre, $direccionProveedor, 
-               $ciudadProveedor, $telefonoProveedor, $observacionesDevolucion, 
-               $compraAsociada, $fechaCompra, $tieneIva, $trm, $moneda, $nombreComprador;
+        global $fechaFormateada, $numeroDevolucion, $compraAsociada, $proveedorNombre, 
+               $direccionProveedor, $ciudadProveedor, $telefonoProveedor, $observacionesDevolucion, 
+               $nombreComprador, $fechaCompra;
         
-        // Logo (si existe)
-        $logoPath = $_SERVER['DOCUMENT_ROOT'] . "/DatenBankenApp/AllSeasonFlowers/assets/logo.png";
-        if (file_exists($logoPath)) {
-            $this->Image($logoPath, 10, 8, 30);
-        }
+        // Logo (misma posición que en ventas)
+        $this->Image($_SERVER['DOCUMENT_ROOT'] . "/DatenBankenApp/AllSeasonFlowers/img/LogoAllSeason.jpg", 10, 8, 50);
         
-        // Título
+        // Título (similar a ventas)
+        $this->SetY(10);
+        $this->SetX(70);
         $this->SetFont('Helvetica', 'B', 16);
-        $this->Cell(0, 10, utf8_decode('NOTA DE DEVOLUCIÓN DE COMPRA'), 0, 1, 'C');
+        $this->Cell(0, 10, utf8_decode('DEVOLUCIÓN / NOTA CRÉDITO COMPRA'), 0, 1, 'C');
         
-        $this->SetFont('Helvetica', 'B', 12);
-        $this->Cell(0, 6, $numeroDevolucion, 0, 1, 'C');
-        
-        $this->SetFont('Helvetica', '', 10);
-        $this->Cell(0, 5, 'Fecha: ' . $fechaDevolucion, 0, 1, 'C');
-        
-        $this->Ln(5);
-        
-        // Información de la empresa
+        // Número de devolución y fecha (mismo estilo que ventas)
+        $this->SetX(70);
         $this->SetFont('Helvetica', 'B', 10);
-        $this->Cell(0, 5, 'ALL SEASON FLOWERS', 0, 1, 'L');
-        $this->SetFont('Helvetica', '', 9);
-        $this->Cell(0, 4, 'Carrera 10 # 9 - 45, Bogotá D.C.', 0, 1, 'L');
-        $this->Cell(0, 4, 'Tel: (57) 1 123 4567 | Email: info@allseasonflowers.com', 0, 1, 'L');
+        $this->Cell(25, 6, utf8_decode('No. Devolución:'), 0, 0, 'R');
+        $this->SetFont('Helvetica', '', 10);
+        $this->Cell(25, 6, $numeroDevolucion, 0, 0, 'L');
+        $this->SetFont('Helvetica', 'B', 10);
+        $this->Cell(25);
+        $this->SetFont('Helvetica', '', 10);
+        $this->Cell(0, 6, $fechaFormateada, 0, 1, 'L');
         
-        $this->Ln(3);
-        $this->addSeparatorLine();
+        // Compra asociada
+        $this->SetX(70);
+        $this->SetFont('Helvetica', 'B', 10);
+        $this->Cell(50, 6, 'Compra:', 0, 0, 'R');
+        $this->SetFont('Helvetica', '', 10);
+        $this->Cell(0, 6, $compraAsociada, 0, 1, 'L');
         
-        // Información del proveedor
+        $this->Ln(10);
+        
+        // Datos del proveedor (mismo formato que cliente en ventas)
         $this->SetFont('Helvetica', 'B', 10);
         $this->Cell(30, 5, 'Proveedor:', 0, 0, 'L');
         $this->SetFont('Helvetica', '', 10);
@@ -211,16 +215,16 @@ class PDF_DevolucionCompra extends FPDF
         
         $this->Ln(3);
         
-        // Información de la compra asociada
+        // Información de comprador
         $this->SetFont('Helvetica', 'B', 10);
-        $this->Cell(40, 5, 'Compra asociada:', 0, 0, 'L');
-        $this->SetFont('Helvetica', '', 10);
-        $this->Cell(0, 5, $compraAsociada . ' (Fecha: ' . $fechaCompra . ')', 0, 1, 'L');
-        
-        $this->SetFont('Helvetica', 'B', 10);
-        $this->Cell(40, 5, 'Comprador:', 0, 0, 'L');
+        $this->Cell(30, 5, 'Comprador:', 0, 0, 'L');
         $this->SetFont('Helvetica', '', 10);
         $this->Cell(0, 5, utf8_decode($nombreComprador ?: 'No especificado'), 0, 1, 'L');
+        
+        $this->SetFont('Helvetica', 'B', 10);
+        $this->Cell(30, 5, 'Fecha Compra:', 0, 0, 'L');
+        $this->SetFont('Helvetica', '', 10);
+        $this->Cell(0, 5, $fechaCompra, 0, 1, 'L');
         
         $this->Ln(5);
         
@@ -256,23 +260,23 @@ $pdf->SetMargins(10, 10, 10);
 $pdf->AliasNbPages();
 $pdf->AddPage();
 
-// Tabla de detalle - ENCABEZADOS
+// Tabla de detalle - ENCABEZADOS (mismo estilo que ventas)
 $pdf->SetFont('Helvetica', 'B', 8);
 $pdf->SetFillColor(220, 220, 220);
 
-// Definir anchos de columnas (ajustados para compras - sin Flete, Fumigacion, Otros)
-$anchoProd = 35;
+// Definir anchos de columnas - ampliados para ocupar todo el ancho de página
+$anchoProd = 38;
 $anchoVar = 25;
-$anchoGrado = 20;
-$anchoTallos = 20;
-$anchoPrecio = 20;
+$anchoGrado = 18;
+$anchoTallos = 18;
+$anchoPrecio = 18;
 $anchoMotivo = 50;
-$anchoTotal = 20;
+$anchoTotal = 24;
 
 $pdf->Cell($anchoProd, 6, 'Producto', 1, 0, 'C', true);
 $pdf->Cell($anchoVar, 6, 'Variedad', 1, 0, 'C', true);
 $pdf->Cell($anchoGrado, 6, 'Grado', 1, 0, 'C', true);
-$pdf->Cell($anchoTallos, 6, 'Tallos Dev.', 1, 0, 'C', true);
+$pdf->Cell($anchoTallos, 6, 'Tallos', 1, 0, 'C', true);
 $pdf->Cell($anchoPrecio, 6, 'Precio U', 1, 0, 'C', true);
 $pdf->Cell($anchoMotivo, 6, 'Motivo', 1, 0, 'C', true);
 $pdf->Cell($anchoTotal, 6, 'Total', 1, 1, 'C', true);
@@ -284,47 +288,60 @@ foreach ($detalle as $item) {
     // Verificar salto de página
     if ($pdf->GetY() > 250) {
         $pdf->AddPage();
-        // Redibujar encabezados de tabla en nueva página
+        // Redibujar encabezados
         $pdf->SetFont('Helvetica', 'B', 8);
         $pdf->SetFillColor(220, 220, 220);
         $pdf->Cell($anchoProd, 6, 'Producto', 1, 0, 'C', true);
         $pdf->Cell($anchoVar, 6, 'Variedad', 1, 0, 'C', true);
         $pdf->Cell($anchoGrado, 6, 'Grado', 1, 0, 'C', true);
-        $pdf->Cell($anchoTallos, 6, 'Tallos Dev.', 1, 0, 'C', true);
+        $pdf->Cell($anchoTallos, 6, 'Tallos', 1, 0, 'C', true);
         $pdf->Cell($anchoPrecio, 6, 'Precio U', 1, 0, 'C', true);
         $pdf->Cell($anchoMotivo, 6, 'Motivo', 1, 0, 'C', true);
         $pdf->Cell($anchoTotal, 6, 'Total', 1, 1, 'C', true);
         $pdf->SetFont('Helvetica', '', 7);
-        $pdf->SetFillColor(255, 255, 255);
     }
     
-    $pdf->Cell($anchoProd, 6, utf8_decode(substr($item['producto'], 0, 20)), 1, 0, 'L', true);
-    $pdf->Cell($anchoVar, 6, utf8_decode(substr($item['variedad'], 0, 15)), 1, 0, 'L', true);
-    $pdf->Cell($anchoGrado, 6, utf8_decode(substr($item['grado'], 0, 10)), 1, 0, 'C', true);
-    $pdf->Cell($anchoTallos, 6, $item['tallos'], 1, 0, 'C', true);
-    $pdf->Cell($anchoPrecio, 6, '$' . number_format($item['precio'], 2), 1, 0, 'R', true);
-    $pdf->Cell($anchoMotivo, 6, utf8_decode(substr($item['motivo'], 0, 25)), 1, 0, 'L', true);
-    $pdf->Cell($anchoTotal, 6, '$' . number_format($item['total'], 2), 1, 1, 'R', true);
+    $pdf->Cell($anchoProd, 5, utf8_decode(substr($item['producto'], 0, 15)), 1, 0, 'L');
+    $pdf->Cell($anchoVar, 5, utf8_decode(substr($item['variedad'], 0, 10)), 1, 0, 'L');
+    $pdf->Cell($anchoGrado, 5, utf8_decode($item['grado']), 1, 0, 'L');
+    $pdf->Cell($anchoTallos, 5, $item['tallos'], 1, 0, 'C');
+    $pdf->Cell($anchoPrecio, 5, '$' . number_format($item['precio'], 2), 1, 0, 'R');
+    $pdf->Cell($anchoMotivo, 5, utf8_decode(substr($item['motivo'], 0, 25)), 1, 0, 'L');
+    $pdf->Cell($anchoTotal, 5, '$' . number_format($item['total'], 2), 1, 1, 'R');
+}
+
+// Línea separadora
+$pdf->addSeparatorLine();
+
+// Totales (mismo formato que ventas, alineados con la tabla ampliada)
+$pdf->SetFont('Helvetica', 'B', 9);
+$pdf->Cell(140, 6, '', 0, 0, 'L');
+$pdf->Cell(27, 6, 'Total a Devolver:', 0, 0, 'R');
+$pdf->Cell(24, 6, '$' . number_format($totalGeneral, 2), 0, 1, 'R');
+
+if ($tieneIva == 1) {
+    $iva = $totalGeneral * 0.19;
+    $pdf->Cell(140, 6, '', 0, 0, 'L');
+    $pdf->Cell(27, 6, 'IVA (19%):', 0, 0, 'R');
+    $pdf->Cell(24, 6, '$' . number_format($iva, 2), 0, 1, 'R');
+    
+    $totalFinal = $totalGeneral + $iva;
+    $pdf->SetFont('Helvetica', 'B', 11);
+    $pdf->Cell(140, 8, '', 0, 0, 'L');
+    $pdf->Cell(27, 8, 'TOTAL FINAL:', 0, 0, 'R');
+    $pdf->Cell(24, 8, '$' . number_format($totalFinal, 2), 0, 1, 'R');
+} else {
+    $pdf->SetFont('Helvetica', 'B', 11);
+    $pdf->Cell(140, 8, '', 0, 0, 'L');
+    $pdf->Cell(27, 8, 'TOTAL FINAL:', 0, 0, 'R');
+    $pdf->Cell(24, 8, '$' . number_format($totalGeneral, 2), 0, 1, 'R');
 }
 
 $pdf->Ln(5);
+$pdf->SetFont('Helvetica', 'I', 8);
+$pdf->Cell(0, 5, 'Moneda: ' . utf8_decode($moneda) . ' - TRM: ' . number_format($trm, 2), 0, 1, 'R');
 
-// Totales
-$pdf->SetFont('Helvetica', 'B', 9);
-$pdf->Cell($anchoProd + $anchoVar + $anchoGrado + $anchoTallos + $anchoPrecio + $anchoMotivo, 6, 'TOTAL GENERAL:', 0, 0, 'R');
-$pdf->Cell($anchoTotal, 6, '$' . number_format($totalGeneral, 2), 1, 1, 'R');
-
-// Información adicional
-$pdf->Ln(10);
-$pdf->SetFont('Helvetica', '', 9);
-$pdf->MultiCell(0, 5, utf8_decode("Nota: Esta devolución corresponde a la compra $compraAsociada con fecha $fechaCompra. Los valores están expresados en $moneda con TRM de $trm."), 0, 'L');
-
-if ($tieneIva) {
-    $pdf->SetFont('Helvetica', 'B', 9);
-    $pdf->Cell(0, 5, utf8_decode('(*) Incluye IVA'), 0, 1, 'L');
-}
-
-// Firmas
+// Espacio para firmas
 $pdf->Ln(15);
 $pdf->SetFont('Helvetica', '', 9);
 $pdf->Cell(95, 5, utf8_decode('___________________________'), 0, 0, 'C');
@@ -333,5 +350,5 @@ $pdf->Cell(95, 5, 'Responsable All Season Flowers', 0, 0, 'C');
 $pdf->Cell(95, 5, 'Recibido por Proveedor', 0, 1, 'C');
 
 // Generar PDF
-$pdf->Output('I', "Devolucion_Compra_$numeroDevolucion.pdf");
+$pdf->Output('I', 'Devolucion_' . $numeroDevolucion . '.pdf');
 ?>

@@ -71,9 +71,9 @@ $sql = "SELECT
             COALESCE(age.NOMAGENCIA, 'K&M Handling') AS agencia,
             'ESTADOS UNIDOS' AS destino_pais,
             CONCAT(cli.Direc1,', ', cli.CIUDAD, ', ', cli.ESTADO, ', ', cli.PAIS) AS destino_completo,
-            SUM(deq.Cantidad) AS TotalPiezas,
-            SUM(deq.Cantidad * teq.EquivFull) AS EquivalenciaFulles,
-            SUM(deq.Cantidad * (dpr.Tallos_Ramo * dpr.Ramos_Caja)) AS TotalTallos,
+            COALESCE(empaques.TotalPiezas, 0) AS TotalPiezas,
+            COALESCE(empaques.EquivalenciaFulles, 0) AS EquivalenciaFulles,
+            COALESCE(productos.TotalTallos, 0) AS TotalTallos,
             enc.Factura,
             CONCAT('FACT-', LPAD(enc.Factura, 6, '0')) AS numero_factura,
             'FLORES FRESCAS CORTADAS' AS descripcion_mercancia,
@@ -84,9 +84,25 @@ $sql = "SELECT
             enc.Placa,
             enc.Precinto
         FROM SAS_EncabPedido enc
-        LEFT JOIN SAS_DetEmpaque deq ON enc.IdEncabPedido = deq.IdEncabPedido
-        LEFT JOIN GEN_TipoEmpaque teq ON deq.IdTipoEmpaque = teq.IdTipoEmpaque
-        LEFT JOIN SAS_DetProducto dpr ON deq.IdDetEmpaque = dpr.IdDetEmpaque
+        LEFT JOIN (
+            SELECT 
+                deq.IdEncabPedido,
+                SUM(deq.Cantidad) AS TotalPiezas,
+                SUM(deq.Cantidad * COALESCE(teq.EquivFull, 0)) AS EquivalenciaFulles
+            FROM SAS_DetEmpaque deq
+            LEFT JOIN GEN_TipoEmpaque teq ON deq.IdTipoEmpaque = teq.IdTipoEmpaque
+            WHERE deq.Anulado = 0
+            GROUP BY deq.IdEncabPedido
+        ) empaques ON enc.IdEncabPedido = empaques.IdEncabPedido
+        LEFT JOIN (
+            SELECT 
+                dpr.IdEncabPedido,
+                SUM(deq1.Cantidad * dpr.Tallos_Ramo * dpr.Ramos_Caja) AS TotalTallos
+            FROM SAS_DetProducto dpr
+            INNER JOIN SAS_DetEmpaque deq1 ON dpr.IdDetEmpaque = deq1.IdDetEmpaque
+            WHERE dpr.Anulado = 0
+            GROUP BY dpr.IdEncabPedido
+        ) productos ON enc.IdEncabPedido = productos.IdEncabPedido
         LEFT JOIN GEN_Clientes cli ON enc.IdCliente = cli.IdCliente
         LEFT JOIN GEN_Aerolineas aer ON enc.IdAerolinea = aer.IdAerolinea
         LEFT JOIN GEN_Agencias age ON enc.IdAgencia = age.IdAgencia

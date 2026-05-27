@@ -1,7 +1,8 @@
 <?php
 // src/Api/compras/ApiGenerarPDFOrdenCompra.php
-require_once($_SERVER['DOCUMENT_ROOT'] . "/DatenBankenApp/fpdf/fpdf.php");
-include $_SERVER['DOCUMENT_ROOT'] . "/DatenBankenApp/AllSeasonFlowers/conexionBaseDatos/conexionbd.php";
+require_once __DIR__ . '/../config/empresa.php';
+require_once FPDF_PATH;
+require_once CONEXION_BD_PATH;
 $enlace->set_charset("utf8mb4");
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
@@ -26,12 +27,12 @@ $sqlEncabezado = "SELECT
                     ec.IdEncabCompra,
                     CONCAT('OC-', LPAD(ec.IdEncabCompra, 6, '0')) AS numero_orden,
                     DATE_FORMAT(ec.FechaSolicitud, '%d-%b-%y') AS fecha_orden,
-                    'ALL SEASON FLOWERS SAS' AS empresa_nombre,
-                    '901.984.016-8' AS nit,
-                    'Finca Villa Clemencia Vrd. Prado' AS direccion_empresa,
-                    '(+057) 3114677282 - 3023090940' AS telefono_empresa,
-                    'Facatativa, Cundinamarca, Colombia' AS ciudad_empresa,
-                    'freshfloral.erikajuley@gmail.com' AS email_empresa,
+                    '" . EMPRESA_NOMBRE . "' AS empresa_nombre,
+                    '" . EMPRESA_NIT . "' AS nit,
+                    '" . EMPRESA_DIRECCION . "' AS direccion_empresa,
+                    '" . EMPRESA_TELEFONO . "' AS telefono_empresa,
+                    '" . EMPRESA_CIUDAD . "' AS ciudad_empresa,
+                    '" . EMPRESA_EMAIL . "' AS email_empresa,
                     p.Proveedor AS proveedor_nombre,
                     p.Nit AS proveedor_nit,
                     CONCAT(p.Direccion, ', ', p.Ciudad, ', ', p.Pais) AS direccion_proveedor,
@@ -232,7 +233,7 @@ class PDF_OrdenCompra extends FPDF
         $this->Ln(5);
 
         // Logo
-        $this->Image($_SERVER['DOCUMENT_ROOT'] . "/DatenBankenApp/AllSeasonFlowers/img/LogoAllSeason.jpg", 15, 30, 60);
+        $this->Image(EMPRESA_LOGO_PATH, 15, 30, 60);
 
         // Información de la empresa (derecha)
         $this->SetY(30);
@@ -240,13 +241,13 @@ class PDF_OrdenCompra extends FPDF
         $this->Cell(100, 5, '', 0, 0, 'L');
         $this->Cell(30, 5, 'Solicitante:', 0, 0, 'L');
         $this->SetFont('Helvetica', '', 10);
-        $this->Cell(0, 5, 'ALL SEASON FLOWERS SAS', 0, 1, 'L');
+        $this->Cell(0, 5, EMPRESA_NOMBRE, 0, 1, 'L');
 
         $this->SetFont('Helvetica', 'B', 10);
         $this->Cell(100, 5, '', 0, 0, 'L');
         $this->Cell(30, 5, 'NIT:', 0, 0, 'L');
         $this->SetFont('Helvetica', '', 10);
-        $this->Cell(0, 5, '901.984.016-8', 0, 1, 'L');
+        $this->Cell(0, 5, EMPRESA_NIT, 0, 1, 'L');
 
         $this->SetFont('Helvetica', 'B', 10);
         $this->Cell(100, 5, '', 0, 0, 'L');
@@ -270,7 +271,7 @@ class PDF_OrdenCompra extends FPDF
         $this->Cell(100, 5, '', 0, 0, 'L');
         $this->Cell(30, 5, 'Email:', 0, 0, 'L');
         $this->SetFont('Helvetica', '', 9);
-        $this->Cell(0, 5, 'freshfloral.erikajuley@gmail.com', 0, 1, 'L');
+        $this->Cell(0, 5, EMPRESA_EMAIL, 0, 1, 'L');
 
         $this->Ln(10);
 
@@ -526,7 +527,7 @@ $pdf->Cell(0, 6, 'TÉRMINOS Y CONDICIONES:', 0, 1, 'L');
 $pdf->SetFont('Helvetica', '', 9);
 
 $terminos = [
-    "1. Los productos deben cumplir con los estándares de calidad establecidos por All Season Flowers.",
+    "1. Los productos deben cumplir con los estándares de calidad establecidos por " . EMPRESA_NOMBRE_CORTO . ".",
     "2. El proveedor se responsabiliza por el transporte hasta nuestras instalaciones en Facatativa.",
     "3. Pago a 30 días después de la recepción y verificación de los productos.",
     "4. Cualquier producto que no cumpla con los estándares será rechazado y devuelto a cargo del proveedor.",
@@ -547,7 +548,7 @@ $pdf->Cell(0, 6, 'FIRMA Y SELLO:', 0, 1, 'L');
 $pdf->SetFont('Helvetica', '', 9);
 $pdf->Cell(0, 5, '___________________________', 0, 1, 'L');
 $pdf->Cell(0, 3, $comprador_nombre, 0, 1, 'L');
-$pdf->Cell(0, 3, 'Comprador - All Season Flowers', 0, 1, 'L');
+$pdf->Cell(0, 3, 'Comprador - ' . EMPRESA_NOMBRE_CORTO, 0, 1, 'L');
 
 // Generar PDF
 $pdf->Output('I', 'Orden_Compra_' . $numero_orden . '.pdf');

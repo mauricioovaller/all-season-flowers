@@ -7,7 +7,8 @@ header("Content-Type: application/json; charset=UTF-8");
 ini_set('display_errors', 1);
 error_reporting(E_ALL);
 // Conexión a la base de datos
-include $_SERVER['DOCUMENT_ROOT'] . "/DatenBankenApp/AllSeasonFlowers/conexionBaseDatos/conexionbd.php";
+require_once __DIR__ . '/../config/empresa.php';
+require_once CONEXION_BD_PATH;
 $enlace->set_charset("utf8mb4"); // 👈 importante
 
 if (!$enlace) {
@@ -53,7 +54,7 @@ $predios = obtenerDatos($enlace, "SELECT IdPredio, NombrePredio FROM GEN_Predios
 $conductores = obtenerDatos($enlace, "SELECT IdConductor, NombreConductor FROM GEN_Conductores ORDER BY NombreConductor");
 $ayudantes = obtenerDatos($enlace, "SELECT IdAyudante, NomAyudante FROM GEN_Ayudantes ORDER BY NomAyudante");
 $responsables = obtenerDatos($enlace, "SELECT IdResponsable, Nombre FROM GEN_Responsables ORDER BY Nombre");
-$mediosPago = obtenerDatos($enlace, "SELECT IdMedioPago, Medio FROM GEN_MedioPago ORDER BY Medio");
+$mediosPago = obtenerDatos($enlace, "SELECT IdMedioPago, Medio FROM GEN_MedioPagos ORDER BY Medio");
 
 echo json_encode([
     'ejecutivos' => $ejecutivos,

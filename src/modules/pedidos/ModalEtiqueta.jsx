@@ -1,6 +1,7 @@
 // src/modules/pedidos/ModalEtiqueta.jsx
 import React, { useState } from "react";
 import Swal from "sweetalert2";
+import { apiUrl } from "../../config/api.js";
 import ModalVisorPreliminar from "./ModalVisorPreliminar";
 import { generarPDFEtiquetas } from "../../services/pedidos/pedidosService";
 
@@ -51,7 +52,7 @@ export default function ModalEtiqueta({
       });
 
       // 🔥 VERSIÓN SIMPLIFICADA: Llamar directamente a la API
-      const API_URL = "https://portal.datenbankensoluciones.com.co/DatenBankenApp/AllSeasonFlowers/Api/pedidos";
+      const API_URL = apiUrl("pedidos");
       
       console.log("3. Llamando a API...");
       const res = await fetch(`${API_URL}/ApiGenerarPDFEtiqueta.php`, {

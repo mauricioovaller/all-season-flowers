@@ -1,5 +1,6 @@
 // src/pages/Productos/Productos.jsx
 import React, { useState, useEffect } from 'react';
+import { CLIENTE } from '../../config/cliente.js';
 import Swal from 'sweetalert2';
 import {
     Package, Plus, Search, Edit, Trash2, Filter,
@@ -217,7 +218,7 @@ const Productos = () => {
                             Gestión de Productos
                         </h1>
                         <p className="text-gray-600 mt-2">
-                            Administra el catálogo de productos de All Season Flowers
+                            Administra el catálogo de productos de {CLIENTE.titulo}
                         </p>
                     </div>
 

@@ -1,7 +1,6 @@
 // src/services/proveedores/proveedoresService.js
-
-const API_URL =
-  "https://portal.datenbankensoluciones.com.co/DatenBankenApp/AllSeasonFlowers/Api/proveedores";
+import { apiUrl } from '../../config/api.js';
+const API_URL = apiUrl('proveedores');
 
 /**
  * Obtiene la lista de proveedores con filtros

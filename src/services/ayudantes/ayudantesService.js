@@ -1,5 +1,6 @@
 // src/services/ayudantes/ayudantesService.js
-const API_URL = "https://portal.datenbankensoluciones.com.co/DatenBankenApp/AllSeasonFlowers/Api/ayudantes";
+import { apiUrl } from '../../config/api.js';
+const API_URL = apiUrl('ayudantes');
 
 /**
  * Obtiene la lista de ayudantes con filtros

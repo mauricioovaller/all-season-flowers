@@ -1,6 +1,6 @@
 // src/services/devoluciones/devolucionesService.js
-const API_URL =
-  "https://portal.datenbankensoluciones.com.co/DatenBankenApp/AllSeasonFlowers/Api/devoluciones";
+import { apiUrl } from '../../config/api.js';
+const API_URL = apiUrl('devoluciones');
 /**
  * Obtiene el último número de devolución (IdDevolucion) y el siguiente formateado
  * @returns {Promise<Object>} { success, ultimoNumero, siguienteNumeroFormateado, ... }

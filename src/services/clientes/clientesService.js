@@ -1,6 +1,6 @@
 // src/services/clientes/clientesService.js 
-
-const API_URL = "https://portal.datenbankensoluciones.com.co/DatenBankenApp/AllSeasonFlowers/Api/clientes";
+import { apiUrl } from '../../config/api.js';
+const API_URL = apiUrl('clientes');
 
 /**
  * Obtiene la lista de clientes con filtros

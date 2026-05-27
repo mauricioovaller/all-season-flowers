@@ -1,5 +1,6 @@
 // src/services/conductores/conductoresService.js
-const API_URL = "https://portal.datenbankensoluciones.com.co/DatenBankenApp/AllSeasonFlowers/Api/conductores";
+import { apiUrl } from '../../config/api.js';
+const API_URL = apiUrl('conductores');
 
 /**
  * Obtiene la lista de conductores con filtros

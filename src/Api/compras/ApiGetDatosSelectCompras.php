@@ -7,7 +7,8 @@ ini_set('display_errors', 1);
 error_reporting(E_ALL);
 
 // Conexión a la base de datos
-include $_SERVER['DOCUMENT_ROOT'] . "/DatenBankenApp/AllSeasonFlowers/conexionBaseDatos/conexionbd.php";
+require_once __DIR__ . '/../config/empresa.php';
+require_once CONEXION_BD_PATH;
 $enlace->set_charset("utf8mb4");
 
 if (!$enlace) {
@@ -71,7 +72,7 @@ $productos = obtenerDatos($enlace, "SELECT IdProducto, NOMPRODUCTO FROM GEN_Prod
 $unidades = obtenerDatos($enlace, "SELECT IdUnidades, DescripUnidad FROM GEN_Unidades ORDER BY DescripUnidad");
 $tipoEmpaque = obtenerDatos($enlace, "SELECT IdTipoEmpaque, Descripcion, EquivFull FROM GEN_TipoEmpaque ORDER BY Descripcion");
 $predios = obtenerDatos($enlace, "SELECT IdPredio, NombrePredio FROM GEN_Predios ORDER BY NombrePredio");
-$mediosPago = obtenerDatos($enlace, "SELECT IdMedioPago, Medio FROM GEN_MedioPago ORDER BY Medio");
+$mediosPago = obtenerDatos($enlace, "SELECT IdMedioPago, Medio FROM GEN_MedioPagos ORDER BY Medio");
 
 // Valores fijos para TipoCompra
 $tiposCompra = [

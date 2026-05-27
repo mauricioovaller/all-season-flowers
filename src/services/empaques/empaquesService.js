@@ -1,7 +1,6 @@
 // src/services/empaques/empaquesService.js
-
-const API_URL =
-  "https://portal.datenbankensoluciones.com.co/DatenBankenApp/AllSeasonFlowers/Api/empaques";
+import { apiUrl } from '../../config/api.js';
+const API_URL = apiUrl('empaques');
 
 export async function getEmpaques(filtros = {}) {
   try {

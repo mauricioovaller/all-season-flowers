@@ -6,6 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "vitest run && vite build",
+    "build:allseason": "cross-env VITE_BASE_PATH=/DatenBankenApp/AllSeasonFlowers/ VITE_API_BASE=https://portal.datenbankensoluciones.com.co/DatenBankenApp/AllSeasonFlowers/Api VITE_EMPRESA_NOMBRE=\"ALL SEASON FLOWERS SAS\" VITE_EMPRESA_NOMBRE_CORTO=\"ALL SEASON FLOWERS\" VITE_EMPRESA_NOMBRE_LARGO=\"ALL SEASON FLOWERS S.A.S\" VITE_EMPRESA_TITLE=\"All Season Flowers\" VITE_EMPRESA_LEMA=\"Flowers & Ornamentals\" VITE_EMPRESA_INICIALES=AS VITE_EMPRESA_LOGO=/DatenBankenApp/AllSeasonFlowers/img/LogoAllSeason.jpg npm run build",
+    "build:flagracol": "cross-env VITE_BASE_PATH=/DatenBankenApp/FlagracolSAS/ VITE_API_BASE=https://portal.datenbankensoluciones.com.co/DatenBankenApp/FlagracolSAS/Api VITE_EMPRESA_NOMBRE=\"FLAGRACOL SAS\" VITE_EMPRESA_NOMBRE_CORTO=FLAGRACOL VITE_EMPRESA_NOMBRE_LARGO=\"FLAGRACOL S.A.S\" VITE_EMPRESA_TITLE=\"Flagracol SAS\" VITE_EMPRESA_LEMA=\"Flores de Colombia\" VITE_EMPRESA_INICIALES=FS VITE_EMPRESA_LOGO=/DatenBankenApp/FlagracolSAS/img/LogoFlagracol.jpg npm run build",
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "vitest run",
@@ -22,7 +24,8 @@
     "react-is": "^19.2.4",
     "react-router-dom": "^7.9.6",
     "recharts": "^3.7.0",
-    "sweetalert2": "^11.26.3"
+    "sweetalert2": "^11.26.3",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",
@@ -35,6 +38,7 @@
     "@vitejs/plugin-react": "^5.1.1",
     "@vitest/ui": "^4.1.5",
     "autoprefixer": "^10.4.22",
+    "cross-env": "^10.1.0",
     "eslint": "^9.39.1",
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.4.24",

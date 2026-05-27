@@ -1,6 +1,6 @@
 // src/services/pagosClientes/pagosClientesService.js
-const API_URL =
-  "https://portal.datenbankensoluciones.com.co/DatenBankenApp/AllSeasonFlowers/Api/pagosClientes";
+import { apiUrl } from '../../config/api.js';
+const API_URL = apiUrl('pagosClientes');
 
 /**
  * Obtiene el último número de pago de cliente

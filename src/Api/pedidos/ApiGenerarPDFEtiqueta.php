@@ -3,8 +3,9 @@
 ini_set('memory_limit', '256M');
 ini_set('max_execution_time', '300');
 
-require_once($_SERVER['DOCUMENT_ROOT'] . "/DatenBankenApp/fpdf/fpdf.php");
-include $_SERVER['DOCUMENT_ROOT'] . "/DatenBankenApp/AllSeasonFlowers/conexionBaseDatos/conexionbd.php";
+require_once __DIR__ . '/../config/empresa.php';
+require_once FPDF_PATH;
+require_once CONEXION_BD_PATH;
 $enlace->set_charset("utf8mb4");
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
@@ -202,30 +203,14 @@ if (count($detalles) === 0) {
     die(json_encode(["error" => "El pedido no tiene productos."]));
 }
 
-// 🔴 CONSULTA 3: INFORMACIÓN DE LA EMPRESA
-$sqlEmpresa = "SELECT 
-                'ALL SEASON FLOWERS SAS' AS empresa_nombre,
-                '901.984.016-8' AS nit_empresa,
-                'Finca Villa Clemencia Vrd. Prado' AS direccion_empresa,
-                'Facatativa, Cundinamarca, Colombia' AS ciudad_empresa,
-                '(+057) 3114677282 - 3023090940' AS telefono_empresa,
-                ' freshfloral.erikajuley@gmail.com' AS email_empresa,
-                'REGISTRO ICA EXP250201' AS registro_ica
-                FROM DUAL";
-
-$stmtEmpresa = $enlace->prepare($sqlEmpresa);
-$stmtEmpresa->execute();
-$stmtEmpresa->bind_result(
-    $empresa_nombre,
-    $nit_empresa,
-    $direccion_empresa,
-    $ciudad_empresa,
-    $telefono_empresa,
-    $email_empresa,
-    $registro_ica
-);
-$stmtEmpresa->fetch();
-$stmtEmpresa->close();
+// 🔴 INFORMACIÓN DE LA EMPRESA (centralizada en config/empresa.php)
+$empresa_nombre   = EMPRESA_NOMBRE;
+$nit_empresa      = EMPRESA_NIT;
+$direccion_empresa = EMPRESA_DIRECCION;
+$ciudad_empresa   = EMPRESA_CIUDAD;
+$telefono_empresa = EMPRESA_TELEFONO;
+$email_empresa    = EMPRESA_EMAIL;
+$registro_ica     = EMPRESA_REGISTRO_ICA;
 
 // Clase PDF personalizada para etiquetas
 class PDF_Etiqueta extends FPDF
@@ -267,7 +252,7 @@ class PDF_Etiqueta extends FPDF
         $this->SetTextColor(0, 0, 0);
 
         // Logo
-        $logo_path = $_SERVER['DOCUMENT_ROOT'] . "/DatenBankenApp/AllSeasonFlowers/img/LogoAllSeason.jpg";
+        $logo_path = EMPRESA_LOGO_PATH;
         if (file_exists($logo_path)) {
             $this->Image($logo_path, 1, 9, 25);
         }

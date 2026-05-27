@@ -1,6 +1,7 @@
 // src/modules/pedidos/ModalFactura.jsx - VERSIÓN CORREGIDA
 import React, { useState, useEffect } from "react";
 import Swal from "sweetalert2";
+import { apiUrl } from "../../config/api.js";
 import ModalVisorPreliminar from "./ModalVisorPreliminar";
 import {
   obtenerUltimoNumeroFactura,
@@ -186,7 +187,7 @@ export default function ModalFactura({
       console.log("4. Número limpio para API:", numero);
 
       // Llamar directamente a la API para obtener el PDF como Blob
-      const API_URL = "https://portal.datenbankensoluciones.com.co/DatenBankenApp/AllSeasonFlowers/Api/pedidos";
+      const API_URL = apiUrl("pedidos");
 
       console.log("5. Llamando a API...");
 

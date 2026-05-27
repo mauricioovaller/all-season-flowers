@@ -1,7 +1,8 @@
 <?php
 //src/Api/pedidos/ApiGenerarPDFFactura.php
-require_once($_SERVER['DOCUMENT_ROOT'] . "/DatenBankenApp/fpdf/fpdf.php");
-include $_SERVER['DOCUMENT_ROOT'] . "/DatenBankenApp/AllSeasonFlowers/conexionBaseDatos/conexionbd.php";
+require_once __DIR__ . '/../config/empresa.php';
+require_once FPDF_PATH;
+require_once CONEXION_BD_PATH;
 $enlace->set_charset("utf8mb4");
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
@@ -26,12 +27,12 @@ $sqlEncabezado = "SELECT
                     enc.IdEncabPedido,
                     CONCAT('ASF-', LPAD(enc.Factura, 6, '0')) AS numero_factura,
                     DATE_FORMAT(enc.FechaEntrega, '%d-%b-%y') AS fecha_factura,
-                    'ALL SEASON FLOWERS SAS' AS empresa_nombre,
-                    '901.984.016-8' AS nit,
+                    '" . EMPRESA_NOMBRE . "' AS empresa_nombre,
+                    '" . EMPRESA_NIT . "' AS nit,
                     'Finca Villa Clemencia Vrd. Prado' AS direccion_empresa,
                     '(+057) 3114677282 - 3023090940' AS telefono_empresa,
                     'Facatativa, Cundinamarca, Colombia' AS ciudad_empresa,
-                    'freshfloral.erikajuley@gmail.com' AS email_empresa,
+                    '" . EMPRESA_EMAIL . "' AS email_empresa,
                     cli.NOMBRE AS cliente_nombre,
                     CONCAT(cli.Direc1, ', ', cli.CIUDAD, ', ', cli.ESTADO, ', ', cli.PAIS) AS direccion_cliente,
                     cli.TEL1 AS telefono_cliente,
@@ -233,20 +234,20 @@ class PDF extends FPDF
         $this->Ln(3);
 
         // Logo
-        $this->Image($_SERVER['DOCUMENT_ROOT'] . "/DatenBankenApp/AllSeasonFlowers/img/LogoAllSeason.jpg", 15, 18, 65);
+        $this->Image(EMPRESA_LOGO_PATH, 15, 18, 65);
 
         // Información de la empresa (derecha)
         $this->SetFont('Helvetica', 'B', 9);
         $this->Cell(100, 5, '', 0, 0, 'L');
         $this->Cell(30, 5, 'Export:', 0, 0, 'L');
         $this->SetFont('Helvetica', '', 9);
-        $this->Cell(25, 5, 'ALL SEASON FLOWERS SAS', 0, 1, 'L');
+        $this->Cell(25, 5, EMPRESA_NOMBRE, 0, 1, 'L');
 
         $this->SetFont('Helvetica', 'B', 9);
         $this->Cell(100, 5, '', 0, 0, 'L');
         $this->Cell(30, 5, 'Nit:', 0, 0, 'L');
         $this->SetFont('Helvetica', '', 9);
-        $this->Cell(25, 5, '901.984.016-8', 0, 1, 'L');
+        $this->Cell(25, 5, EMPRESA_NIT, 0, 1, 'L');
 
         $this->SetFont('Helvetica', 'B', 9);
         $this->Cell(100, 5, '', 0, 0, 'L');
@@ -276,7 +277,7 @@ class PDF extends FPDF
         $this->Cell(100, 5, '', 0, 0, 'L');
         $this->Cell(30, 5, 'Email:', 0, 0, 'L');
         $this->SetFont('Helvetica', '', 9);
-        $this->Cell(25, 5, ' freshfloral.erikajuley@gmail.com', 0, 1, 'L');
+        $this->Cell(25, 5, EMPRESA_EMAIL, 0, 1, 'L');
 
         $this->Ln(5);
 

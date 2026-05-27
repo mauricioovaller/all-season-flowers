@@ -41,7 +41,8 @@ $fechaFin = $input['fechaFin'] ?? date('Y-m-d');
 $app = $input['app'] ?? 'allseason';
 
 // INCLUIR CONEXIÓN
-include $_SERVER['DOCUMENT_ROOT'] . "/DatenBankenApp/AllSeasonFlowers/conexionBaseDatos/conexionbd.php";
+require_once __DIR__ . '/../config/empresa.php';
+require_once CONEXION_BD_PATH;
 
 // VERIFICAR CONEXIÓN (COMO EL OTRO ARCHIVO)
 if ($enlace->connect_error) {

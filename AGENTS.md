@@ -35,7 +35,7 @@ npm run test:watch    # Watch mode — re-runs on file save (use while developin
 npm run test:ui       # Visual browser UI for test results
 ```
 
-**Current coverage:** 217 tests across 17 test files — all passing.
+**Current coverage:** 284 tests across 25 test files — all passing.
 
 **Test files location:** `src/test/<module>/`
 
@@ -55,6 +55,8 @@ npm run test:ui       # Visual browser UI for test results
 | pedidos             | `src/test/pedidos/servicio.test.js`                                       |
 | devoluciones        | `src/test/devoluciones/servicio.test.js`                                  |
 | dashboard           | `src/test/dashboard/servicio.test.js`                                     |
+| bajas               | `src/test/bajas/servicio.test.js`                                         |
+| inventarios         | `src/test/inventarios/servicio.test.js`                                   |
 
 **Vitest configuration** (`vite.config.js`):
 
@@ -235,7 +237,8 @@ try {
 ### API Integration
 
 - Service functions are in `src/services/` directory
-- API base URL: `https://portal.datenbankensoluciones.com.co/DatenBankenApp/AllSeasonFlowers/Api/`
+- **La URL base de API NO está hardcodeada en los servicios.** Se lee de `src/config/api.js`, que a su vez lee `VITE_API_BASE` del `.env`.
+- Usar siempre `import { apiUrl } from '../../config/api.js'` en nuevos servicios JS: `const API_URL = apiUrl('nombreModulo');`
 - Use POST requests with JSON body for data operations
 - Handle loading states and errors in components
 - Validate responses before using data
@@ -277,7 +280,7 @@ The project uses ESLint with these key rules:
 
 1. **Start development**: `npm run dev`
 2. **Make changes**: Follow code style guidelines
-3. **Run tests**: `npm test` — verify all 217 tests still pass
+3. **Run tests**: `npm test` — verify all 263 tests still pass
 4. **Check linting**: `npm run lint` (fix any issues)
 5. **Test manually**: Verify functionality in browser
 6. **Build for production**: `npm run build` (verify no errors)
@@ -289,7 +292,9 @@ The project uses ESLint with these key rules:
 
 ### Global Configuration
 
-- Base path: `/DatenBankenApp/AllSeasonFlowers/` (configured in Vite and React Router)
+- Base path: leído de `VITE_BASE_PATH` en `.env` (fallback: `/DatenBankenApp/AllSeasonFlowers/`)
+- URL base de API: leída de `VITE_API_BASE` en `.env` (centralizada en `src/config/api.js`)
+- Datos de empresa (nombre, NIT, logo, etc.): centralizados en `src/Api/config/empresa.php`
 - jsPDF is made available globally via `window.jspdf`
 - Tailwind CSS is configured with default theme
 
@@ -298,6 +303,8 @@ The project uses ESLint with these key rules:
 - **Pedidos**: Order management module
 - **Devoluciones**: Returns management module
 - **Compras**: Purchases management module
+- **Bajas**: Write-offs management module (daño, pérdida, obsequio). Header/detail structure: `SAS_EncabBaja` + `SAS_DetBaja`. Flexible levels: permite registrar solo producto, producto+variedad, o producto+variedad+grado.
+- **Inventarios**: Inventory report with 3 levels of aggregation (Producto, Producto+Variedad, Producto+Variedad+Grado). Calculates entries from Compras + Devoluciones Ventas (Colombia only) and exits from Pedidos + Devoluciones Compras + Bajas.
 - Each module has its own services and API endpoints
 
 ### Backend Integration
@@ -349,6 +356,120 @@ Los errores más comunes en los PHP del proyecto han sido columnas inexistentes 
 2. Run `npm test` immediately — if any test fails, the change broke something
 3. If the behavior intentionally changed (e.g. new error message), update the corresponding test file
 4. Do not ship if tests are failing
+
+## Arquitectura multi-cliente
+
+El proyecto está preparado para distribuirse a múltiples floristas.  
+**Un solo codebase, builds separados por cliente.**
+
+### Documentación de referencia (léame primero)
+
+| Documento | Propósito |
+|---|---|
+| 📋 **`scripts/PLANTILLA_NUEVO_CLIENTE.md`** | **→ EMPEZAR AQUÍ ←** Formulario para recolectar datos + paso a paso para crear o modificar un cliente. Incluye tabla con datos de los clientes existentes. |
+| 📖 **`scripts/DEPLOY_MULTICLIENTE.md`** | Guía detallada de despliegue (soporte técnico, comandos, solución de problemas). |
+| 📄 **`AGENTS.md`** | (este archivo) Biblia del proyecto con toda la arquitectura. |
+
+**Regla de oro:** Si va a crear un nuevo cliente o modificar uno existente → abra `scripts/PLANTILLA_NUEVO_CLIENTE.md` y siga las instrucciones.
+
+### Archivos clave de la arquitectura
+
+| Archivo | Rol |
+|---|---|
+| `src/config/api.js` | Lee `VITE_API_BASE` del `.env` para que el frontend sepa a qué servidor PHP llamar |
+| `src/config/cliente.js` | Lee `VITE_EMPRESA_*` del `.env` y exporta objeto `CLIENTE` con nombre, lema, iniciales, logo, título |
+| `vite.config.js` | Usa `VITE_BASE_PATH` del `.env` como `base` del build |
+| `src/main.jsx` | Lee `import.meta.env.VITE_BASE_PATH` para el `basename` del Router |
+| `src/Api/config/empresa.php` | Contiene **todos los datos del cliente** para los PHP: nombre, NIT, logo, rutas BD, FPDF |
+| `.env` / `.env-allseason` / `.env-flagracol` | Variables de entorno por cliente (ver sección "Archivos .env") |
+| `.gitignore` | Excluye `.env` y `.env-*` — NUNCA subir credenciales al repo |
+
+### Archivos .env
+
+Cada cliente tiene su propio `.env-*` con TODAS las variables necesarias:
+
+| Variable | Descripción |
+|---|---|
+| `VITE_BASE_PATH` | Ruta base de la SPA en el servidor (ej: `/DatenBankenApp/AllSeasonFlowers/`) |
+| `VITE_API_BASE` | URL base de las APIs PHP |
+| `VITE_EMPRESA_NOMBRE` | Nombre legal completo (ej: `ALL SEASON FLOWERS SAS`) |
+| `VITE_EMPRESA_NOMBRE_CORTO` | Nombre corto (ej: `ALL SEASON FLOWERS`) |
+| `VITE_EMPRESA_NOMBRE_LARGO` | Nombre con sufijo legal (ej: `ALL SEASON FLOWERS S.A.S`) |
+| `VITE_EMPRESA_TITLE` | Nombre para mostrar en pestaña, header y sidebar |
+| `VITE_EMPRESA_LEMA` | Eslogan o lema del cliente |
+| `VITE_EMPRESA_INICIALES` | Iniciales para el sidebar (ej: `AS`) |
+| `VITE_EMPRESA_LOGO` | Ruta pública del logo (ej: `/DatenBankenApp/AllSeasonFlowers/img/LogoAllSeason.jpg`) |
+
+Archivos actuales:
+
+| Archivo | Contiene |
+|---|---|
+| `.env` | Activo (usado por `npm run dev`) |
+| `.env-allseason` | Variables completas para All Season Flowers |
+| `.env-flagracol` | Variables completas para FlagracolSAS |
+| `.env.example` | Plantilla sin datos reales para referencia |
+
+> **Regla:** Todos los `.env-*` están en `.gitignore`. Cada desarrollador los crea localmente con las credenciales reales.
+
+### Comandos de build por cliente
+
+| Comando | Tests | Destino |
+|---|---|---|
+| `npm run build:allseason` | ✅ Corre 263 tests | Genera `dist/` para AllSeasonFlowers |
+| `npm run build:flagracol` | ✅ Corre 263 tests | Genera `dist/` para FlagracolSAS |
+| `npm run build` | ✅ Corre 263 tests | Usa el `.env` actual (genérico) |
+| `npm run build:no-test` | ❌ Solo compila | Útil para pruebas rápidas |
+
+> **Siempre correr `npm test` antes de cada build.** Si un test falla, algo se rompió.
+
+### Componentes que ahora son dinámicos por cliente
+
+| Componente/Archivo | Qué muestra ahora dinámico |
+|---|---|
+| `index.html` | Título de pestaña (`%VITE_EMPRESA_TITLE%`) |
+| `src/main.jsx` | Basename del Router (`VITE_BASE_PATH`) |
+| `src/config/api.js` | URL base de APIs (`VITE_API_BASE`) |
+| `src/config/cliente.js` | Objeto `CLIENTE` con todos los datos de la empresa |
+| `Header.jsx` | Logo, nombre, lema, iniciales |
+| `Sidebar.jsx` | Iniciales, nombre, lema (expandido, colapsado y móvil) |
+| `Dashboard.jsx` | Nombre y lema |
+| 12 páginas (Clientes, Proveedores, Productos, etc.) | Descripciones con nombre del cliente |
+| 6 módulos (Pedidos, Compras, Devoluciones, Pagos) | Footers con nombre del cliente |
+| 5 modales (Factura, Fitosanitario, Etiqueta, Planilla) | URLs de API centralizadas |
+
+### Textos en PHP (backend) que ahora son dinámicos
+
+| Archivo PHP | Qué usa |
+|---|---|
+| `config/AllSeasonFlowers/empresa.php` | Constantes `EMPRESA_NOMBRE_TITULO`, `EMPRESA_LEMA`, `EMPRESA_INICIALES` (agregadas) |
+| `ApiGenerarPDFOrdenCompra.php` | `EMPRESA_NOMBRE_CORTO` en términos y condiciones |
+| Los 9 PDFs ya usaban `EMPRESA_NOMBRE`, `EMPRESA_NIT`, `EMPRESA_LOGO_PATH`, etc. desde `empresa.php` |
+
+### Clientes activos
+
+| Dato | All Season Flowers | Flagracol SAS |
+|---|---|---|
+| **Ruta servidor** | `/DatenBankenApp/AllSeasonFlowers/` | `/DatenBankenApp/FlagracolSAS/` |
+| **URL API** | `.../AllSeasonFlowers/Api` | `.../FlagracolSAS/Api` |
+| **Script build** | `npm run build:allseason` | `npm run build:flagracol` |
+| **Archivo .env** | `.env-allseason` | `.env-flagracol` |
+| **Archivo empresa.php** | `config/AllSeasonFlowers/empresa.php` | `config/FlagracolSAS/empresa.php` |
+| **Base de datos** | `datenban_AllSeasonFlowers` | `datenban_FlagracolSAS` |
+| **Nombre legal** | ALL SEASON FLOWERS SAS | FLAGRACOL SAS |
+| **Nombre corto** | ALL SEASON FLOWERS | FLAGRACOL |
+| **Título frontend** | All Season Flowers | Flagracol SAS |
+| **Lema** | Flowers & Ornamentals | Flores de Colombia |
+| **Iniciales** | AS | FS |
+| **Logo** | `img/LogoAllSeason.jpg` | `img/LogoFlagracol.jpg` |
+| **NIT** | 901.984.016-8 | 901.104.002-0 |
+| **Dirección** | Finca Villa Clemencia Vrd. Prado | CALLE 163 N 50-80 INT 10 OF 233 |
+| **Teléfono** | (+057) 3114677282 - 3023090940 | (+057) 316 507 95 27 |
+| **Email** | freshfloral.erikajuley@gmail.com | logística@flagracol.com.co |
+
+### Pendiente (fuera del alcance)
+
+- [ ] Migrar credenciales de `conexionbd.php` a variables de entorno PHP.
+- [ ] Tests automatizados para los PHP de PDFs.
 
 ## Troubleshooting
 

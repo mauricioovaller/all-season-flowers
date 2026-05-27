@@ -1,5 +1,6 @@
 // src/pages/EjecutivosCompras/EjecutivosCompras.jsx
 import React, { useState, useEffect } from 'react';
+import { CLIENTE } from '../../config/cliente.js';
 import Swal from 'sweetalert2';
 import { UserCog, Plus, Search, Filter, RefreshCw, Users, XCircle, UserCheck } from 'lucide-react';
 import EjecutivosComprasForm from './EjecutivosComprasForm';
@@ -74,7 +75,7 @@ const EjecutivosCompras = () => {
                             <UserCog className="w-8 h-8 text-green-600" />
                             Gestión de Ejecutivos de Compras
                         </h1>
-                        <p className="text-gray-600 mt-2">Administra los ejecutivos de compras de All Season Flowers</p>
+                        <p className="text-gray-600 mt-2">Administra los ejecutivos de compras de {CLIENTE.titulo}</p>
                     </div>
                     <button onClick={handleNuevo}
                         className="mt-4 md:mt-0 bg-gradient-to-r from-green-600 to-emerald-700 text-white px-6 py-3.5 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 flex items-center gap-3 font-bold text-base group relative overflow-hidden">

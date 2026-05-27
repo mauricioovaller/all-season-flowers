@@ -1,5 +1,6 @@
 // src/pages/Proveedores/Proveedores.jsx
 import React, { useState, useEffect } from 'react';
+import { CLIENTE } from '../../config/cliente.js';
 import Swal from 'sweetalert2';
 import {
     Package, Plus, Search, Edit, Trash2, Filter,
@@ -227,7 +228,7 @@ const Proveedores = () => {
                             Gestión de Proveedores
                         </h1>
                         <p className="text-gray-600 mt-2">
-                            Administra la información de los proveedores de All Season Flowers
+                            Administra la información de los proveedores de {CLIENTE.titulo}
                         </p>
                     </div>
 

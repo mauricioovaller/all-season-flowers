@@ -1,6 +1,6 @@
 // src/services/pedidos/pedidosService.js
-const API_URL =
-  "https://portal.datenbankensoluciones.com.co/DatenBankenApp/AllSeasonFlowers/Api/pedidos";
+import { apiUrl } from '../../config/api.js';
+const API_URL = apiUrl('pedidos');
 
 /**
  * Obtiene datos para los selects del formulario de pedidos

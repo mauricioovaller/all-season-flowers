@@ -1,7 +1,8 @@
 <?php
 // src/Api/pagosClientes/ApiGenerarPDFPagoCliente.php
-require_once($_SERVER['DOCUMENT_ROOT'] . "/DatenBankenApp/fpdf/fpdf.php");
-include $_SERVER['DOCUMENT_ROOT'] . "/DatenBankenApp/AllSeasonFlowers/conexionBaseDatos/conexionbd.php";
+require_once __DIR__ . '/../config/empresa.php';
+require_once FPDF_PATH;
+require_once CONEXION_BD_PATH;
 $enlace->set_charset("utf8mb4");
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
@@ -38,10 +39,10 @@ try {
             pc.Observaciones,
             
             -- Información de la empresa
-            'ALL SEASON FLOWERS' as empresa,
-            'Nit: 900.123.456-7' as nit,
-            'Dirección: Calle 123 #45-67' as direccion,
-            'Teléfono: (601) 123-4567' as telefono
+            '" . EMPRESA_NOMBRE_CORTO . "' as empresa,
+            'Nit: " . EMPRESA_NIT . "' as nit,
+            'Dirección: " . EMPRESA_DIRECCION . "' as direccion,
+            'Teléfono: " . EMPRESA_TELEFONO . "' as telefono
             
         FROM SAS_EncabPagoCliente pc
         INNER JOIN GEN_Clientes c ON pc.IdCliente = c.IdCliente
@@ -213,9 +214,9 @@ try {
     $pdf->SetAutoPageBreak(true, 20);
 
     // --- ENCABEZADO: Logo + Empresa ---
-    $logoPath = $_SERVER['DOCUMENT_ROOT'] . '/DatenBankenApp/AllSeasonFlowers/assets/logos/LogoAllSeason.jpg';
+    $logoPath = EMPRESA_LOGO_PATH_ASSETS;
     if (!file_exists($logoPath)) {
-        $logoPath = $_SERVER['DOCUMENT_ROOT'] . '/DatenBankenApp/AllSeasonFlowers/public/assets/logos/LogoAllSeason.jpg';
+        $logoPath = EMPRESA_LOGO_PATH_ASSETS_ALT;
     }
     if (file_exists($logoPath)) {
         $pdf->Image($logoPath, 12, 8, 38);
@@ -224,14 +225,14 @@ try {
     // Info empresa (derecha del logo)
     $pdf->SetFont('Helvetica', 'B', 13);
     $pdf->SetXY(55, 9);
-    $pdf->Cell(145, 7, utf8_decode('ALL SEASON FLOWERS'), 0, 1, 'C');
+    $pdf->Cell(145, 7, utf8_decode(EMPRESA_NOMBRE_CORTO), 0, 1, 'C');
     $pdf->SetFont('Helvetica', '', 9);
     $pdf->SetX(55);
-    $pdf->Cell(145, 5, utf8_decode('NIT: 900.123.456-7'), 0, 1, 'C');
+    $pdf->Cell(145, 5, utf8_decode('NIT: ' . EMPRESA_NIT), 0, 1, 'C');
     $pdf->SetX(55);
-    $pdf->Cell(145, 5, utf8_decode('Dirección: Calle 123 #45-67, Bogotá D.C.'), 0, 1, 'C');
+    $pdf->Cell(145, 5, utf8_decode('Dirección: ' . EMPRESA_DIRECCION . ', ' . EMPRESA_CIUDAD), 0, 1, 'C');
     $pdf->SetX(55);
-    $pdf->Cell(145, 5, utf8_decode('Teléfono: (601) 123-4567'), 0, 1, 'C');
+    $pdf->Cell(145, 5, utf8_decode('Teléfono: ' . EMPRESA_TELEFONO), 0, 1, 'C');
 
     $pdf->SetY(42);
 

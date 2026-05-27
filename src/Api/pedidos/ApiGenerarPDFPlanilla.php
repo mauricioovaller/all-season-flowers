@@ -1,6 +1,7 @@
 <?php
-require_once($_SERVER['DOCUMENT_ROOT'] . "/DatenBankenApp/fpdf/fpdf.php");
-include $_SERVER['DOCUMENT_ROOT'] . "/DatenBankenApp/AllSeasonFlowers/conexionBaseDatos/conexionbd.php";
+require_once __DIR__ . '/../config/empresa.php';
+require_once FPDF_PATH;
+require_once CONEXION_BD_PATH;
 $enlace->set_charset("utf8mb4");
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
@@ -54,10 +55,10 @@ $sql = "SELECT
             CONCAT('PLAN-', LPAD(enc.NoPlanilla, 4, '0')) AS numero_planilla,
             DATE_FORMAT(NOW(), '%d/%m/%Y') AS fecha_actual,
             DATE_FORMAT(enc.FechaEntrega, '%d/%m/%Y') AS fecha_entrega,
-            'ALL SEASON FLOWERS SAS' AS empresa_nombre,
-            '901.984.016-8' AS nit,
-            'ERIKA JULEY GONZALEZ CHINGATE' AS representante_legal,
-            '1.073.525.441' AS cc_representante,
+            '" . EMPRESA_NOMBRE . "' AS empresa_nombre,
+            '" . EMPRESA_NIT . "' AS nit,
+            '" . EMPRESA_REPRESENTANTE . "' AS representante_legal,
+            '" . EMPRESA_CC_REPRESENTANTE . "' AS cc_representante,
             'C.C. 1.073.525.441 DE CAJAMARCA' AS cc_completo,
             '3114677282' AS telefono_empresa,
             'FINCA VILLA CLEMENCIA BRR SANTA MARTA VEREDA PRADO - Facatativa, Cundinamarca' AS direccion_empresa,
@@ -221,7 +222,7 @@ class PDF_Planilla extends FPDF
         $this->AddPage();
 
         // Logo
-        $this->Image($_SERVER['DOCUMENT_ROOT'] . "/DatenBankenApp/AllSeasonFlowers/img/LogoAllSeason.jpg", 150, 10, 60);
+        $this->Image(EMPRESA_LOGO_PATH, 150, 10, 60);
         $this->Ln(18);
 
         // Fecha y lugar
@@ -382,7 +383,7 @@ class PDF_Planilla extends FPDF
         $this->AddPage();
 
         // Logo
-        $this->Image($_SERVER['DOCUMENT_ROOT'] . "/DatenBankenApp/AllSeasonFlowers/img/LogoAllSeason.jpg", 150, 10, 60);
+        $this->Image(EMPRESA_LOGO_PATH, 150, 10, 60);
 
         $this->Ln(14);
 
@@ -546,7 +547,7 @@ class PDF_Planilla extends FPDF
 
         // Título
         // Logo
-        $this->Image($_SERVER['DOCUMENT_ROOT'] . "/DatenBankenApp/AllSeasonFlowers/img/LogoAllSeason.jpg", 150, 10, 60);
+        $this->Image(EMPRESA_LOGO_PATH, 150, 10, 60);
 
         $this->Ln(45);
 
@@ -678,7 +679,7 @@ $datosPDF = [
 
 $pdf = new PDF_Planilla($datosPDF);
 $pdf->SetTitle('Planilla ' . $numero_planilla);
-$pdf->SetAuthor('All Season Flowers');
+$pdf->SetAuthor(EMPRESA_NOMBRE_CORTO);
 $pdf->SetCreator('Sistema de Pedidos');
 
 // Generar las 3 planillas

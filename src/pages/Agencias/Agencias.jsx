@@ -1,5 +1,6 @@
 // src/pages/Agencias/Agencias.jsx
 import React, { useState, useEffect } from 'react';
+import { CLIENTE } from '../../config/cliente.js';
 import Swal from 'sweetalert2';
 import { Building2, Plus, Search, RefreshCw } from 'lucide-react';
 import AgenciasForm from './AgenciasForm';
@@ -69,7 +70,7 @@ const Agencias = () => {
                         <h1 className="text-2xl md:text-3xl font-bold text-gray-800 flex items-center gap-3">
                             <Building2 className="w-8 h-8 text-green-600" />Gestión de Agencias
                         </h1>
-                        <p className="text-gray-600 mt-2">Administra las agencias de All Season Flowers</p>
+                        <p className="text-gray-600 mt-2">Administra las agencias de {CLIENTE.titulo}</p>
                     </div>
                     <button onClick={handleNuevo}
                         className="mt-4 md:mt-0 bg-gradient-to-r from-green-600 to-emerald-700 text-white px-6 py-3.5 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 flex items-center gap-3 font-bold text-base group relative overflow-hidden">

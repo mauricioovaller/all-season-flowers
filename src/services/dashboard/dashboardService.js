@@ -1,5 +1,6 @@
 //src/services/dashboard/dashboardService.js
-const API_BASE = 'https://portal.datenbankensoluciones.com.co/DatenBankenApp/AllSeasonFlowers/Api/dashboard';
+import { apiUrl } from '../../config/api.js';
+const API_BASE = apiUrl('dashboard');
 
 export const fetchDashboardData = async (app, fechaInicio, fechaFin) => {
     try {

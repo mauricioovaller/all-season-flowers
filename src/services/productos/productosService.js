@@ -1,5 +1,6 @@
 // src/services/productos/productosService.js 
-const API_URL = "https://portal.datenbankensoluciones.com.co/DatenBankenApp/AllSeasonFlowers/Api/productos";
+import { apiUrl } from '../../config/api.js';
+const API_URL = apiUrl('productos');
 
 /**
  * Obtiene la lista de productos con filtros

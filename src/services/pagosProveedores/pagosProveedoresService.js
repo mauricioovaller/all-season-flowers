@@ -1,6 +1,6 @@
 // src/services/pagosProveedores/pagosProveedoresService.js
-const API_URL =
-  "https://portal.datenbankensoluciones.com.co/DatenBankenApp/AllSeasonFlowers/Api/pagosProveedores";
+import { apiUrl } from '../../config/api.js';
+const API_URL = apiUrl('pagosProveedores');
 
 /**
  * Obtiene el último número de pago a proveedor
@@ -227,7 +227,7 @@ export async function getMediosPago() {
   try {
     // Usamos el endpoint de pagosClientes ya que es el mismo para ambos
     const res = await fetch(
-      "https://portal.datenbankensoluciones.com.co/DatenBankenApp/AllSeasonFlowers/Api/pagosClientes/ApiGetMediosPago.php",
+      `${apiUrl('pagosClientes')}/ApiGetMediosPago.php`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },

@@ -16,7 +16,8 @@ header("Access-Control-Allow-Methods: POST");
 header("Access-Control-Allow-Headers: Content-Type, Access-Control-Allow-Headers, Authorization, X-Requested-With");
 
 // Incluir conexión a base de datos
-include $_SERVER['DOCUMENT_ROOT'] . "/DatenBankenApp/AllSeasonFlowers/conexionBaseDatos/conexionbd.php";
+require_once __DIR__ . '/../config/empresa.php';
+require_once CONEXION_BD_PATH;
 
 // Validar método HTTP
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {

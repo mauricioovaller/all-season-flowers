@@ -25,6 +25,8 @@ import Aerolineas from './pages/Aerolineas/Aerolineas';
 import Agencias from './pages/Agencias/Agencias';
 import EstadoCuentaCliente from './pages/Reportes/EstadoCuentaCliente';
 import EstadoCuentaProveedor from './pages/Reportes/EstadoCuentaProveedor';
+import Bajas from './modules/bajas/Bajas';
+import Inventario from './pages/Reportes/Inventario';
 import './index.css';
 
 function App() {
@@ -64,6 +66,10 @@ function App() {
         return <EstadoCuentaCliente />;
       case 'estado-cuenta-proveedores':
         return <EstadoCuentaProveedor />;
+      case 'bajas':
+        return <Bajas />;
+      case 'inventario':
+        return <Inventario />;
       case 'ejecutivos-venta':
         return <EjecutivosVenta />;
       case 'ejecutivos-compra':

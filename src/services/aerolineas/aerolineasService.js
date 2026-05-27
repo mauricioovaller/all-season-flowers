@@ -1,7 +1,6 @@
 // src/services/aerolineas/aerolineasService.js
-
-const API_URL =
-  "https://portal.datenbankensoluciones.com.co/DatenBankenApp/AllSeasonFlowers/Api/aerolineas";
+import { apiUrl } from '../../config/api.js';
+const API_URL = apiUrl('aerolineas');
 
 export async function getAerolineas(filtros = {}) {
   try {

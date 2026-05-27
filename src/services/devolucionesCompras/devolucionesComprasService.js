@@ -1,6 +1,6 @@
 // src/services/devolucionesCompras/devolucionesComprasService.js
-const API_URL =
-  "https://portal.datenbankensoluciones.com.co/DatenBankenApp/AllSeasonFlowers/Api/devolucionesCompras";
+import { apiUrl } from '../../config/api.js';
+const API_URL = apiUrl('devolucionesCompras');
 
 /**
  * Obtiene el último número de devolución de compras (IdDevolucion) y el siguiente formateado

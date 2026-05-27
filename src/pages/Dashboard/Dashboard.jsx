@@ -1,6 +1,7 @@
 // src/pages/Dashboard/Dashboard.jsx
 
 import React, { useEffect, useState } from 'react';
+import { CLIENTE } from '../../config/cliente.js';
 import {
   Flower2, Leaf, Sprout, Users, Building, UserCheck, UserCog,
   Package, Truck, UsersRound, Plane, Star,
@@ -127,12 +128,12 @@ const Dashboard = () => {
             <div className="asf-float flex-shrink-0 w-16 h-16 lg:w-20 lg:h-20 bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl flex items-center justify-center shadow-xl shadow-green-900/50 ring-2 ring-green-400/20">
               <Flower2 className="w-9 h-9 lg:w-11 lg:h-11 text-white" />
             </div>
-            <div>
-              <h1 className="asf-gradient-text text-3xl lg:text-4xl xl:text-5xl font-extrabold leading-tight tracking-tight">
-                All Season Flowers
+            <div className="min-w-0 max-w-full">
+              <h1 className="asf-gradient-text text-3xl lg:text-4xl font-extrabold leading-snug tracking-tight break-words whitespace-normal">
+                {CLIENTE.titulo}
               </h1>
               <p className="text-green-400/80 font-medium text-sm lg:text-base mt-1 tracking-wide">
-                Flowers &amp; Ornamentals
+                {CLIENTE.lema}
               </p>
             </div>
           </div>

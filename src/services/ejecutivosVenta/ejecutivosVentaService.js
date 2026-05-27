@@ -1,7 +1,6 @@
 // src/services/ejecutivosVenta/ejecutivosVentaService.js
-
-const API_URL =
-  "https://portal.datenbankensoluciones.com.co/DatenBankenApp/AllSeasonFlowers/Api/ejecutivosVenta";
+import { apiUrl } from '../../config/api.js';
+const API_URL = apiUrl('ejecutivosVenta');
 
 export async function getEjecutivosVenta(filtros = {}) {
   try {

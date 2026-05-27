@@ -1,5 +1,6 @@
 // src/pages/Conductores/Conductores.jsx
 import React, { useState, useEffect } from 'react';
+import { CLIENTE } from '../../config/cliente.js';
 import Swal from 'sweetalert2';
 import {
     Truck, Plus, Search, Edit, Filter,
@@ -213,7 +214,7 @@ const Conductores = () => {
                             Gestión de Conductores
                         </h1>
                         <p className="text-gray-600 mt-2">
-                            Administra la información de los conductores de All Season Flowers
+                            Administra la información de los conductores de {CLIENTE.titulo}
                         </p>
                     </div>
 

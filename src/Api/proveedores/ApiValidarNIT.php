@@ -13,8 +13,8 @@ if ($_SERVER["REQUEST_METHOD"] !== "POST") {
 }
 
 // Incluir conexión a base de datos
-$rutaBase = $_SERVER['DOCUMENT_ROOT'] . "/DatenBankenApp/AllSeasonFlowers/conexionBaseDatos/";
-include $rutaBase . "conexionbd.php";
+require_once __DIR__ . '/../config/empresa.php';
+require_once CONEXION_BD_PATH;
 
 // Verificar conexión
 if (!isset($enlace) || $enlace->connect_error) {

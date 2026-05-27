@@ -8,7 +8,8 @@ ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 
 // Conexión a la base de datos
-include $_SERVER['DOCUMENT_ROOT'] . "/DatenBankenApp/AllSeasonFlowers/conexionBaseDatos/conexionbd.php";
+require_once __DIR__ . '/../config/empresa.php';
+require_once CONEXION_BD_PATH;
 
 if ($enlace->connect_error) {
     echo json_encode(["success" => false, "message" => "Error de conexión: " . $enlace->connect_error]);

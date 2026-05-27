@@ -1,7 +1,8 @@
 <?php
 // src/Api/devoluciones/ApiGenerarPDFDevolucion.php
-require_once($_SERVER['DOCUMENT_ROOT'] . "/DatenBankenApp/fpdf/fpdf.php");
-include $_SERVER['DOCUMENT_ROOT'] . "/DatenBankenApp/AllSeasonFlowers/conexionBaseDatos/conexionbd.php";
+require_once __DIR__ . '/../config/empresa.php';
+require_once FPDF_PATH;
+require_once CONEXION_BD_PATH;
 $enlace->set_charset("utf8mb4");
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
@@ -162,7 +163,7 @@ class PDF_Devolucion extends FPDF
         global $fechaFormateada, $numero_devolucion, $factura_asociada, $cliente_nombre, $direccion_cliente, $ciudad_cliente, $telefono_cliente, $awb, $awb_hija, $awb_nieta, $aerolinea, $observacionesDevolucion;
 
         // Logo
-        $this->Image($_SERVER['DOCUMENT_ROOT'] . "/DatenBankenApp/AllSeasonFlowers/img/LogoAllSeason.jpg", 10, 8, 50);
+        $this->Image(EMPRESA_LOGO_PATH, 10, 8, 50);
 
         // Título
         $this->SetY(10);

@@ -1,5 +1,6 @@
 // src/pages/Variedades/Variedades.jsx
 import React, { useState, useEffect } from 'react';
+import { CLIENTE } from '../../config/cliente.js';
 import Swal from 'sweetalert2';
 import {
     Palette, Plus, Search, Edit, Filter,
@@ -243,7 +244,7 @@ const Variedades = () => {
                             Gestión de Variedades
                         </h1>
                         <p className="text-gray-600 mt-2">
-                            Administra las variedades de productos de All Season Flowers
+                            Administra las variedades de productos de {CLIENTE.titulo}
                         </p>
                     </div>
 

@@ -3,8 +3,9 @@
 ini_set('memory_limit', '256M');
 ini_set('max_execution_time', '300');
 
-require_once($_SERVER['DOCUMENT_ROOT'] . "/DatenBankenApp/fpdf/fpdf.php");
-include $_SERVER['DOCUMENT_ROOT'] . "/DatenBankenApp/AllSeasonFlowers/conexionBaseDatos/conexionbd.php";
+require_once __DIR__ . '/../config/empresa.php';
+require_once FPDF_PATH;
+require_once CONEXION_BD_PATH;
 $enlace->set_charset("utf8mb4");
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
@@ -138,55 +139,23 @@ while ($stmtProductos->fetch()) {
 }
 $stmtProductos->close();
 
-// 🔴 CONSULTA 3: DATOS FIJOS DE LA EMPRESA E INSPECTOR
-$sqlEmpresa = "SELECT 
-                'ALL SEASON FLOWERS SAS' AS empresa_nombre,
-                '901.984.016-8' AS nit_empresa,
-                'Finca Villa Clemencia Vrd. Prado' AS direccion_empresa,
-                'Facatativa, Cundinamarca, Colombia' AS ciudad_empresa,
-                '(+057) 3114677282 - 3023090940' AS telefono_empresa,
-                'freshfloral.erikajulie@gmail.com' AS email_empresa,
-                'REGISTRO ICA EXP250201' AS registro_ica,
-                'JOSE YAIR FONSECA CAMACHO' AS inspector_nombre,
-                '1073514261' AS inspector_cc,
-                '091019-0567503' AS inspector_tp,
-                '2502027' AS inspector_reg_sv
-                FROM DUAL";
+// 🔴 DATOS FIJOS DE LA EMPRESA E INSPECTOR (centralizados en config/empresa.php)
+$empresa_nombre   = EMPRESA_NOMBRE;
+$nit_empresa      = EMPRESA_NIT;
+$direccion_empresa = EMPRESA_DIRECCION;
+$ciudad_empresa   = EMPRESA_CIUDAD;
+$telefono_empresa = EMPRESA_TELEFONO;
+$email_empresa    = EMPRESA_EMAIL;
+$registro_ica     = EMPRESA_REGISTRO_ICA;
+$inspector_nombre = INSPECTOR_NOMBRE;
+$inspector_cc     = INSPECTOR_CC;
+$inspector_tp     = INSPECTOR_TP;
+$inspector_reg_sv = INSPECTOR_REG_SV;
 
-$stmtEmpresa = $enlace->prepare($sqlEmpresa);
-$stmtEmpresa->execute();
-$stmtEmpresa->bind_result(
-    $empresa_nombre,
-    $nit_empresa,
-    $direccion_empresa,
-    $ciudad_empresa,
-    $telefono_empresa,
-    $email_empresa,
-    $registro_ica,
-    $inspector_nombre,
-    $inspector_cc,
-    $inspector_tp,
-    $inspector_reg_sv
-);
-$stmtEmpresa->fetch();
-$stmtEmpresa->close();
-
-// 🔴 CONSULTA 4: DATOS DE CULTIVO (por ahora fijos)
-$sqlCultivo = "SELECT 
-                'ALL SEASON FLOWERS SAS' AS cultivo_nombre,
-                'EXP250201' AS cultivo_registro_ica,
-                'INDEFINIDO' AS cultivo_vencimiento
-                FROM DUAL";
-
-$stmtCultivo = $enlace->prepare($sqlCultivo);
-$stmtCultivo->execute();
-$stmtCultivo->bind_result(
-    $cultivo_nombre,
-    $cultivo_registro_ica,
-    $cultivo_vencimiento
-);
-$stmtCultivo->fetch();
-$stmtCultivo->close();
+// 🔴 DATOS DE CULTIVO (por ahora fijos, centralizados en config/empresa.php)
+$cultivo_nombre       = EMPRESA_NOMBRE;
+$cultivo_registro_ica = EMPRESA_CULTIVO_REG_ICA;
+$cultivo_vencimiento  = 'INDEFINIDO';
 
 // Clase PDF personalizada para fitosanitario
 class PDF_Fitosanitario extends FPDF
@@ -196,13 +165,13 @@ class PDF_Fitosanitario extends FPDF
         global $numero_fitosanitario, $fechaVigenciaInicial;
 
         // Logo
-        $this->Image($_SERVER['DOCUMENT_ROOT'] . "/DatenBankenApp/AllSeasonFlowers/img/LogoAllSeason.jpg", 20, 10, 65);
+        $this->Image(EMPRESA_LOGO_PATH, 20, 10, 65);
         // Configurar fuente
         $this->SetFont('Helvetica', '', 8);
 
         // NIT y datos empresa (parte superior izquierda)
         $this->SetX(110);
-        $this->Cell(100, 4, 'NIT. 901.984.016-8', 0, 1, 'C');
+        $this->Cell(100, 4, 'NIT. ' . EMPRESA_NIT, 0, 1, 'C');
         $this->SetX(110);
         $this->Cell(100, 4, 'Finca Villa Clemencia Vrd. Prado', 0, 1, 'C');
         $this->SetX(110);

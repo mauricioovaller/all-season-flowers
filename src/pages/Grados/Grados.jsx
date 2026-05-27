@@ -1,5 +1,6 @@
 // src/pages/Grados/Grados.jsx
 import React, { useState, useEffect } from 'react';
+import { CLIENTE } from '../../config/cliente.js';
 import Swal from 'sweetalert2';
 import {
     Layers, Plus, Search, Edit, Filter,
@@ -239,7 +240,7 @@ const Grados = () => {
                             Gestión de Grados
                         </h1>
                         <p className="text-gray-600 mt-2">
-                            Administra los grados de productos de All Season Flowers
+                            Administra los grados de productos de {CLIENTE.titulo}
                         </p>
                     </div>
 

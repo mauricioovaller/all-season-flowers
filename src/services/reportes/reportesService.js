@@ -1,7 +1,6 @@
 // src/services/reportes/reportesService.js
-
-const API_URL =
-  "https://portal.datenbankensoluciones.com.co/DatenBankenApp/AllSeasonFlowers/Api/reportes";
+import { apiUrl } from '../../config/api.js';
+const API_URL = apiUrl('reportes');
 
 /**
  * Obtiene el estado de cuenta de un cliente en un rango de fechas

@@ -10,8 +10,9 @@
  * @subpackage DevolucionesCompras
  */
 
-require_once($_SERVER['DOCUMENT_ROOT'] . "/DatenBankenApp/fpdf/fpdf.php");
-include $_SERVER['DOCUMENT_ROOT'] . "/DatenBankenApp/AllSeasonFlowers/conexionBaseDatos/conexionbd.php";
+require_once __DIR__ . '/../config/empresa.php';
+require_once FPDF_PATH;
+require_once CONEXION_BD_PATH;
 
 // Configuración de errores y charset
 $enlace->set_charset("utf8mb4");
@@ -164,7 +165,7 @@ class PDF_DevolucionCompra extends FPDF
                $nombreComprador, $fechaCompra;
         
         // Logo (misma posición que en ventas)
-        $this->Image($_SERVER['DOCUMENT_ROOT'] . "/DatenBankenApp/AllSeasonFlowers/img/LogoAllSeason.jpg", 10, 8, 50);
+        $this->Image(EMPRESA_LOGO_PATH, 10, 8, 50);
         
         // Título (similar a ventas)
         $this->SetY(10);
@@ -346,7 +347,7 @@ $pdf->Ln(15);
 $pdf->SetFont('Helvetica', '', 9);
 $pdf->Cell(95, 5, utf8_decode('___________________________'), 0, 0, 'C');
 $pdf->Cell(95, 5, utf8_decode('___________________________'), 0, 1, 'C');
-$pdf->Cell(95, 5, 'Responsable All Season Flowers', 0, 0, 'C');
+$pdf->Cell(95, 5, 'Responsable ' . EMPRESA_NOMBRE_CORTO, 0, 0, 'C');
 $pdf->Cell(95, 5, 'Recibido por Proveedor', 0, 1, 'C');
 
 // Generar PDF

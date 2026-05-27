@@ -1,5 +1,6 @@
 // src/modules/compras/Compras.jsx
 import React, { useRef, useState, useEffect } from "react";
+import { CLIENTE } from "../../config/cliente.js";
 import Swal from "sweetalert2";
 import { Search, Save, Plus, Download, ShoppingCart } from 'lucide-react';
 import CompraHeader from "./CompraHeader";
@@ -913,7 +914,7 @@ export default function Compras() {
                         </div>
                         <div>
                             <h2 className="text-white font-bold text-base lg:text-lg leading-tight">Compras de Flor</h2>
-                            <p className="text-slate-400 text-xs">All Season Flowers — Sistema de compras</p>
+                            <p className="text-slate-400 text-xs">{CLIENTE.titulo} — Sistema de compras</p>
                         </div>
                     </div>
                     <div className="flex items-center gap-3 flex-shrink-0">

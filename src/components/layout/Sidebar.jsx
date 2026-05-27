@@ -1,10 +1,11 @@
 // src/components/layout/Sidebar.jsx
 import React, { useState } from 'react';
+import { CLIENTE } from '../../config/cliente.js';
 import {
   Users, Building, UserCheck, UserCog, Flower2, Sprout, Star, Package,
   Truck, UsersRound, Plane, BarChart3, ShoppingCart, CreditCard,
-  FileText, Download, LayoutDashboard, ChevronLeft, ChevronRight, Home, Undo2,
-  Wallet, HandCoins, Menu, X
+  FileText, Download,   LayoutDashboard, ChevronLeft, ChevronRight, Home, Undo2,
+  Wallet, HandCoins, Menu, X, Trash2, ClipboardList
 } from 'lucide-react';
 
 const Sidebar = ({ onModuleChange, currentModule }) => {
@@ -54,6 +55,7 @@ const Sidebar = ({ onModuleChange, currentModule }) => {
     { id: 'devolucion-compra', label: 'Devoluciones Compras', icon: <Undo2 className="w-5 h-5" />, category: 'operativos', priority: 2 },
     { id: 'pago-cliente', label: 'Pago Clientes', icon: <Wallet className="w-5 h-5" />, category: 'operativos', priority: 2 },
     { id: 'pago-proveedor', label: 'Pago Proveedores', icon: <HandCoins className="w-5 h-5" />, category: 'operativos', priority: 2 },
+    { id: 'bajas', label: 'Bajas', icon: <Trash2 className="w-5 h-5" />, category: 'operativos', priority: 2 },
 
     // INFORMES
     {
@@ -68,6 +70,7 @@ const Sidebar = ({ onModuleChange, currentModule }) => {
     { id: 'consolidados-compras', label: 'Cons. Compras', icon: <BarChart3 className="w-5 h-5" />, category: 'informes', priority: 3 },
     { id: 'exportacion-contable', label: 'Exportación', icon: <Download className="w-5 h-5" />, category: 'informes', priority: 3 },
     {id: 'tablero-control', label: 'Tablero Control', icon: <LayoutDashboard className="w-5 h-5" />, category: 'informes', priority: 3 },
+    { id: 'inventario', label: 'Inventarios', icon: <ClipboardList className="w-5 h-5" />, category: 'informes', priority: 3 },
   ];
 
   const handleItemClick = (itemId) => {
@@ -144,18 +147,18 @@ const Sidebar = ({ onModuleChange, currentModule }) => {
           {!isCollapsed && (
             <div className="flex items-center space-x-3">
               <div className="w-9 h-9 bg-gradient-to-r from-green-500 to-emerald-600 rounded-xl flex items-center justify-center shadow-lg shadow-green-900/40">
-                <span className="text-white font-bold text-sm">AS</span>
+                <span className="text-white font-bold text-sm">{CLIENTE.iniciales}</span>
               </div>
               <div>
-                <h2 className="text-sm font-bold text-white leading-tight">All Season Flowers</h2>
-                <p className="text-xs text-green-400 font-medium">Flowers & Ornamentals</p>
+                <h2 className="text-sm font-bold text-white leading-tight">{CLIENTE.titulo}</h2>
+                <p className="text-xs text-green-400 font-medium">{CLIENTE.lema}</p>
               </div>
             </div>
           )}
           {isCollapsed && (
             <div className="flex justify-center">
               <div className="w-9 h-9 bg-gradient-to-r from-green-500 to-emerald-600 rounded-xl flex items-center justify-center shadow-lg shadow-green-900/40">
-                <span className="text-white font-bold text-sm">AS</span>
+                <span className="text-white font-bold text-sm">{CLIENTE.iniciales}</span>
               </div>
             </div>
           )}
@@ -193,10 +196,10 @@ const Sidebar = ({ onModuleChange, currentModule }) => {
         <div className="bg-slate-800 shadow-lg px-4 py-3 flex items-center justify-between">
           <div className="flex items-center space-x-3">
             <div className="w-8 h-8 bg-gradient-to-r from-green-500 to-emerald-600 rounded-lg flex items-center justify-center shadow shadow-green-900/40 flex-shrink-0">
-              <span className="text-white font-bold text-xs">AS</span>
+              <span className="text-white font-bold text-xs">{CLIENTE.iniciales}</span>
             </div>
             <div className="min-w-0">
-              <span className="text-white text-sm font-bold block leading-tight truncate">All Season Flowers</span>
+              <span className="text-white text-sm font-bold block leading-tight truncate">{CLIENTE.titulo}</span>
               <span className="text-green-400 text-xs font-medium truncate block">{currentModuleLabel}</span>
             </div>
           </div>

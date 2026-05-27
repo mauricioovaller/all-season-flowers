@@ -1,6 +1,7 @@
 // src/services/variedades/variedadesService.js 
-const API_URL = "https://portal.datenbankensoluciones.com.co/DatenBankenApp/AllSeasonFlowers/Api/variedades";
-const API_PRODUCTOS = "https://portal.datenbankensoluciones.com.co/DatenBankenApp/AllSeasonFlowers/Api/productos";
+import { apiUrl } from '../../config/api.js';
+const API_URL = apiUrl('variedades');
+const API_PRODUCTOS = apiUrl('productos');
 
 /**
  * Obtiene productos para el selector
@@ -8,7 +9,7 @@ const API_PRODUCTOS = "https://portal.datenbankensoluciones.com.co/DatenBankenAp
  */
 export async function getProductosParaSelector() {
   try {
-    const res = await fetch(`${API_PRODUCTOS}/ApiGetProductosParaSelector.php`, {
+    const res = await fetch(`${API_URL}/ApiGetProductosParaSelector.php`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

@@ -1,5 +1,6 @@
 // src/modules/pagosClientes/PagosClientes.jsx
 import React, { useState, useEffect, useRef } from "react";
+import { CLIENTE } from "../../config/cliente.js";
 import Swal from "sweetalert2";
 import { Search, Save, Plus, FileText, Trash2, Wallet } from 'lucide-react';
 import PagoClienteHeader from "./PagoClienteHeader";
@@ -549,7 +550,7 @@ export default function PagosClientes() {
             </div>
             <div>
               <h2 className="text-white font-bold text-base lg:text-lg leading-tight">Pago Recibido de Clientes</h2>
-              <p className="text-slate-400 text-xs">All Season Flowers — Gestión de pagos de clientes</p>
+              <p className="text-slate-400 text-xs">{CLIENTE.titulo} — Gestión de pagos de clientes</p>
             </div>
           </div>
           <div className="flex items-center gap-3 flex-shrink-0">

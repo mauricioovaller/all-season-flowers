@@ -1,5 +1,6 @@
 // src/pages/Clientes/Clientes.jsx
 import React, { useState, useEffect } from 'react';
+import { CLIENTE } from '../../config/cliente.js';
 import Swal from 'sweetalert2';
 import {
     Users, Plus, Search, Edit, Trash2, Filter,
@@ -236,7 +237,7 @@ const Clientes = () => {
                             Gestión de Clientes
                         </h1>
                         <p className="text-gray-600 mt-2">
-                            Administra la información de los clientes de All Season Flowers
+                            Administra la información de los clientes de {CLIENTE.titulo}
                         </p>
                     </div>
 

@@ -1,6 +1,7 @@
 ﻿<?php
 header("Content-Type: text/plain; charset=UTF-8");
-include $_SERVER['DOCUMENT_ROOT'] . "/DatenBankenApp/AllSeasonFlowers/conexionBaseDatos/conexionbd.php";
+require_once __DIR__ . '/../config/empresa.php';
+require_once CONEXION_BD_PATH;
 
 $tablas = [
     'SAS_EncabPagoProveedor',

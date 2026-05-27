@@ -1,11 +1,13 @@
 // src/components/layout/Header.jsx
 import React, { useState, useRef, useEffect } from 'react';
+import { CLIENTE } from '../../config/cliente.js';
 import Swal from 'sweetalert2';
 import {
   Search, Bell, User, LogOut, X, ChevronRight,
   Home, Users, Building, UserCheck, UserCog, Flower2, Sprout, Star,
   Package, Truck, UsersRound, Plane, ShoppingCart, CreditCard, Undo2,
   Wallet, HandCoins, FileText, BarChart3, Download, LayoutDashboard,
+  Trash2, ClipboardList,
 } from 'lucide-react';
 
 // ── Índice de módulos para búsqueda ─────────────────────────────────────────
@@ -29,12 +31,14 @@ const MODULES = [
   { id: 'devolucion-compra',         label: 'Devoluciones Compras',   cat: 'Operativos', Icon: Undo2,           catColor: 'text-blue-400 bg-blue-400/10'       },
   { id: 'pago-cliente',              label: 'Pagos a Clientes',       cat: 'Operativos', Icon: Wallet,          catColor: 'text-blue-400 bg-blue-400/10'       },
   { id: 'pago-proveedor',            label: 'Pagos a Proveedores',    cat: 'Operativos', Icon: HandCoins,       catColor: 'text-blue-400 bg-blue-400/10'       },
+  { id: 'bajas',                     label: 'Bajas de Producto',      cat: 'Operativos', Icon: Trash2,          catColor: 'text-blue-400 bg-blue-400/10'       },
   { id: 'estado-cuenta-proveedores', label: 'Cuenta Proveedores',     cat: 'Informes',   Icon: FileText,        catColor: 'text-amber-400 bg-amber-400/10'     },
   { id: 'estado-cuenta-clientes',    label: 'Cuenta Clientes',        cat: 'Informes',   Icon: FileText,        catColor: 'text-amber-400 bg-amber-400/10'     },
   { id: 'consolidados-ventas',       label: 'Consolidados Ventas',    cat: 'Informes',   Icon: BarChart3,       catColor: 'text-amber-400 bg-amber-400/10'     },
   { id: 'consolidados-compras',      label: 'Consolidados Compras',   cat: 'Informes',   Icon: BarChart3,       catColor: 'text-amber-400 bg-amber-400/10'     },
   { id: 'exportacion-contable',      label: 'Exportación Contable',   cat: 'Informes',   Icon: Download,        catColor: 'text-amber-400 bg-amber-400/10'     },
   { id: 'tablero-control',           label: 'Tablero de Control',     cat: 'Informes',   Icon: LayoutDashboard, catColor: 'text-amber-400 bg-amber-400/10'     },
+  { id: 'inventario',                label: 'Inventarios',            cat: 'Informes',   Icon: ClipboardList,   catColor: 'text-amber-400 bg-amber-400/10'     },
 ];
 
 const Header = ({ onModuleChange }) => {
@@ -148,12 +152,12 @@ const Header = ({ onModuleChange }) => {
         <div className="flex items-center justify-between gap-3">
 
           {/* ── Logo + marca ── */}
-          <div className="flex items-center gap-3 flex-shrink-0">
-            <div className="w-12 h-12 bg-white rounded-xl shadow-lg overflow-hidden border border-slate-600 flex-shrink-0 flex items-center justify-center">
+          <div className="flex items-center gap-4 flex-shrink-0">
+            <div className="w-16 h-16 bg-white rounded-xl shadow-lg overflow-hidden border border-slate-600 flex-shrink-0 flex items-center justify-center">
               <img
-                src="/DatenBankenApp/AllSeasonFlowers/img/LogoAllSeason.jpg"
-                alt="All Season Flowers"
-                className="w-full h-full object-contain"
+                src={CLIENTE.logoPath}
+                alt={CLIENTE.titulo}
+                className="w-full h-full object-contain p-1"
                 onError={(e) => {
                   e.target.style.display = 'none';
                   e.target.nextSibling.style.display = 'flex';
@@ -163,12 +167,12 @@ const Header = ({ onModuleChange }) => {
                 className="w-full h-full bg-gradient-to-br from-green-500 to-emerald-600 items-center justify-center"
                 style={{ display: 'none' }}
               >
-                <span className="text-white font-extrabold text-base">AS</span>
+                <span className="text-white font-extrabold text-lg">{CLIENTE.iniciales}</span>
               </div>
             </div>
             <div className="hidden sm:block">
-              <p className="text-white font-bold text-sm lg:text-base leading-tight">All Season Flowers</p>
-              <p className="text-green-400 text-xs font-medium">Flowers &amp; Ornamentals</p>
+              <p className="text-white font-bold text-base lg:text-lg leading-tight">{CLIENTE.titulo}</p>
+              <p className="text-green-400 text-xs lg:text-sm font-medium">{CLIENTE.lema}</p>
             </div>
           </div>
 

@@ -1,7 +1,6 @@
 // src/services/ejecutivosCompras/ejecutivosComprasService.js
-
-const API_URL =
-  "https://portal.datenbankensoluciones.com.co/DatenBankenApp/AllSeasonFlowers/Api/ejecutivosCompras";
+import { apiUrl } from '../../config/api.js';
+const API_URL = apiUrl('ejecutivosCompras');
 
 export async function getEjecutivosCompras(filtros = {}) {
   try {

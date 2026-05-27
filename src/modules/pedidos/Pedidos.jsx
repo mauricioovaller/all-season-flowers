@@ -1,5 +1,6 @@
 // src/modules/pedidos/Pedidos.jsx
 import React, { useRef, useState, useEffect } from "react";
+import { CLIENTE } from "../../config/cliente.js";
 import Swal from "sweetalert2";
 import { Search, Save, Plus, Download, CreditCard } from 'lucide-react';
 import PedidoHeader from "./PedidoHeader";
@@ -1334,7 +1335,7 @@ export default function Pedidos() {
             </div>
             <div>
               <h2 className="text-white font-bold text-base lg:text-lg leading-tight">Pedidos de Exportación</h2>
-              <p className="text-slate-400 text-xs">All Season Flowers — Sistema de pedidos</p>
+              <p className="text-slate-400 text-xs">{CLIENTE.titulo} — Sistema de pedidos</p>
             </div>
           </div>
           <div className="flex items-center gap-3 flex-shrink-0">

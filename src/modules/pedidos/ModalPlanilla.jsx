@@ -1,6 +1,7 @@
 // src/modules/pedidos/ModalPlanilla.jsx
 import React, { useState, useEffect } from "react";
 import Swal from "sweetalert2";
+import API_BASE from "../../config/api.js";
 import ModalVisorPreliminar from "./ModalVisorPreliminar";
 import {
   obtenerUltimoNumeroPlanilla,
@@ -280,7 +281,7 @@ export default function ModalPlanilla({
       const numero = numeroPlanilla.replace("PLAN-", "");
 
       // URL de la API - MISMO FORMATO QUE FACTURA
-      const apiUrl = `https://portal.datenbankensoluciones.com.co/DatenBankenApp/AllSeasonFlowers/Api/pedidos/ApiGenerarPDFPlanilla.php`;
+      const apiUrl = `${API_BASE}/pedidos/ApiGenerarPDFPlanilla.php`;
 
       console.log("Enviando solicitud a API...");
 
@@ -334,7 +335,7 @@ export default function ModalPlanilla({
         showConfirmButton: false
       }).then(() => {
         const numero = (planillaExistente ? numeroPlanillaExistente : siguienteNumero).replace("PLAN-", "");
-        const directUrl = `https://portal.datenbankensoluciones.com.co/DatenBankenApp/AllSeasonFlowers/Api/pedidos/ApiGenerarPDFPlanilla.php?numeroPlanilla=${numero}`;
+        const directUrl = `${API_BASE}/pedidos/ApiGenerarPDFPlanilla.php?numeroPlanilla=${numero}`;
         window.open(directUrl, '_blank');
       });
     } finally {

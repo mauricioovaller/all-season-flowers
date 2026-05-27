@@ -1,0 +1,51 @@
+Asunto: Implementación de plataforma web — Solicitud de datos de su empresa
+
+---
+
+Estimado(a) [Nombre del contacto],
+
+Es un gusto saludarle. Mi nombre es [Tu nombre], desarrollador de software
+especializado en soluciones web empresariales para el sector floricultor.
+
+Me complace informarle que estamos listos para desplegar la plataforma de
+gestión para su empresa. Esta aplicación web le permitirá administrar de
+forma centralizada y eficiente todos los procesos operativos de su negocio:
+
+  • Pedidos
+  • Compras a proveedores
+  • Devoluciones (ventas y compras)
+  • Pagos a proveedores y de clientes
+  • Bajas de inventario (daño, pérdida, obsequio)
+  • Inventarios con trazabilidad completa
+  • Clientes, proveedores, productos, variedades y grados
+  • Conductores, ayudantes, agencias y aerolíneas
+  • Generación de facturas, certificados fitosanitarios y demás PDFs
+
+Para personalizar la plataforma con la identidad visual y los datos legales
+de su empresa, le solicito diligenciar el archivo de Excel adjunto. Contiene
+tres hojas que puede completar en menos de 10 minutos:
+
+  1. Identidad Empresarial  — nombre legal, logo, NIT, lema, iniciales
+  2. Contacto                — dirección, teléfono, correo, representante legal
+  3. ICA / Fitosanitario     — solo si exportan flores y requieren certificados
+
+La cuarta hoja ("Información Técnica") NO debe llenarla; contiene datos que
+yo configuro al momento del despliegue.
+
+Una vez reciba el Excel diligenciado y el archivo del logo de su empresa,
+el tiempo estimado de implementación es de [X] días hábiles. Al finalizar
+recibirá:
+
+  • Credenciales de acceso (usuario administrador)
+  • URL de la plataforma
+  • Una breve capacitación virtual sobre el uso del sistema
+
+Quedo atento a cualquier inquietud y a la pronta devolución del Excel
+diligenciado.
+
+Cordialmente,
+
+[Tu nombre completo]
+[Tu cargo]
+[Tu teléfono]
+[Tu correo]

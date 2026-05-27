@@ -1,6 +1,6 @@
 // src/services/compras/comprasService.js
-const API_URL =
-  "https://portal.datenbankensoluciones.com.co/DatenBankenApp/AllSeasonFlowers/Api/compras";
+import { apiUrl } from '../../config/api.js';
+const API_URL = apiUrl('compras');
 
 /**
  * Obtiene datos para los selects del formulario de compras
@@ -29,7 +29,7 @@ export async function getDatosSelectCompras() {
 export async function getVariedadesYGrados(idProducto) {
   try {
     const res = await fetch(
-      "https://portal.datenbankensoluciones.com.co/DatenBankenApp/AllSeasonFlowers/Api/pedidos/ApiGetSelecVariedGrado.php",
+      `${apiUrl('pedidos')}/ApiGetSelecVariedGrado.php`,
       {
         method: "POST",
         headers: {

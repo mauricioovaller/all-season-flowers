@@ -4,8 +4,9 @@ header("Access-Control-Allow-Origin: *");
 header("Access-Control-Allow-Methods: POST");
 header("Access-Control-Allow-Headers: Content-Type, Access-Control-Allow-Headers, Authorization, X-Requested-With");
 
-include $_SERVER['DOCUMENT_ROOT'] . "/DatenBankenApp/AllSeasonFlowers/conexionBaseDatos/conexionbd.php";
-require_once $_SERVER['DOCUMENT_ROOT'] . "/DatenBankenApp/fpdf/fpdf.php";
+require_once __DIR__ . '/../config/empresa.php';
+require_once CONEXION_BD_PATH;
+require_once FPDF_PATH;
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     header("Content-Type: application/json");
@@ -141,9 +142,9 @@ try {
     $pdf->SetAutoPageBreak(true, 20);
 
     // --- ENCABEZADO: Logo + Empresa ---
-    $logoPath = $_SERVER['DOCUMENT_ROOT'] . '/DatenBankenApp/AllSeasonFlowers/assets/logos/LogoAllSeason.jpg';
+    $logoPath = EMPRESA_LOGO_PATH_ASSETS;
     if (!file_exists($logoPath)) {
-        $logoPath = $_SERVER['DOCUMENT_ROOT'] . '/DatenBankenApp/AllSeasonFlowers/public/assets/logos/LogoAllSeason.jpg';
+        $logoPath = EMPRESA_LOGO_PATH_ASSETS_ALT;
     }
     if (file_exists($logoPath)) {
         $pdf->Image($logoPath, 12, 8, 38);
@@ -152,14 +153,14 @@ try {
     // Info empresa (derecha del logo)
     $pdf->SetFont('Helvetica', 'B', 13);
     $pdf->SetXY(55, 9);
-    $pdf->Cell(145, 7, utf8_decode('ALL SEASON FLOWERS'), 0, 1, 'C');
+    $pdf->Cell(145, 7, utf8_decode(EMPRESA_NOMBRE_CORTO), 0, 1, 'C');
     $pdf->SetFont('Helvetica', '', 9);
     $pdf->SetX(55);
-    $pdf->Cell(145, 5, utf8_decode('NIT: 900.123.456-7'), 0, 1, 'C');
+    $pdf->Cell(145, 5, utf8_decode('NIT: ' . EMPRESA_NIT), 0, 1, 'C');
     $pdf->SetX(55);
-    $pdf->Cell(145, 5, utf8_decode('Direccion: Calle 123 #45-67, Bogota D.C.'), 0, 1, 'C');
+    $pdf->Cell(145, 5, utf8_decode('Direccion: ' . EMPRESA_DIRECCION . ', ' . EMPRESA_CIUDAD), 0, 1, 'C');
     $pdf->SetX(55);
-    $pdf->Cell(145, 5, utf8_decode('Telefono: (601) 123-4567'), 0, 1, 'C');
+    $pdf->Cell(145, 5, utf8_decode('Telefono: ' . EMPRESA_TELEFONO), 0, 1, 'C');
 
     $pdf->SetY(42);
 

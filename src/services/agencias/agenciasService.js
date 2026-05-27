@@ -1,7 +1,6 @@
 // src/services/agencias/agenciasService.js
-
-const API_URL =
-  "https://portal.datenbankensoluciones.com.co/DatenBankenApp/AllSeasonFlowers/Api/agencias";
+import { apiUrl } from '../../config/api.js';
+const API_URL = apiUrl('agencias');
 
 export async function getAgencias(filtros = {}) {
   try {

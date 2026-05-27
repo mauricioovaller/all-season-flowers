@@ -1,5 +1,6 @@
 // src/modules/devoluciones/Devoluciones.jsx
 import React, { useState, useEffect, useRef } from "react";
+import { CLIENTE } from "../../config/cliente.js";
 import Swal from "sweetalert2";
 import { Search, Save, Plus, FileText, Trash2, Undo2 } from 'lucide-react';
 import DevolucionHeader from "./DevolucionHeader";
@@ -486,7 +487,7 @@ export default function Devoluciones() {
             </div>
             <div>
               <h2 className="text-white font-bold text-base lg:text-lg leading-tight">Devoluciones / Notas Crédito</h2>
-              <p className="text-slate-400 text-xs">All Season Flowers — Devoluciones de ventas</p>
+              <p className="text-slate-400 text-xs">{CLIENTE.titulo} — Devoluciones de ventas</p>
             </div>
           </div>
           <div className="flex items-center gap-3 flex-shrink-0">

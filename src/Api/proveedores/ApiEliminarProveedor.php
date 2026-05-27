@@ -11,7 +11,8 @@ echo json_encode(["success" => false, "message" => "Método no permitido"]);
 exit;
 }
 
-include $_SERVER['DOCUMENT_ROOT'] . "/DatenBankenApp/AllSeasonFlowers/conexionBaseDatos/conexionbd.php";
+require_once __DIR__ . '/../config/empresa.php';
+require_once CONEXION_BD_PATH;
 
 if ($enlace->connect_error) {
 http_response_code(500);

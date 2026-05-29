@@ -29,9 +29,9 @@ $sqlEncabezado = "SELECT
                     DATE_FORMAT(enc.FechaEntrega, '%d-%b-%y') AS fecha_factura,
                     '" . EMPRESA_NOMBRE . "' AS empresa_nombre,
                     '" . EMPRESA_NIT . "' AS nit,
-                    'Finca Villa Clemencia Vrd. Prado' AS direccion_empresa,
-                    '(+057) 3114677282 - 3023090940' AS telefono_empresa,
-                    'Facatativa, Cundinamarca, Colombia' AS ciudad_empresa,
+                    '" . EMPRESA_DIRECCION . "' AS direccion_empresa,
+                    '" . EMPRESA_TELEFONO . "' AS telefono_empresa,
+                    '" . EMPRESA_CIUDAD . "' AS ciudad_empresa,
                     '" . EMPRESA_EMAIL . "' AS email_empresa,
                     cli.NOMBRE AS cliente_nombre,
                     CONCAT(cli.Direc1, ', ', cli.CIUDAD, ', ', cli.ESTADO, ', ', cli.PAIS) AS direccion_cliente,
@@ -228,120 +228,120 @@ class PDF extends FPDF
 
         // Información de la empresa
         $this->SetFont('Helvetica', 'B', 12);
-        $this->Cell(70, 8, 'Date: ' . $fecha_factura, 0, 0, 'C');
-        $this->Cell(70, 8, 'Invoice No ' . $numero_factura, 0, 1, 'C');
+        $this->Cell(70, 7, 'Date: ' . $fecha_factura, 0, 0, 'C');
+        $this->Cell(70, 7, 'Invoice No ' . $numero_factura, 0, 1, 'C');
 
-        $this->Ln(3);
+        $this->Ln(1);
 
         // Logo
-        $this->Image(EMPRESA_LOGO_PATH, 15, 18, 65);
+        $this->Image(EMPRESA_LOGO_PATH, 15, 15, 45);
 
         // Información de la empresa (derecha)
-        $this->SetFont('Helvetica', 'B', 9);
-        $this->Cell(100, 5, '', 0, 0, 'L');
-        $this->Cell(30, 5, 'Export:', 0, 0, 'L');
+        $this->SetFont('Helvetica', 'B', 8);
+        $this->Cell(100, 3.5, '', 0, 0, 'L');
+        $this->Cell(30, 3.5, 'Export:', 0, 0, 'L');
+        $this->SetFont('Helvetica', '', 8);
+        $this->Cell(25, 3.5, utf8_decode(EMPRESA_NOMBRE), 0, 1, 'L');
+
+        $this->SetFont('Helvetica', 'B', 8);
+        $this->Cell(100, 3.5, '', 0, 0, 'L');
+        $this->Cell(30, 3.5, 'Nit:', 0, 0, 'L');
+        $this->SetFont('Helvetica', '', 8);
+        $this->Cell(25, 3.5, EMPRESA_NIT, 0, 1, 'L');
+
+        $this->SetFont('Helvetica', 'B', 8);
+        $this->Cell(100, 3.5, '', 0, 0, 'L');
+        $this->Cell(30, 3.5, 'Address:', 0, 0, 'L');
+        $this->SetFont('Helvetica', '', 8);
+        $this->Cell(25, 3.5, utf8_decode(EMPRESA_DIRECCION), 0, 1, 'L');
+
+        $this->SetFont('Helvetica', 'B', 8);
+        $this->Cell(100, 3.5, '', 0, 0, 'L');
+        $this->Cell(30, 3.5, 'Phone Number:', 0, 0, 'L');
+        $this->SetFont('Helvetica', '', 8);
+        $this->Cell(25, 3.5, utf8_decode(EMPRESA_TELEFONO), 0, 1, 'L');
+
+        $this->SetFont('Helvetica', 'B', 8);
+        $this->Cell(100, 3.5, '', 0, 0, 'L');
+        $this->Cell(30, 3.5, 'City:', 0, 0, 'L');
         $this->SetFont('Helvetica', '', 9);
-        $this->Cell(25, 5, EMPRESA_NOMBRE, 0, 1, 'L');
+        $this->Cell(25, 3.5, utf8_decode(EMPRESA_CIUDAD), 0, 1, 'L');
 
-        $this->SetFont('Helvetica', 'B', 9);
-        $this->Cell(100, 5, '', 0, 0, 'L');
-        $this->Cell(30, 5, 'Nit:', 0, 0, 'L');
+        $this->SetFont('Helvetica', 'B', 8);
+        $this->Cell(100, 3.5, '', 0, 0, 'L');
+        $this->Cell(30, 3.5, 'Country:', 0, 0, 'L');
         $this->SetFont('Helvetica', '', 9);
-        $this->Cell(25, 5, EMPRESA_NIT, 0, 1, 'L');
+        $this->Cell(25, 3.5, 'Colombia', 0, 1, 'L');
 
-        $this->SetFont('Helvetica', 'B', 9);
-        $this->Cell(100, 5, '', 0, 0, 'L');
-        $this->Cell(30, 5, 'Address:', 0, 0, 'L');
-        $this->SetFont('Helvetica', '', 9);
-        $this->Cell(25, 5, 'Finca Villa Clemencia Vrd. Prado', 0, 1, 'L');
+        $this->SetFont('Helvetica', 'B', 8);
+        $this->Cell(100, 3.5, '', 0, 0, 'L');
+        $this->Cell(30, 3.5, 'Email:', 0, 0, 'L');
+        $this->SetFont('Helvetica', '', 8);
+        $this->Cell(25, 3.5, utf8_decode(EMPRESA_EMAIL), 0, 1, 'L');
 
-        $this->SetFont('Helvetica', 'B', 9);
-        $this->Cell(100, 5, '', 0, 0, 'L');
-        $this->Cell(30, 5, 'Phone Number:', 0, 0, 'L');
-        $this->SetFont('Helvetica', '', 9);
-        $this->Cell(25, 5, '(+057) 3114677282 - 3023090940', 0, 1, 'L');
-
-        $this->SetFont('Helvetica', 'B', 9);
-        $this->Cell(100, 5, '', 0, 0, 'L');
-        $this->Cell(30, 5, 'City:', 0, 0, 'L');
-        $this->SetFont('Helvetica', '', 10);
-        $this->Cell(25, 5, 'Facatativa, Cundinamarca', 0, 1, 'L');
-
-        $this->SetFont('Helvetica', 'B', 9);
-        $this->Cell(100, 5, '', 0, 0, 'L');
-        $this->Cell(30, 5, 'Country:', 0, 0, 'L');
-        $this->SetFont('Helvetica', '', 10);
-        $this->Cell(25, 5, 'Colombia', 0, 1, 'L');
-
-        $this->SetFont('Helvetica', 'B', 9);
-        $this->Cell(100, 5, '', 0, 0, 'L');
-        $this->Cell(30, 5, 'Email:', 0, 0, 'L');
-        $this->SetFont('Helvetica', '', 9);
-        $this->Cell(25, 5, EMPRESA_EMAIL, 0, 1, 'L');
-
-        $this->Ln(5);
+        $this->Ln(2);
 
         // Información de cliente y envío
-        $this->SetFont('Helvetica', 'B', 9);
-        $this->Cell(30, 5, 'Destination:', 0, 0, 'L');
-        $this->SetFont('Helvetica', '', 9);
-        $this->Cell(90, 5, $destino_pais, 0, 0, 'L');
-        $this->SetFont('Helvetica', 'B', 9);
-        $this->Cell(30, 5, 'AWB:', 0, 0, 'L');
-        $this->SetFont('Helvetica', '', 9);
-        $this->Cell(90, 5, $awb, 0, 1, 'L');
+        $this->SetFont('Helvetica', 'B', 8);
+        $this->Cell(30, 3.5, 'Destination:', 0, 0, 'L');
+        $this->SetFont('Helvetica', '', 8);
+        $this->Cell(90, 3.5, $destino_pais, 0, 0, 'L');
+        $this->SetFont('Helvetica', 'B', 8);
+        $this->Cell(30, 3.5, 'AWB:', 0, 0, 'L');
+        $this->SetFont('Helvetica', '', 8);
+        $this->Cell(90, 3.5, $awb, 0, 1, 'L');
 
-        $this->SetFont('Helvetica', 'B', 9);
-        $this->Cell(30, 5, 'Client:', 0, 0, 'L');
-        $this->SetFont('Helvetica', '', 9);
-        $this->Cell(90, 5, $cliente_nombre, 0, 0, 'L');
-        $this->SetFont('Helvetica', 'B', 9);
-        $this->Cell(30, 5, 'SECOND AWB:', 0, 0, 'L');
-        $this->SetFont('Helvetica', '', 9);
-        $this->Cell(90, 5, $awb_hija, 0, 1, 'L');
+        $this->SetFont('Helvetica', 'B', 8);
+        $this->Cell(30, 3.5, 'Client:', 0, 0, 'L');
+        $this->SetFont('Helvetica', '', 8);
+        $this->Cell(90, 3.5, $cliente_nombre, 0, 0, 'L');
+        $this->SetFont('Helvetica', 'B', 8);
+        $this->Cell(30, 3.5, 'SECOND AWB:', 0, 0, 'L');
+        $this->SetFont('Helvetica', '', 8);
+        $this->Cell(90, 3.5, $awb_hija, 0, 1, 'L');
 
-        $this->SetFont('Helvetica', 'B', 9);
-        $this->Cell(30, 5, 'Address:', 0, 0, 'L');
-        $this->SetFont('Helvetica', '', 9);
-        $this->Cell(90, 5, $direccion_linea1, 0, 0, 'L');
-        $this->SetFont('Helvetica', 'B', 9);
-        $this->Cell(30, 5, 'THIRD AWB:', 0, 0, 'L');
-        $this->SetFont('Helvetica', '', 9);
-        $this->Cell(90, 5, $awb_nieta, 0, 1, 'L');
+        $this->SetFont('Helvetica', 'B', 8);
+        $this->Cell(30, 3.5, 'Address:', 0, 0, 'L');
+        $this->SetFont('Helvetica', '', 8);
+        $this->Cell(90, 3.5, $direccion_linea1, 0, 0, 'L');
+        $this->SetFont('Helvetica', 'B', 8);
+        $this->Cell(30, 3.5, 'THIRD AWB:', 0, 0, 'L');
+        $this->SetFont('Helvetica', '', 8);
+        $this->Cell(90, 3.5, $awb_nieta, 0, 1, 'L');
 
         // Segunda línea de dirección si es necesaria
         if (!empty($direccion_linea2)) {
-            $this->Cell(30, 5, '', 0, 0, 'L');
-            $this->SetFont('Helvetica', '', 9);
-            $this->Cell(90, 5, $direccion_linea2, 0, 0, 'L');
-            $this->Cell(120, 5, '', 0, 1, 'L');
+            $this->Cell(30, 3.5, '', 0, 0, 'L');
+            $this->SetFont('Helvetica', '', 8);
+            $this->Cell(90, 3.5, $direccion_linea2, 0, 0, 'L');
+            $this->Cell(120, 3.5, '', 0, 1, 'L');
             $this->Ln(-1);
         }
 
-        $this->SetFont('Helvetica', 'B', 9);
-        $this->Cell(30, 5, 'Phone Number:', 0, 0, 'L');
-        $this->SetFont('Helvetica', '', 9);
-        $this->Cell(90, 5, $telefono_cliente, 0, 0, 'L');
-        $this->SetFont('Helvetica', 'B', 9);
-        $this->Cell(30, 5, 'AIRLINE:', 0, 0, 'L');
-        $this->SetFont('Helvetica', '', 9);
-        $this->Cell(90, 5, $aerolinea, 0, 1, 'L');
+        $this->SetFont('Helvetica', 'B', 8);
+        $this->Cell(30, 3.5, 'Phone Number:', 0, 0, 'L');
+        $this->SetFont('Helvetica', '', 8);
+        $this->Cell(90, 3.5, $telefono_cliente, 0, 0, 'L');
+        $this->SetFont('Helvetica', 'B', 8);
+        $this->Cell(30, 3.5, 'AIRLINE:', 0, 0, 'L');
+        $this->SetFont('Helvetica', '', 8);
+        $this->Cell(90, 3.5, $aerolinea, 0, 1, 'L');
 
-        $this->SetFont('Helvetica', 'B', 9);
-        $this->Cell(30, 5, 'City:', 0, 0, 'L');
-        $this->SetFont('Helvetica', '', 9);
-        $this->Cell(90, 5, $ciudad_cliente, 0, 0, 'L');
-        $this->SetFont('Helvetica', 'B', 9);
-        $this->Cell(30, 5, 'FORWARDER:', 0, 0, 'L');
-        $this->SetFont('Helvetica', '', 9);
-        $this->Cell(90, 5, $agencia, 0, 1, 'L');
+        $this->SetFont('Helvetica', 'B', 8);
+        $this->Cell(30, 3.5, 'City:', 0, 0, 'L');
+        $this->SetFont('Helvetica', '', 8);
+        $this->Cell(90, 3.5, $ciudad_cliente, 0, 0, 'L');
+        $this->SetFont('Helvetica', 'B', 8);
+        $this->Cell(30, 3.5, 'FORWARDER:', 0, 0, 'L');
+        $this->SetFont('Helvetica', '', 8);
+        $this->Cell(90, 3.5, $agencia, 0, 1, 'L');
 
-        $this->SetFont('Helvetica', 'B', 9);
-        $this->Cell(30, 5, 'P.O.:', 0, 0, 'L');
-        $this->SetFont('Helvetica', '', 9);
-        $this->Cell(90, 5, $po_cliente, 0, 1, 'L');
+        $this->SetFont('Helvetica', 'B', 8);
+        $this->Cell(30, 3.5, 'P.O.:', 0, 0, 'L');
+        $this->SetFont('Helvetica', '', 8);
+        $this->Cell(90, 3.5, $po_cliente, 0, 1, 'L');
 
-        $this->Ln(2);
+        $this->Ln(1);
     }
 
     function Footer()
@@ -373,7 +373,7 @@ $pdf->AliasNbPages();
 $pdf->AddPage();
 
 // Tabla de detalle - ENCABEZADOS
-$pdf->SetFont('Helvetica', 'B', 8);
+$pdf->SetFont('Helvetica', 'B', 7);
 $pdf->SetFillColor(220, 220, 220);
 
 // Definir anchos exactos de columnas
@@ -391,20 +391,20 @@ $anchoPriceU = 15;
 $anchoValTot = 15;
 
 // Encabezados de la tabla
-$pdf->Cell($anchoItm, 6, 'Itm.', 0, 0, 'C', true);
-$pdf->Cell($anchoPack, 6, 'Pack.', 0, 0, 'C', true);
-$pdf->Cell($anchoUPack, 6, 'U Pack', 0, 0, 'C', true);
-$pdf->Cell($anchoFull, 6, 'Full', 0, 0, 'C', true);
-$pdf->Cell($anchoDesc, 6, 'Description', 0, 0, 'C', true);
-$pdf->Cell($anchoPO, 6, 'PO', 0, 0, 'C', true);
-$pdf->Cell($anchoBillingU, 6, 'Billing U', 0, 0, 'C', true);
-$pdf->Cell($anchoSBox, 6, 'S.Box', 0, 0, 'C', true);
-$pdf->Cell($anchoBBox, 6, 'B. Box', 0, 0, 'C', true);
-$pdf->Cell($anchoTStem, 6, 'T.Stem', 0, 0, 'C', true);
-$pdf->Cell($anchoPriceU, 6, 'Price U', 0, 0, 'C', true);
-$pdf->Cell($anchoValTot, 6, 'Val Tot', 0, 1, 'C', true);
+$pdf->Cell($anchoItm, 4, 'Itm.', 0, 0, 'C', true);
+$pdf->Cell($anchoPack, 4, 'Pack.', 0, 0, 'C', true);
+$pdf->Cell($anchoUPack, 4, 'U Pack', 0, 0, 'C', true);
+$pdf->Cell($anchoFull, 4, 'Full', 0, 0, 'C', true);
+$pdf->Cell($anchoDesc, 4, 'Description', 0, 0, 'C', true);
+$pdf->Cell($anchoPO, 4, 'PO', 0, 0, 'C', true);
+$pdf->Cell($anchoBillingU, 4, 'Billing U', 0, 0, 'C', true);
+$pdf->Cell($anchoSBox, 4, 'S.Box', 0, 0, 'C', true);
+$pdf->Cell($anchoBBox, 4, 'B. Box', 0, 0, 'C', true);
+$pdf->Cell($anchoTStem, 4, 'T.Stem', 0, 0, 'C', true);
+$pdf->Cell($anchoPriceU, 4, 'Price U', 0, 0, 'C', true);
+$pdf->Cell($anchoValTot, 4, 'Val Tot', 0, 1, 'C', true);
 
-$pdf->SetFont('Helvetica', '', 7);
+$pdf->SetFont('Helvetica', '', 6);
 $pdf->SetFillColor(255, 255, 255);
 
 foreach ($detalles_por_empaque as $idEmpaque => $grupo) {
@@ -416,30 +416,30 @@ foreach ($detalles_por_empaque as $idEmpaque => $grupo) {
 
         // Itm. (solo en primer producto del empaque)
         if ($firstProduct) {
-            $pdf->Cell($anchoItm, 6, $detalle['item_global'], 0, 0, 'C');
+            $pdf->Cell($anchoItm, 4, $detalle['item_global'], 0, 0, 'C');
         } else {
-            $pdf->Cell($anchoItm, 6, '', 0, 0, 'C');
+            $pdf->Cell($anchoItm, 4, '', 0, 0, 'C');
         }
 
         // Pack. (solo en primer producto del empaque)
         if ($firstProduct) {
-            $pdf->Cell($anchoPack, 6, $detalle['empaque'], 0, 0, 'C');
+            $pdf->Cell($anchoPack, 4, $detalle['empaque'], 0, 0, 'C');
         } else {
-            $pdf->Cell($anchoPack, 6, '', 0, 0, 'C');
+            $pdf->Cell($anchoPack, 4, '', 0, 0, 'C');
         }
 
         // U Pack (solo en primer producto del empaque)
         if ($firstProduct) {
-            $pdf->Cell($anchoUPack, 6, $detalle['piezas'], 0, 0, 'C');
+            $pdf->Cell($anchoUPack, 4, $detalle['piezas'], 0, 0, 'C');
         } else {
-            $pdf->Cell($anchoUPack, 6, '', 0, 0, 'C');
+            $pdf->Cell($anchoUPack, 4, '', 0, 0, 'C');
         }
 
         // Full (solo en primer producto del empaque)
         if ($firstProduct) {
-            $pdf->Cell($anchoFull, 6, number_format($detalle['full'], 2), 0, 0, 'C');
+            $pdf->Cell($anchoFull, 4, number_format($detalle['full'], 2), 0, 0, 'C');
         } else {
-            $pdf->Cell($anchoFull, 6, '', 0, 0, 'C');
+            $pdf->Cell($anchoFull, 4, '', 0, 0, 'C');
         }
 
         // GUARDAR POSICIÓN ACTUAL
@@ -457,7 +457,7 @@ foreach ($detalles_por_empaque as $idEmpaque => $grupo) {
             $linea2 = substr($descripcionDecoded, 30, 32) . (strlen($descripcionDecoded) > 67 ? '...' : '');
 
             // Primera línea de descripción
-            $pdf->Cell($anchoDesc, 6, $linea1, 0, 0, 'L');
+            $pdf->Cell($anchoDesc, 4, $linea1, 0, 0, 'L');
 
             // Escribir PRIMERO todas las demás columnas en la PRIMERA línea
             $xPosicionColumnas = $xDespuesPrimerasColumnas + $anchoDesc;
@@ -467,81 +467,81 @@ foreach ($detalles_por_empaque as $idEmpaque => $grupo) {
             if ($firstProduct && !empty($detalle['po_empaque'])) {
                 $po = utf8_decode($detalle['po_empaque']);
                 if (strlen($po) > 8) {
-                    $pdf->Cell($anchoPO, 6, substr($po, 0, 8), 0, 0, 'C');
+                    $pdf->Cell($anchoPO, 4, substr($po, 0, 8), 0, 0, 'C');
                 } else {
-                    $pdf->Cell($anchoPO, 6, $po, 0, 0, 'C');
+                    $pdf->Cell($anchoPO, 4, $po, 0, 0, 'C');
                 }
             } else {
-                $pdf->Cell($anchoPO, 6, '', 0, 0, 'C');
+                $pdf->Cell($anchoPO, 4, '', 0, 0, 'C');
             }
 
             // Billing U
-            $pdf->Cell($anchoBillingU, 6, utf8_decode($detalle['und_facturacion']), 0, 0, 'C');
+            $pdf->Cell($anchoBillingU, 4, utf8_decode($detalle['und_facturacion']), 0, 0, 'C');
 
             // S.Box
-            $pdf->Cell($anchoSBox, 6, $detalle['tallos_caja'], 0, 0, 'C');
+            $pdf->Cell($anchoSBox, 4, $detalle['tallos_caja'], 0, 0, 'C');
 
             // B. Box
-            $pdf->Cell($anchoBBox, 6, $detalle['ramos_caja'], 0, 0, 'C');
+            $pdf->Cell($anchoBBox, 4, $detalle['ramos_caja'], 0, 0, 'C');
 
             // T.Stem
-            $pdf->Cell($anchoTStem, 6, $detalle['total_tallos'], 0, 0, 'C');
+            $pdf->Cell($anchoTStem, 4, $detalle['total_tallos'], 0, 0, 'C');
 
             // Price U
-            $pdf->Cell($anchoPriceU, 6, '$' . number_format($detalle['precio_venta'], 2), 0, 0, 'R');
+            $pdf->Cell($anchoPriceU, 4, '$' . number_format($detalle['precio_venta'], 2), 0, 0, 'R');
 
             // Val Tot
-            $pdf->Cell($anchoValTot, 6, '$' . number_format($detalle['total_venta'], 2), 0, 0, 'R');
+            $pdf->Cell($anchoValTot, 4, '$' . number_format($detalle['total_venta'], 2), 0, 0, 'R');
 
             // Ahora mover a la SEGUNDA línea para la segunda parte de la descripción
-            $pdf->Ln(6);
+            $pdf->Ln(4);
             $pdf->SetX($xDespuesPrimerasColumnas);
 
             // Segunda línea de descripción
-            $pdf->Cell($anchoDesc, 6, $linea2, 0, 0, 'L');
+            $pdf->Cell($anchoDesc, 4, $linea2, 0, 0, 'L');
 
             // Las demás columnas en blanco en la segunda línea
             $pdf->SetX($xPosicionColumnas);
-            $pdf->Cell($anchoPO, 6, '', 0, 0, 'C');
-            $pdf->Cell($anchoBillingU, 6, '', 0, 0, 'C');
-            $pdf->Cell($anchoSBox, 6, '', 0, 0, 'C');
-            $pdf->Cell($anchoBBox, 6, '', 0, 0, 'C');
-            $pdf->Cell($anchoTStem, 6, '', 0, 0, 'C');
-            $pdf->Cell($anchoPriceU, 6, '', 0, 0, 'R');
-            $pdf->Cell($anchoValTot, 6, '', 0, 1, 'R');
+            $pdf->Cell($anchoPO, 4, '', 0, 0, 'C');
+            $pdf->Cell($anchoBillingU, 4, '', 0, 0, 'C');
+            $pdf->Cell($anchoSBox, 4, '', 0, 0, 'C');
+            $pdf->Cell($anchoBBox, 4, '', 0, 0, 'C');
+            $pdf->Cell($anchoTStem, 4, '', 0, 0, 'C');
+            $pdf->Cell($anchoPriceU, 4, '', 0, 0, 'R');
+            $pdf->Cell($anchoValTot, 4, '', 0, 1, 'R');
         } else {
             // DESCRIPCIÓN DE UNA SOLA LÍNEA
-            $pdf->Cell($anchoDesc, 6, substr($descripcionDecoded, 0, 35), 0, 0, 'L');
+            $pdf->Cell($anchoDesc, 4, substr($descripcionDecoded, 0, 35), 0, 0, 'L');
 
             // PO (solo en primer producto del empaque)
             if ($firstProduct && !empty($detalle['po_empaque'])) {
                 $po = utf8_decode($detalle['po_empaque']);
                 if (strlen($po) > 8) {
-                    $pdf->Cell($anchoPO, 6, substr($po, 0, 8), 0, 0, 'C');
+                    $pdf->Cell($anchoPO, 4, substr($po, 0, 8), 0, 0, 'C');
                 } else {
-                    $pdf->Cell($anchoPO, 6, $po, 0, 0, 'C');
+                    $pdf->Cell($anchoPO, 4, $po, 0, 0, 'C');
                 }
             } else {
-                $pdf->Cell($anchoPO, 6, '', 0, 0, 'C');
+                $pdf->Cell($anchoPO, 4, '', 0, 0, 'C');
             }
 
             // Billing U
-            $pdf->Cell($anchoBillingU, 6, utf8_decode($detalle['und_facturacion']), 0, 0, 'C');
+            $pdf->Cell($anchoBillingU, 4, utf8_decode($detalle['und_facturacion']), 0, 0, 'C');
 
             // S.Box
-            $pdf->Cell($anchoSBox, 6, $detalle['tallos_caja'], 0, 0, 'C');
+            $pdf->Cell($anchoSBox, 4, $detalle['tallos_caja'], 0, 0, 'C');
 
             // B. Box
-            $pdf->Cell($anchoBBox, 6, $detalle['ramos_caja'], 0, 0, 'C');
+            $pdf->Cell($anchoBBox, 4, $detalle['ramos_caja'], 0, 0, 'C');
 
             // T.Stem
-            $pdf->Cell($anchoTStem, 6, $detalle['total_tallos'], 0, 0, 'C');
+            $pdf->Cell($anchoTStem, 4, $detalle['total_tallos'], 0, 0, 'C');
 
             // Price U
-            $pdf->Cell($anchoPriceU, 6, '$' . number_format($detalle['precio_venta'], 2), 0, 0, 'R');
+            $pdf->Cell($anchoPriceU, 4, '$' . number_format($detalle['precio_venta'], 2), 0, 0, 'R');
 
             // Val Tot
-            $pdf->Cell($anchoValTot, 6, '$' . number_format($detalle['total_venta'], 2), 0, 1, 'R');
+            $pdf->Cell($anchoValTot, 4, '$' . number_format($detalle['total_venta'], 2), 0, 1, 'R');
         }
 
         $firstProduct = false;
@@ -550,21 +550,21 @@ foreach ($detalles_por_empaque as $idEmpaque => $grupo) {
         if ($pdf->GetY() > 250) {
             $pdf->AddPage();
             // Redibujar encabezados
-            $pdf->SetFont('Helvetica', 'B', 8);
+            $pdf->SetFont('Helvetica', 'B', 7);
             $pdf->SetFillColor(220, 220, 220);
-            $pdf->Cell($anchoItm, 6, 'Itm.', 0, 0, 'C', true);
-            $pdf->Cell($anchoPack, 6, 'Pack.', 0, 0, 'C', true);
-            $pdf->Cell($anchoUPack, 6, 'U Pack', 0, 0, 'C', true);
-            $pdf->Cell($anchoFull, 6, 'Full', 0, 0, 'C', true);
-            $pdf->Cell($anchoDesc, 6, 'Description', 0, 0, 'C', true);
-            $pdf->Cell($anchoPO, 6, 'PO', 0, 0, 'C', true);
-            $pdf->Cell($anchoBillingU, 6, 'Billing U', 0, 0, 'C', true);
-            $pdf->Cell($anchoSBox, 6, 'S.Box', 0, 0, 'C', true);
-            $pdf->Cell($anchoBBox, 6, 'B. Box', 0, 0, 'C', true);
-            $pdf->Cell($anchoTStem, 6, 'T.Stem', 0, 0, 'C', true);
-            $pdf->Cell($anchoPriceU, 6, 'Price U', 0, 0, 'C', true);
-            $pdf->Cell($anchoValTot, 6, 'Val Tot', 0, 1, 'C', true);
-            $pdf->SetFont('Helvetica', '', 8);
+            $pdf->Cell($anchoItm, 4, 'Itm.', 0, 0, 'C', true);
+            $pdf->Cell($anchoPack, 4, 'Pack.', 0, 0, 'C', true);
+            $pdf->Cell($anchoUPack, 4, 'U Pack', 0, 0, 'C', true);
+            $pdf->Cell($anchoFull, 4, 'Full', 0, 0, 'C', true);
+            $pdf->Cell($anchoDesc, 4, 'Description', 0, 0, 'C', true);
+            $pdf->Cell($anchoPO, 4, 'PO', 0, 0, 'C', true);
+            $pdf->Cell($anchoBillingU, 4, 'Billing U', 0, 0, 'C', true);
+            $pdf->Cell($anchoSBox, 4, 'S.Box', 0, 0, 'C', true);
+            $pdf->Cell($anchoBBox, 4, 'B. Box', 0, 0, 'C', true);
+            $pdf->Cell($anchoTStem, 4, 'T.Stem', 0, 0, 'C', true);
+            $pdf->Cell($anchoPriceU, 4, 'Price U', 0, 0, 'C', true);
+            $pdf->Cell($anchoValTot, 4, 'Val Tot', 0, 1, 'C', true);
+            $pdf->SetFont('Helvetica', '', 6);
         }
     }
 
@@ -573,40 +573,40 @@ foreach ($detalles_por_empaque as $idEmpaque => $grupo) {
 }
 
 // Totales
-$pdf->SetFont('Helvetica', 'B', 9);
-$pdf->Cell(20, 8, 'Total:', 0, 0, 'R');
-$pdf->Cell(10, 8, $tot_piezas, 0, 0, 'C');
-$pdf->Cell(15, 8, number_format($tot_full, 2), 0, 0, 'C');
-$pdf->Cell(100, 8, '', 0, 0, 'C');
-$pdf->Cell(15, 8, $tot_tallos, 0, 0, 'C');
-$pdf->Cell(15, 8, '', 0, 0, 'C');
-$pdf->Cell(15, 8, '$' . number_format($total_general, 2), 0, 1, 'R');
+$pdf->SetFont('Helvetica', 'B', 8);
+$pdf->Cell(20, 5, 'Total:', 0, 0, 'R');
+$pdf->Cell(10, 5, $tot_piezas, 0, 0, 'C');
+$pdf->Cell(15, 5, number_format($tot_full, 2), 0, 0, 'C');
+$pdf->Cell(100, 5, '', 0, 0, 'C');
+$pdf->Cell(15, 5, $tot_tallos, 0, 0, 'C');
+$pdf->Cell(15, 5, '', 0, 0, 'C');
+$pdf->Cell(15, 5, '$' . number_format($total_general, 2), 0, 1, 'R');
 
-$pdf->Ln(3);
+$pdf->Ln(2);
 
 // Otros cargos
-$pdf->SetFont('Helvetica', '', 9);
-$pdf->Cell(135, 6, '', 0, 0, 'R');
-$pdf->Cell(40, 6, 'IVA:', 0, 0, 'L');
-$pdf->Cell(15, 6, '$' . number_format($tot_IVA, 2), 0, 1, 'R');
+$pdf->SetFont('Helvetica', '', 8);
+$pdf->Cell(135, 4, '', 0, 0, 'R');
+$pdf->Cell(40, 4, 'IVA:', 0, 0, 'L');
+$pdf->Cell(15, 4, '$' . number_format($tot_IVA, 2), 0, 1, 'R');
 
-$pdf->SetFont('Helvetica', '', 9);
-$pdf->Cell(135, 6, '', 0, 0, 'R');
-$pdf->Cell(40, 6, 'Other Charge:', 0, 0, 'L');
-$pdf->Cell(15, 6, '$0.00', 0, 1, 'R');
+$pdf->SetFont('Helvetica', '', 8);
+$pdf->Cell(135, 4, '', 0, 0, 'R');
+$pdf->Cell(40, 4, 'Other Charge:', 0, 0, 'L');
+$pdf->Cell(15, 4, '$0.00', 0, 1, 'R');
 
-$pdf->SetFont('Helvetica', 'B', 10);
-$pdf->Cell(135, 6, 'INCOTERMS FCA BOGOTA - COLOMBIA', 0, 0, 'C');
-$pdf->SetFont('Helvetica', '', 9);
-$pdf->Cell(40, 6, 'V/r Transport:', 0, 0, 'L');
-$pdf->Cell(15, 6, '$0.00', 0, 1, 'R');
+$pdf->SetFont('Helvetica', 'B', 9);
+$pdf->Cell(135, 4, 'INCOTERMS FCA BOGOTA - COLOMBIA', 0, 0, 'C');
+$pdf->SetFont('Helvetica', '', 8);
+$pdf->Cell(40, 4, 'V/r Transport:', 0, 0, 'L');
+$pdf->Cell(15, 4, '$0.00', 0, 1, 'R');
 
-$pdf->SetFont('Helvetica', 'B', 10);
-$pdf->Cell(135, 6, '', 0, 0, 'R');
-$pdf->Cell(40, 8, 'Invoice Total USD:', 0, 0, 'L');
-$pdf->Cell(15, 8, '$' . number_format($total_general + $tot_IVA, 2), 0, 1, 'R');
+$pdf->SetFont('Helvetica', 'B', 9);
+$pdf->Cell(135, 4, '', 0, 0, 'R');
+$pdf->Cell(40, 5, 'Invoice Total USD:', 0, 0, 'L');
+$pdf->Cell(15, 5, '$' . number_format($total_general + $tot_IVA, 2), 0, 1, 'R');
 
-$pdf->Ln(5);
+$pdf->Ln(3);
 
 
 

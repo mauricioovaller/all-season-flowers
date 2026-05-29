@@ -7,6 +7,7 @@ import ChartProductos from './ChartProductos';
 import ChartTendencia from './ChartTendencia';
 import FiltrosFecha from './FiltrosFecha';
 import { APPS_CONFIG } from '../../services/dashboard/dashboardService';
+import { CLIENTE } from '../../config/cliente';
 
 const DashboardAllSeason = () => {
     const [datos, setDatos] = useState(null);
@@ -83,7 +84,7 @@ const DashboardAllSeason = () => {
             <div className="flex flex-col lg:flex-row lg:items-center justify-between mb-4 md:mb-6 pb-4 border-b border-gray-200">
                 <div className="mb-3 lg:mb-0">
                     <h1 className="text-xl md:text-2xl lg:text-3xl font-bold text-gray-800">
-                        {configApp.nombre} - Dashboard
+                        {CLIENTE.titulo}
                     </h1>
                     <p className="text-sm text-gray-600 mt-1">
                         Período: {fechaInicio} al {fechaFin}

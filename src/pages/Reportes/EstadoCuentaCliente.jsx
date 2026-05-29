@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { FileText, Search, Download, RefreshCw, User, Calendar } from 'lucide-react';
 import { getEstadoCuentaCliente } from '../../services/reportes/reportesService';
 import { getClientes } from '../../services/clientes/clientesService';
+import { CLIENTE } from '../../config/cliente';
 
 const EstadoCuentaCliente = () => {
     const [clientes, setClientes] = useState([]);
@@ -74,7 +75,8 @@ const EstadoCuentaCliente = () => {
         // ── ENCABEZADO PROFESIONAL ────────────────────────────────────────────
         // Logo empresa
         try {
-            const logoUrl = `${import.meta.env.BASE_URL}assets/logos/LogoAllSeason.jpg`;
+            const logoFileName = CLIENTE.logoPath.split('/').pop();
+            const logoUrl = `${import.meta.env.BASE_URL}assets/logos/${logoFileName}`;
             const imgData = await fetch(logoUrl)
                 .then(r => r.blob())
                 .then(blob => new Promise((resolve, reject) => {
@@ -90,7 +92,7 @@ const EstadoCuentaCliente = () => {
         doc.setFontSize(17);
         doc.setFont('helvetica', 'bold');
         doc.setTextColor(22, 101, 52);   // green-800
-        doc.text('ALL SEASON FLOWERS S.A.S', anchoTotal / 2, y + 8, { align: 'center' });
+        doc.text(CLIENTE.nombreLargo, anchoTotal / 2, y + 8, { align: 'center' });
 
         doc.setFontSize(11);
         doc.setFont('helvetica', 'normal');

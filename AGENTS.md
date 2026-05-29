@@ -35,7 +35,7 @@ npm run test:watch    # Watch mode — re-runs on file save (use while developin
 npm run test:ui       # Visual browser UI for test results
 ```
 
-**Current coverage:** 284 tests across 25 test files — all passing.
+**Current coverage:** 290 tests across 26 test files — all passing.
 
 **Test files location:** `src/test/<module>/`
 
@@ -57,6 +57,7 @@ npm run test:ui       # Visual browser UI for test results
 | dashboard           | `src/test/dashboard/servicio.test.js`                                     |
 | bajas               | `src/test/bajas/servicio.test.js`                                         |
 | inventarios         | `src/test/inventarios/servicio.test.js`                                   |
+| permisos            | `src/test/permisos/servicio.test.js`                                      |
 
 **Vitest configuration** (`vite.config.js`):
 
@@ -280,7 +281,7 @@ The project uses ESLint with these key rules:
 
 1. **Start development**: `npm run dev`
 2. **Make changes**: Follow code style guidelines
-3. **Run tests**: `npm test` — verify all 263 tests still pass
+3. **Run tests**: `npm test` — verify all 290 tests still pass
 4. **Check linting**: `npm run lint` (fix any issues)
 5. **Test manually**: Verify functionality in browser
 6. **Build for production**: `npm run build` (verify no errors)
@@ -306,6 +307,55 @@ The project uses ESLint with these key rules:
 - **Bajas**: Write-offs management module (daño, pérdida, obsequio). Header/detail structure: `SAS_EncabBaja` + `SAS_DetBaja`. Flexible levels: permite registrar solo producto, producto+variedad, o producto+variedad+grado.
 - **Inventarios**: Inventory report with 3 levels of aggregation (Producto, Producto+Variedad, Producto+Variedad+Grado). Calculates entries from Compras + Devoluciones Ventas (Colombia only) and exits from Pedidos + Devoluciones Compras + Bajas.
 - Each module has its own services and API endpoints
+
+> 📖 **Referencia completa:** [`docs/PERMISOS.md`](docs/PERMISOS.md) — contiene especificación de la tabla, ejemplos de INSERT, flujo de autenticación detallado y comportamiento ante errores.
+
+### Sistema de Permisos
+
+El proyecto implementa un sistema de control de acceso por menú (sin login propio). La autenticación la realiza un **portal externo** que establece `$_SESSION['idUsuario']` en el servidor antes de que el usuario llegue a la SPA.
+
+**Tabla en base de datos:**
+
+```sql
+CREATE TABLE Permisos (
+    IdPermiso    INT(11)      NOT NULL AUTO_INCREMENT,
+    IdUsuario    INT(11)      NOT NULL,
+    NombreOpcion VARCHAR(100) NOT NULL,
+    Ruta         VARCHAR(255) NOT NULL,
+    PRIMARY KEY (IdPermiso)
+);
+```
+
+**Archivos del módulo:**
+
+| Archivo | Rol |
+|---|---|
+| `src/Api/permisos/ApiGetPermisos.php` | Endpoint PHP. Lee `$_SESSION['idUsuario']`, consulta `Permisos`, devuelve rutas permitidas. Si no hay sesión retorna 401. |
+| `src/services/permisos/permisosService.js` | Función `getPermisos()` → fetch POST con `credentials: 'include'`. Devuelve `string[]` de rutas (ej: `['/clientes','/pedidos']`). |
+| `src/test/permisos/servicio.test.js` | 6 tests: éxito, error HTTP, error red, success=false, permisos no-array, verifica POST+credentials. |
+
+**Flujo de funcionamiento:**
+
+1. Portal externo autentica al usuario y establece `$_SESSION['idUsuario']`
+2. `App.jsx` monta → llama `getPermisos()` → POST a `ApiGetPermisos.php` con `credentials: 'include'`
+3. PHP lee `session_start()`, verifica `$_SESSION['idUsuario']`, consulta `Permisos WHERE IdUsuario = ?`
+4. Frontend recibe las rutas permitidas → `App.jsx` las pasa como props `rutasPermitidas` al `Sidebar`
+5. **Sidebar**: filtra `menuItems` con `useMemo`. Solo muestra ítems cuya ruta `/${item.id}` esté en `rutasPermitidas`. Los headers (`type: 'header'`) siempre se muestran. Mientras carga permisos, muestra spinner.
+6. **App.jsx**: protege rutas en el `switch`. Si el módulo actual no tiene permiso y no es `dashboard`, redirige a Dashboard. Mientras carga permisos, muestra spinner en el área de contenido.
+7. Si el API falla o el usuario no tiene permisos → menú vacío (fail-closed). Dashboard siempre accesible.
+
+**Convención de rutas en la tabla Permisos:**
+
+La columna `Ruta` debe coincidir con `/${item.id}` del menú. Ejemplos:
+
+```sql
+INSERT INTO Permisos (IdUsuario, NombreOpcion, Ruta) VALUES
+(1, 'Clientes',   '/clientes'),
+(1, 'Pedidos',    '/pedidos'),
+(1, 'Proveedores','/proveedores');
+```
+
+Los `item.id` disponibles en el Sidebar son: `dashboard`, `clientes`, `proveedores`, `ejecutivos-venta`, `ejecutivos-compra`, `productos`, `variedades`, `grados`, `tipos-empaque`, `conductores`, `ayudantes`, `aerolineas`, `agencias`, `compras`, `pedidos`, `devolucion-venta`, `devolucion-compra`, `pago-cliente`, `pago-proveedor`, `bajas`, `estado-cuenta-proveedores`, `estado-cuenta-clientes`, `consolidados-ventas`, `consolidados-compras`, `exportacion-contable`, `tablero-control`, `inventario`.
 
 ### Backend Integration
 
@@ -415,9 +465,9 @@ Archivos actuales:
 
 | Comando | Tests | Destino |
 |---|---|---|
-| `npm run build:allseason` | ✅ Corre 263 tests | Genera `dist/` para AllSeasonFlowers |
-| `npm run build:flagracol` | ✅ Corre 263 tests | Genera `dist/` para FlagracolSAS |
-| `npm run build` | ✅ Corre 263 tests | Usa el `.env` actual (genérico) |
+| `npm run build:allseason` | ✅ Corre 290 tests | Genera `dist/` para AllSeasonFlowers |
+| `npm run build:flagracol` | ✅ Corre 290 tests | Genera `dist/` para FlagracolSAS |
+| `npm run build` | ✅ Corre 290 tests | Usa el `.env` actual (genérico) |
 | `npm run build:no-test` | ❌ Solo compila | Útil para pruebas rápidas |
 
 > **Siempre correr `npm test` antes de cada build.** Si un test falla, algo se rompió.

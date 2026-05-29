@@ -1,6 +1,6 @@
 //src/App.jsx
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Header from './components/layout/Header';
 import Sidebar from './components/layout/Sidebar';
 import Dashboard from './pages/Dashboard/Dashboard';
@@ -27,12 +27,44 @@ import EstadoCuentaCliente from './pages/Reportes/EstadoCuentaCliente';
 import EstadoCuentaProveedor from './pages/Reportes/EstadoCuentaProveedor';
 import Bajas from './modules/bajas/Bajas';
 import Inventario from './pages/Reportes/Inventario';
+import { getPermisos } from './services/permisos/permisosService';
 import './index.css';
 
 function App() {
   const [currentModule, setCurrentModule] = useState('dashboard');
+  const [rutasPermitidas, setRutasPermitidas] = useState(null);
+  const [cargandoPermisos, setCargandoPermisos] = useState(true);
+
+  useEffect(() => {
+    getPermisos().then((rutas) => {
+      setRutasPermitidas(rutas);
+      setCargandoPermisos(false);
+    });
+  }, []);
+
+  const tienePermiso = (moduloId) => {
+    if (moduloId === 'dashboard') return true;
+    if (!rutasPermitidas) return true;
+    if (cargandoPermisos) return true;
+    return rutasPermitidas.includes(`/${moduloId}`);
+  };
 
   const renderContent = () => {
+    if (cargandoPermisos) {
+      return (
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="flex flex-col items-center gap-3">
+            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-green-600" />
+            <p className="text-gray-500 text-sm">Cargando permisos...</p>
+          </div>
+        </div>
+      );
+    }
+
+    if (!tienePermiso(currentModule) && currentModule !== 'dashboard') {
+      return <Dashboard />;
+    }
+
     switch (currentModule) {
       case 'pedidos':
         return <Pedidos />;
@@ -91,9 +123,13 @@ function App() {
       <Header onModuleChange={setCurrentModule} />
 
       <div className="flex flex-col lg:flex-row">
-        <Sidebar onModuleChange={setCurrentModule} />
+        <Sidebar
+          onModuleChange={setCurrentModule}
+          currentModule={currentModule}
+          rutasPermitidas={rutasPermitidas}
+          cargandoPermisos={cargandoPermisos}
+        />
 
-        {/* Área principal de contenido */}
         <main className="flex-1 p-4 lg:p-6">
           {renderContent()}
         </main>

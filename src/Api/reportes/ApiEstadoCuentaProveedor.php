@@ -154,6 +154,18 @@ try {
 
     echo json_encode([
         "success"      => true,
+        "empresa"      => [
+            "nombre"    => EMPRESA_NOMBRE,
+            "nombreLargo" => EMPRESA_NOMBRE,
+            "titulo"    => EMPRESA_NOMBRE_TITULO,
+            "lema"      => EMPRESA_LEMA,
+            "iniciales" => EMPRESA_INICIALES,
+            "nit"       => EMPRESA_NIT,
+            "logoPath"  => APP_BASE_PATH . 'img/' . basename(EMPRESA_LOGO_PATH),
+            "direccion" => EMPRESA_DIRECCION,
+            "telefono"  => EMPRESA_TELEFONO,
+            "email"     => EMPRESA_EMAIL,
+        ],
         "proveedor"    => ["id" => intval($pId), "nombre" => $pNombre],
         "movimientos"  => $movimientos,
         "totales"      => [

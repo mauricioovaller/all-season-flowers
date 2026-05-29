@@ -8,7 +8,7 @@ import {
   Wallet, HandCoins, Menu, X, Trash2, ClipboardList
 } from 'lucide-react';
 
-const Sidebar = ({ onModuleChange, currentModule }) => {
+const Sidebar = ({ onModuleChange, currentModule, rutasPermitidas, cargandoPermisos }) => {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [showAllMobileItems, setShowAllMobileItems] = useState(false);
 
@@ -73,6 +73,17 @@ const Sidebar = ({ onModuleChange, currentModule }) => {
     { id: 'inventario', label: 'Inventarios', icon: <ClipboardList className="w-5 h-5" />, category: 'informes', priority: 3 },
   ];
 
+  // Filtrar ítems del menú según permisos del usuario
+  const menuItemsPermitidos = React.useMemo(() => {
+    if (cargandoPermisos || !rutasPermitidas) return [];
+
+    return menuItems.filter((item) => {
+      if (item.type === 'header') return true;
+      if (item.id === 'dashboard') return true;
+      return rutasPermitidas.includes(`/${item.id}`);
+    });
+  }, [rutasPermitidas, cargandoPermisos, menuItems]);
+
   const handleItemClick = (itemId) => {
     if (onModuleChange) {
       onModuleChange(itemId);
@@ -129,10 +140,11 @@ const Sidebar = ({ onModuleChange, currentModule }) => {
   };
 
   // Filtros por categoría para menú móvil
-  const dashboardMobileItems = menuItems.filter(item => item.category === 'dashboard');
-  const maestrasMobileItems  = menuItems.filter(item => item.category === 'maestras');
-  const operativosMobileItems = menuItems.filter(item => item.category === 'operativos');
-  const informesMobileItems  = menuItems.filter(item => item.category === 'informes');
+  const itemsParaMobile = cargandoPermisos || !rutasPermitidas ? menuItems : menuItemsPermitidos;
+  const dashboardMobileItems = itemsParaMobile.filter(item => item.category === 'dashboard');
+  const maestrasMobileItems  = itemsParaMobile.filter(item => item.category === 'maestras');
+  const operativosMobileItems = itemsParaMobile.filter(item => item.category === 'operativos');
+  const informesMobileItems  = itemsParaMobile.filter(item => item.category === 'informes');
   const currentModuleLabel   = menuItems.find(item => item.id === currentModule)?.label || 'Inicio';
 
   return (
@@ -167,7 +179,18 @@ const Sidebar = ({ onModuleChange, currentModule }) => {
         {/* Menú de navegación */}
         <nav className="flex-1 p-4 overflow-y-auto">
           <ul className="space-y-1">
-            {renderMenuItems(menuItems)}
+            {cargandoPermisos || !rutasPermitidas ? (
+              <li className="p-4 text-center">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-green-400 mx-auto" />
+                <p className="text-gray-500 text-xs mt-2">Cargando...</p>
+              </li>
+            ) : menuItemsPermitidos.length === 0 ? (
+              <li className="p-4 text-center">
+                <p className="text-gray-500 text-xs">Sin acceso</p>
+              </li>
+            ) : (
+              renderMenuItems(menuItemsPermitidos)
+            )}
           </ul>
         </nav>
 

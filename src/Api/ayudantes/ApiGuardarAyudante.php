@@ -37,8 +37,8 @@ try {
 
     // Escapar datos
     $NomAyudante = $enlace->real_escape_string(trim($data["NomAyudante"]));
-    $NoCedula = isset($data["NoCedula"]) && !empty($data["NoCedula"]) 
-        ? intval($data["NoCedula"]) 
+    $NoCedula = isset($data["NoCedula"]) && !empty($data["NoCedula"])
+        ? $enlace->real_escape_string(trim($data["NoCedula"]))
         : null;
     $ACTIVO = isset($data["ACTIVO"]) && $data["ACTIVO"] ? 1 : 0;
 
@@ -49,7 +49,7 @@ try {
 
     // Validar unicidad de NomAyudante
     $idExcluir = isset($data["IdAyudante"]) ? intval($data["IdAyudante"]) : 0;
-    
+
     // Validar NomAyudante único
     $sqlVerificarNombre = "SELECT IdAyudante FROM GEN_Ayudantes 
                           WHERE UPPER(NomAyudante) = UPPER('$NomAyudante')";
@@ -59,14 +59,14 @@ try {
     $result = $enlace->query($sqlVerificarNombre);
     if ($result && $result->num_rows > 0) {
         throw new Exception("Ya existe un ayudante con ese nombre");
-    }    
+    }
 
     if (isset($data["IdAyudante"]) && !empty($data["IdAyudante"])) {
         // ACTUALIZAR
         $idAyudante = intval($data["IdAyudante"]);
 
         // Construir SET dinámico para NoCedula (puede ser NULL)
-        $setCedula = $NoCedula !== null ? "NoCedula = $NoCedula" : "NoCedula = NULL";
+        $setCedula = $NoCedula !== null ? "NoCedula = '$NoCedula'" : "NoCedula = NULL";
 
         $sql = "UPDATE GEN_Ayudantes SET 
                 NomAyudante = '$NomAyudante',
@@ -84,8 +84,8 @@ try {
     } else {
         // CREAR
         // Preparar valores para NoCedula (puede ser NULL)
-        $valorCedula = $NoCedula !== null ? $NoCedula : "NULL";
-        
+        $valorCedula = $NoCedula !== null ? "'$NoCedula'" : "NULL";
+
         $sql = "INSERT INTO GEN_Ayudantes 
                 (NomAyudante, NoCedula, ACTIVO) 
                 VALUES (
@@ -116,4 +116,3 @@ try {
 }
 
 $enlace->close();
-?>

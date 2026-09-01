@@ -94,6 +94,22 @@ try {
         // ACTUALIZAR compra existente
         $idEncabCompra = validar_entero($encabezado["IdEncabCompra"]);
 
+        // Guard: no permitir editar una compra anulada
+        $sqlAnulado = "SELECT Anulado FROM SAS_EncabCompra WHERE IdEncabCompra = ?";
+        $stmtAnulado = $enlace->prepare($sqlAnulado);
+        if (!$stmtAnulado) {
+            throw new Exception("Error preparando consulta de anulación: " . $enlace->error);
+        }
+        $stmtAnulado->bind_param("i", $idEncabCompra);
+        $stmtAnulado->execute();
+        $stmtAnulado->bind_result($anuladoExistente);
+        $stmtAnulado->fetch();
+        $stmtAnulado->close();
+
+        if ($anuladoExistente == 1) {
+            throw new Exception("La compra está anulada y no puede modificarse");
+        }
+
         $sqlEnc = "UPDATE SAS_EncabCompra SET 
             TipoCompra = ?,
             IdProveedor = ?, 
@@ -144,6 +160,76 @@ try {
         if ($stmtEnc->errno) {
             throw new Exception("Error al actualizar el encabezado de la compra: " . $stmtEnc->error);
         }
+
+        // ==================== 1.1 CAPTURAR DEVOLUCIONES ANTES DE ELIMINAR ====================
+        // Si la compra tiene datos de devolución en el detalle, se capturan para
+        // restaurarlos después de la reinserción (el INSERT no los incluye y se perderían).
+
+        // Índice absoluto de cada empaque (posición dentro de la compra)
+        $empaqueOrden = [];
+        $sqlEmpOrder = "SELECT IdDetEmpaque FROM SAS_DetEmpaqueCompra WHERE IdEncabCompra = ? ORDER BY IdDetEmpaque";
+        $stmtEmpOrder = $enlace->prepare($sqlEmpOrder);
+        if (!$stmtEmpOrder) {
+            throw new Exception("Error preparando consulta de empaques: " . $enlace->error);
+        }
+        $stmtEmpOrder->bind_param("i", $idEncabCompra);
+        $stmtEmpOrder->execute();
+        $stmtEmpOrder->bind_result($idEmpOrder);
+        $idxEmp = 0;
+        while ($stmtEmpOrder->fetch()) {
+            if (!isset($empaqueOrden[$idEmpOrder])) {
+                $empaqueOrden[$idEmpOrder] = $idxEmp;
+            }
+            $idxEmp++;
+        }
+        $stmtEmpOrder->close();
+
+        $devolucionesViejas = [];
+        $sqlDev = "SELECT de.IdDetEmpaque, dp.IdProducto, dp.IdVariedad, dp.IdGrado,
+                          dp.TallosDevolucion, dp.MotivoDevolucion, dp.Flete, dp.Fumigacion, dp.Otros
+                   FROM SAS_DetEmpaqueCompra de
+                   INNER JOIN SAS_DetProductoCompra dp ON de.IdDetEmpaque = dp.IdDetEmpaque
+                   WHERE de.IdEncabCompra = ?
+                     AND dp.Anulado = 0
+                     AND (dp.TallosDevolucion > 0 OR dp.Flete > 0 OR dp.Fumigacion > 0 OR dp.Otros > 0
+                          OR (dp.MotivoDevolucion IS NOT NULL AND dp.MotivoDevolucion != ''))
+                   ORDER BY de.IdDetEmpaque, dp.IdDetProducto";
+
+        $stmtDev = $enlace->prepare($sqlDev);
+        if (!$stmtDev) {
+            throw new Exception("Error preparando consulta de devoluciones: " . $enlace->error);
+        }
+        $stmtDev->bind_param("i", $idEncabCompra);
+        $stmtDev->execute();
+        $stmtDev->bind_result(
+            $idDetEmpaqueOld,
+            $devIdProducto,
+            $devIdVariedad,
+            $devIdGrado,
+            $devTallosDevolucion,
+            $devMotivoDevolucion,
+            $devFlete,
+            $devFumigacion,
+            $devOtros
+        );
+
+        while ($stmtDev->fetch()) {
+            $eIdx = $empaqueOrden[$idDetEmpaqueOld] ?? null;
+            if ($eIdx === null) {
+                continue; // Empaque no encontrado en la compra (no debería ocurrir)
+            }
+            $devolucionesViejas[$eIdx][] = [
+                'IdProducto'         => $devIdProducto,
+                'IdVariedad'         => $devIdVariedad,
+                'IdGrado'            => $devIdGrado,
+                'TallosDevolucion'   => $devTallosDevolucion,
+                'MotivoDevolucion'   => $devMotivoDevolucion,
+                'Flete'              => $devFlete,
+                'Fumigacion'         => $devFumigacion,
+                'Otros'              => $devOtros,
+            ];
+        }
+        $stmtDev->close();
 
         // ELIMINAR empaques, productos y recetas anteriores (se reinsertarán)
         $tablas = ['SAS_DetRecetaCompra', 'SAS_DetProductoCompra', 'SAS_DetEmpaqueCompra'];
@@ -206,6 +292,10 @@ try {
     }
 
     // ==================== 2. PROCESAR EMPAQUES ====================
+    // Registro de filas reinsertadas para restaurar devoluciones después
+    $empIdx = 0;
+    $nuevosIds = [];
+    $nuevosDetalles = [];
     foreach ($empaques as $empaqueData) {
         $empaque = $empaqueData["empaque"] ?? [];
         $productos = $empaqueData["productos"] ?? [];
@@ -235,6 +325,7 @@ try {
         $idDetEmpaque = $enlace->insert_id;
 
         // ==================== 3. PROCESAR PRODUCTOS ====================
+        $prodIdx = 0;
         foreach ($productos as $productoData) {
             $producto = $productoData["producto"] ?? [];
             $receta = $productoData["receta"] ?? [];
@@ -285,6 +376,14 @@ try {
 
             $idDetProducto = $enlace->insert_id;
 
+            // Registrar fila nueva para restaurar devoluciones después
+            $nuevosIds[$empIdx][$prodIdx] = $idDetProducto;
+            $nuevosDetalles[$empIdx][$prodIdx] = [
+                'IdProducto' => $IdProducto,
+                'IdVariedad' => $IdVariedad,
+                'IdGrado'    => $IdGrado,
+            ];
+
             // ==================== 4. PROCESAR RECETA (si es bouquet) ====================
             if (!empty($receta)) {
                 foreach ($receta as $ingrediente) {
@@ -316,6 +415,71 @@ try {
                         throw new Exception("Error al insertar ingrediente de receta");
                     }
                 }
+            }
+
+            $prodIdx++;
+        }
+
+        $empIdx++;
+    }
+
+    // ==================== 5. RESTAURAR DEVOLUCIONES Y VALIDAR ====================
+    // Las devoluciones registradas antes de la actualización deben conservarse.
+    // Si la línea con devolución fue modificada o eliminada, se bloquea el guardado.
+    if (!empty($devolucionesViejas)) {
+        foreach ($devolucionesViejas as $empIdxDev => $productosDev) {
+            if (!isset($nuevosDetalles[$empIdxDev])) {
+                throw new Exception("No se puede guardar: se eliminó el empaque que contenía la devolución. Registre o elimine la devolución antes de guardar la compra.");
+            }
+
+            $nuevosEmp = $nuevosDetalles[$empIdxDev];
+            $usados = [];
+            foreach ($productosDev as $devInfo) {
+                // Buscar la línea nueva con el mismo producto/variedad/grado dentro del empaque
+                // (por contenido, no por posición, para permitir agregar/quitar otras líneas)
+                $idxEncontrado = -1;
+                foreach ($nuevosEmp as $pi => $nuevo) {
+                    if (in_array($pi, $usados, true)) {
+                        continue;
+                    }
+                    if ($nuevo['IdProducto'] == $devInfo['IdProducto']
+                     && $nuevo['IdVariedad'] == $devInfo['IdVariedad']
+                     && $nuevo['IdGrado']    == $devInfo['IdGrado']) {
+                        $idxEncontrado = $pi;
+                        break;
+                    }
+                }
+
+                if ($idxEncontrado === -1) {
+                    throw new Exception("No se puede guardar: la línea con devolución del producto {$devInfo['IdProducto']} (variedad {$devInfo['IdVariedad']}, grado {$devInfo['IdGrado']}) fue modificada o eliminada. Registre o elimine la devolución antes de guardar la compra.");
+                }
+
+                $usados[] = $idxEncontrado;
+
+                // Restaurar los datos de devolución en la fila reinsertada
+                $sqlRest = "UPDATE SAS_DetProductoCompra
+                            SET TallosDevolucion = ?, MotivoDevolucion = ?,
+                                Flete = ?, Fumigacion = ?, Otros = ?
+                            WHERE IdDetProducto = ?";
+                $stmtRest = $enlace->prepare($sqlRest);
+                if (!$stmtRest) {
+                    throw new Exception("Error preparando restauración de devolución: " . $enlace->error);
+                }
+
+                $tallosRest = intval($devInfo['TallosDevolucion'] ?? 0);
+                $motivoRest = $devInfo['MotivoDevolucion'] ?? '';
+                $fleteRest   = floatval($devInfo['Flete'] ?? 0);
+                $fumigRest   = floatval($devInfo['Fumigacion'] ?? 0);
+                $otrosRest   = floatval($devInfo['Otros'] ?? 0);
+                $nuevoDetId  = $nuevosIds[$empIdxDev][$idxEncontrado];
+
+                $stmtRest->bind_param("isdddi", $tallosRest, $motivoRest, $fleteRest, $fumigRest, $otrosRest, $nuevoDetId);
+                $stmtRest->execute();
+
+                if ($stmtRest->errno) {
+                    throw new Exception("Error al restaurar la devolución: " . $stmtRest->error);
+                }
+                $stmtRest->close();
             }
         }
     }

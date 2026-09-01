@@ -2,7 +2,7 @@
 import React, { useRef, useState, useEffect } from "react";
 import { CLIENTE } from "../../config/cliente.js";
 import Swal from "sweetalert2";
-import { Search, Save, Plus, Download, ShoppingCart } from 'lucide-react';
+import { Search, Save, Plus, Download, ShoppingCart, XCircle } from 'lucide-react';
 import CompraHeader from "./CompraHeader";
 import CompraEmpaque from "./CompraEmpaque";
 import ModalBuscarCompras from "./ModalBuscarCompras";
@@ -13,7 +13,8 @@ import {
     getCompraEspecifica,
     prepararDatosParaGuardar,
     calcularTotales,
-    generarPDFOrdenCompra
+    generarPDFOrdenCompra,
+    anularCompra
 } from "../../services/compras/comprasService";
 
 // Función para fecha actual en formato ISO (YYYY-MM-DD)
@@ -36,6 +37,7 @@ export default function Compras() {
         fechaSolicitud: todayISODate(),
         fechaEntrega: "",
         moneda: "",
+        monedaNombre: "",
         trm: "",
         poProveedor: "",
         observaciones: "",
@@ -73,6 +75,7 @@ export default function Compras() {
     // Estados de carga inicial
     const [loadingDatos, setLoadingDatos] = useState(true);
     const [guardando, setGuardando] = useState(false);
+    const [anulando, setAnulando] = useState(false);
     const [menuCompacto, setMenuCompacto] = useState(false);
 
     // --------------------------------------------------------------
@@ -601,6 +604,7 @@ export default function Compras() {
                     fechaSolicitud: todayISODate(),
                     fechaEntrega: "",
                     moneda: "",
+                    monedaNombre: "",
                     trm: "",
                     poProveedor: "",
                     observaciones: "",
@@ -648,6 +652,7 @@ export default function Compras() {
                     fechaSolicitud: headerData.FechaSolicitud || todayISODate(),
                     fechaEntrega: headerData.FechaEntrega || "",
                     moneda: String(headerData.IdMoneda),
+                    monedaNombre: headerData.MonedaNombre || "",
                     trm: String(headerData.TRM || ""),
                     poProveedor: headerData.PO_Proveedor || "",
                     observaciones: headerData.Observaciones || "",
@@ -678,7 +683,9 @@ export default function Compras() {
                     const itemsTransformados = empaque.items.map(item => {
                         const tallosRamo = Number(item.tallosRamo) || 0;
                         const ramosCaja = Number(item.ramosCaja) || 0;
-                        const cantidadBouquets = Number(item.cantidadBouquets) || 1;
+                        const cantidadBouquets =
+                          Number(item.cantidadBouquets) ||
+                          (item.esBouquet ? Number(item.ramosCaja) || 1 : 1);
                         const precioCompra = parseFloat(String(item.precioCompra || "0").replace(/,/g, '.')) || 0;
 
                         let tallosCaja = 0;
@@ -781,26 +788,44 @@ export default function Compras() {
 
                 setEmpaques(empaquesTransformados);
 
-                // 5. Actualizar estado de orden de compra si existe                
-
-                // 6. Mostrar mensaje de éxito con resumen
-                Swal.fire({
-                    icon: 'success',
-                    title: 'Compra Cargada',
-                    html: `
-          <div class="text-left">
-            <p><strong>Compra:</strong> COMP-${headerData.IdEncabCompra}</p>
-            <p><strong>Empaques:</strong> ${empaquesTransformados.length}</p>
-            <p><strong>Piezas totales:</strong> ${totalPiezas}</p>
-            <p><strong>Fulles totales:</strong> ${totalFulles.toFixed(3)}</p>
-            <p><strong>Tallos totales:</strong> ${totalTallos}</p>
-            <p><strong>Valor compra:</strong> $${valorCompra.toLocaleString()}</p>
-            <p><strong>IVA (${tieneIVA ? '19%' : '0%'}):</strong> $${iva.toLocaleString()}</p>
-            <p><strong>Total compra:</strong> $${totalCompra.toLocaleString()}</p>
-          </div>
-        `,
-                    timer: 3000
-                });
+                if (compra.duplicar) {
+                    setHeader(prev => ({
+                        ...prev,
+                        noCompra: 'COMP-000000',
+                        anulado: false,
+                    }));
+                    Swal.fire({
+                        icon: 'info',
+                        title: 'Compra Duplicada',
+                        html: `
+              <div class="text-left">
+                <p>Se ha duplicado la compra como <strong>nueva</strong>.</p>
+                <p>Modifique lo necesario y guárdela.</p>
+                <p class="mt-2"><strong>Empaques:</strong> ${empaquesTransformados.length}</p>
+                <p><strong>Valor compra:</strong> $${valorCompra.toLocaleString()}</p>
+              </div>
+            `,
+                    });
+                } else {
+                    // 6. Mostrar mensaje de éxito con resumen
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Compra Cargada',
+                        html: `
+              <div class="text-left">
+                <p><strong>Compra:</strong> COMP-${headerData.IdEncabCompra}</p>
+                <p><strong>Empaques:</strong> ${empaquesTransformados.length}</p>
+                <p><strong>Piezas totales:</strong> ${totalPiezas}</p>
+                <p><strong>Fulles totales:</strong> ${totalFulles.toFixed(3)}</p>
+                <p><strong>Tallos totales:</strong> ${totalTallos}</p>
+                <p><strong>Valor compra:</strong> $${valorCompra.toLocaleString()}</p>
+                <p><strong>IVA (${tieneIVA ? '19%' : '0%'}):</strong> $${iva.toLocaleString()}</p>
+                <p><strong>Total compra:</strong> $${totalCompra.toLocaleString()}</p>
+              </div>
+            `,
+                        timer: 3000
+                    });
+                }
 
             } else {
                 throw new Error(res.message || "Error al cargar la compra");
@@ -888,6 +913,91 @@ export default function Compras() {
     };
 
     // --------------------------------------------------------------
+    // Anular compra (doble confirmación + motivo obligatorio)
+    // --------------------------------------------------------------
+    const handleAnular = async () => {
+        if (header.noCompra === "COMP-000000") {
+            Swal.fire("Aviso", "No hay una compra para anular", "info");
+            return;
+        }
+        if (header.anulado) {
+            Swal.fire("Aviso", "Esta compra ya está anulada", "info");
+            return;
+        }
+
+        // 1ª confirmación
+        const primera = await Swal.fire({
+            title: "¿Está seguro?",
+            html: `Va a anular la compra <strong>${header.noCompra}</strong>.<br/>Esta acción es <strong>irreversible</strong> y afectará todos los procesos relacionados.`,
+            icon: "warning",
+            showCancelButton: true,
+            confirmButtonColor: "#d33",
+            cancelButtonColor: "#3085d6",
+            confirmButtonText: "Sí, continuar",
+            cancelButtonText: "Cancelar",
+            reverseButtons: true,
+        });
+        if (!primera.isConfirmed) return;
+
+        // 2ª confirmación con motivo obligatorio
+        const segunda = await Swal.fire({
+            title: "Confirmación final",
+            html: '<input id="motivo-anulacion-compra" class="swal2-input" placeholder="Motivo de la anulación (obligatorio)" maxlength="300" />',
+            icon: "warning",
+            showCancelButton: true,
+            confirmButtonColor: "#d33",
+            cancelButtonColor: "#3085d6",
+            confirmButtonText: "Anular definitivamente",
+            cancelButtonText: "Cancelar",
+            reverseButtons: true,
+            preConfirm: () => {
+                const motivo = document.getElementById("motivo-anulacion-compra").value.trim();
+                if (!motivo) {
+                    Swal.showValidationMessage("Debe indicar el motivo de la anulación");
+                    return false;
+                }
+                return motivo;
+            },
+        });
+        if (!segunda.isConfirmed) return;
+
+        const idCompra = parseInt(header.noCompra.replace("COMP-", "")) || 0;
+        if (!idCompra) {
+            Swal.fire("Aviso", "No se pudo determinar la compra a anular", "warning");
+            return;
+        }
+
+        setAnulando(true);
+        try {
+            Swal.fire({
+                title: "Anulando compra...",
+                text: "Por favor espere",
+                allowOutsideClick: false,
+                didOpen: () => Swal.showLoading(),
+            });
+
+            const resultado = await anularCompra(idCompra, segunda.value);
+
+            if (resultado.success) {
+                Swal.fire({
+                    icon: "success",
+                    title: "¡Anulada!",
+                    text: resultado.message,
+                    timer: 2000,
+                    showConfirmButton: false,
+                });
+                setHeader(prev => ({ ...prev, anulado: true }));
+            } else {
+                throw new Error(resultado.message || "Error al anular la compra");
+            }
+        } catch (err) {
+            Swal.fire("Error", err.message || "No se pudo anular la compra", "error");
+        } finally {
+            setAnulando(false);
+        }
+    };
+
+    // --------------------------------------------------------------
     // Renderizado
     // --------------------------------------------------------------
     if (loadingDatos) {
@@ -920,11 +1030,11 @@ export default function Compras() {
                     <div className="flex items-center gap-3 flex-shrink-0">
                         <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border ${
                             header.noCompra !== 'COMP-000000'
-                                ? 'bg-green-500/15 text-green-400 border-green-500/25'
+                                ? (header.anulado ? 'bg-red-500/15 text-red-400 border-red-500/25' : 'bg-green-500/15 text-green-400 border-green-500/25')
                                 : 'bg-amber-500/15 text-amber-400 border-amber-500/25'
                         }`}>
-                            <span className={`w-1.5 h-1.5 rounded-full ${header.noCompra !== 'COMP-000000' ? 'bg-green-400 animate-pulse' : 'bg-amber-400'}`} />
-                            {header.noCompra !== 'COMP-000000' ? 'Activa' : 'Sin guardar'}
+                            <span className={`w-1.5 h-1.5 rounded-full ${header.noCompra !== 'COMP-000000' ? (header.anulado ? 'bg-red-400' : 'bg-green-400 animate-pulse') : 'bg-amber-400'}`} />
+                            {header.noCompra !== 'COMP-000000' ? (header.anulado ? 'Anulada' : 'Activa') : 'Sin guardar'}
                         </div>
                         <span className="text-slate-500 text-xs font-mono hidden sm:block">{header.noCompra}</span>
                     </div>
@@ -941,9 +1051,9 @@ export default function Compras() {
                         </button>
                         <button
                             onClick={handleSave}
-                            disabled={guardando}
+                            disabled={guardando || header.anulado}
                             className={`flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 transition-all duration-200 font-semibold text-sm flex-1 min-w-[85px] ${
-                                guardando
+                                guardando || header.anulado
                                     ? 'bg-slate-700 text-slate-500 cursor-not-allowed'
                                     : 'bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-500 hover:to-green-500 text-white shadow-md shadow-green-900/40'
                             }`}
@@ -973,11 +1083,34 @@ export default function Compras() {
                             <Download className="w-4 h-4 flex-shrink-0" />
                             <span>Excel</span>
                         </button>
+                        <button
+                            onClick={handleAnular}
+                            disabled={header.noCompra === "COMP-000000" || header.anulado || anulando}
+                            title={header.anulado ? "Esta compra ya está anulada" : "Anular la compra"}
+                            className={`flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 transition-all duration-200 font-semibold text-sm flex-1 min-w-[85px] ${
+                                header.noCompra !== "COMP-000000" && !header.anulado
+                                    ? 'bg-gradient-to-r from-red-600 to-rose-700 hover:from-red-500 hover:to-rose-600 text-white shadow-md shadow-red-900/40'
+                                    : 'bg-slate-700 text-slate-500 cursor-not-allowed'
+                            }`}
+                        >
+                            {anulando ? (
+                                <><div className="animate-spin rounded-full h-3.5 w-3.5 border-b-2 border-slate-400 flex-shrink-0" /><span>Anulando...</span></>
+                            ) : (
+                                <><XCircle className="w-4 h-4 flex-shrink-0" /><span>{header.anulado ? "Anulada" : "Anular"}</span></>
+                            )}
+                        </button>
                     </div>
                 </div>
             </div>
 
+            {header.anulado && (
+                <div className="flex items-center gap-2 bg-red-600/15 border border-red-500/40 text-red-300 rounded-xl px-4 py-3 text-sm font-semibold">
+                    ⛔ Esta compra está <strong>ANULADA</strong> y no puede modificarse. Solo lectura.
+                </div>
+            )}
+
             {/* Encabezado de la compra */}
+            <fieldset disabled={header.anulado} className="min-w-0 border-0 p-0 m-0">
             <CompraHeader
                 header={header}
                 onChange={handleHeaderChange}
@@ -1029,7 +1162,9 @@ export default function Compras() {
                 tiposEmpaque={datosSelect.tiposEmpaque}
                 unidadesFacturacion={datosSelect.unidadesFacturacion}
                 predios={datosSelect.predios}
+                monedaNombre={header.monedaNombre}
             />
+            </fieldset>
 
             {/* Información adicional - COMPACTA - IGUAL A PEDIDOS */}
             <div className="bg-white rounded-lg md:rounded-xl shadow-sm md:shadow-md p-3 md:p-4">

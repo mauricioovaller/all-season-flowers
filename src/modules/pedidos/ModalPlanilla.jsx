@@ -6,8 +6,8 @@ import ModalVisorPreliminar from "./ModalVisorPreliminar";
 import {
   obtenerUltimoNumeroPlanilla,
   generarPlanilla,
-  generarPDFPlanilla,
-  obtenerPlanilla
+  obtenerPlanilla,
+  obtenerDestinoPedido
 } from "../../services/pedidos/pedidosService";
 
 export default function ModalPlanilla({
@@ -21,8 +21,7 @@ export default function ModalPlanilla({
   numeroPlanillaExistente = "",
   conductores = [],
   ayudantes = [],
-  onPlanillaGenerada,
-  datosPedido = {}
+  onPlanillaGenerada
 }) {
   const [cargando, setCargando] = useState(false);
   const [cargandoPlanilla, setCargandoPlanilla] = useState(false);
@@ -34,23 +33,61 @@ export default function ModalPlanilla({
     conductorId: "",
     ayudanteId: "",
     placa: "",
-    precinto: "0"
+    precinto: "0",
+    destinoFinal: ""
   });
 
   const [mostrarVisor, setMostrarVisor] = useState(false);
   const [urlPDF, setUrlPDF] = useState(null);
-  const [planillaData, setPlanillaData] = useState(null);
+
+  // Auto-cargar Placa SOLO cuando el usuario cambia el conductor (no en carga inicial)
+  const handleFormChange = (field, value) => {
+    setFormData(prev => {
+      const updated = { ...prev, [field]: value };
+      if (field === 'conductorId' && value) {
+        const conductor = conductores.find(c => c.id === value);
+        if (conductor && conductor.placas) {
+          updated.placa = conductor.placas;
+        }
+      }
+      return updated;
+    });
+  };
 
   // Cargar datos al abrir el modal
   useEffect(() => {
     if (isOpen) {
       if (!planillaExistente) {
-        cargarUltimoNumeroPlanilla();
+        cargarDatosPlanillaNueva();
       } else if (numeroPlanillaExistente) {
         cargarDatosPlanillaExistente();
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, planillaExistente, numeroPlanillaExistente]);
+
+  const cargarDestinoPedido = async () => {
+    try {
+      const resultado = await obtenerDestinoPedido(parseInt(pedidoId));
+      if (resultado.success && resultado.destino_completo) {
+        setFormData(prev => ({
+          ...prev,
+          destinoFinal: resultado.destino_completo
+        }));
+      }
+    } catch (err) {
+      console.error("Error al cargar destino del pedido:", err);
+    }
+  };
+
+  const cargarDatosPlanillaNueva = async () => {
+    setError(null);
+    // Cargar último número de planilla y destino del pedido en paralelo
+    await Promise.all([
+      cargarUltimoNumeroPlanilla(),
+      cargarDestinoPedido()
+    ]);
+  };
 
   const cargarDatosPlanillaExistente = async () => {
     try {
@@ -58,12 +95,13 @@ export default function ModalPlanilla({
       const resultado = await obtenerPlanilla(numeroPlanillaExistente.replace("PLAN-", ""));
 
       if (resultado.success) {
-        setPlanillaData(resultado.planilla);
+        const destino = resultado.planilla.DestinoFinal || resultado.planilla.destino_completo || "";
         setFormData({
           conductorId: resultado.planilla.IdConductor?.toString() || "",
           ayudanteId: resultado.planilla.IdAyudante?.toString() || "",
           placa: resultado.planilla.Placa || "",
-          precinto: resultado.planilla.Precinto?.toString() || "0"
+          precinto: resultado.planilla.Precinto?.toString() || "0",
+          destinoFinal: destino
         });
       }
     } catch (err) {
@@ -76,7 +114,6 @@ export default function ModalPlanilla({
   const cargarUltimoNumeroPlanilla = async () => {
     try {
       setCargando(true);
-      setError(null);
 
       const resultado = await obtenerUltimoNumeroPlanilla();
 
@@ -96,13 +133,6 @@ export default function ModalPlanilla({
     }
   };
 
-  const handleFormChange = (field, value) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: value
-    }));
-  };
-
   const validarFormulario = () => {
     const errores = [];
 
@@ -118,6 +148,10 @@ export default function ModalPlanilla({
       errores.push("El número de precinto es obligatorio");
     }
 
+    if (!formData.destinoFinal || formData.destinoFinal.trim() === "") {
+      errores.push("El destino final es obligatorio");
+    }
+
     return errores;
   };
 
@@ -130,6 +164,27 @@ export default function ModalPlanilla({
         confirmButtonText: 'Entendido'
       });
       return;
+    }
+
+    // Si Destino Final está vacío, ofrecer recuperarlo de la dirección del cliente
+    if (!formData.destinoFinal || formData.destinoFinal.trim() === "") {
+      const recovery = await Swal.fire({
+        title: 'Destino Final vacío',
+        text: 'El Destino Final está vacío. ¿Desea usar la dirección del cliente para completar este campo?',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'Sí, usar dirección del cliente',
+        cancelButtonText: 'No, prefiero escribirla',
+        confirmButtonColor: '#3B82F6',
+      });
+
+      if (recovery.isConfirmed) {
+        const result = await obtenerDestinoPedido(parseInt(pedidoId));
+        if (result.success && result.destino_completo) {
+          formData.destinoFinal = result.destino_completo;
+          setFormData(prev => ({ ...prev, destinoFinal: result.destino_completo }));
+        }
+      }
     }
 
     const errores = validarFormulario();
@@ -165,6 +220,7 @@ export default function ModalPlanilla({
               <p><strong>Conductor:</strong> ${conductores.find(c => c.id === formData.conductorId)?.nombre || 'No seleccionado'}</p>
               <p><strong>Placa:</strong> ${formData.placa}</p>
               <p><strong>Precinto:</strong> ${formData.precinto}</p>
+              <p><strong>Destino:</strong> <span class="text-xs">${formData.destinoFinal.substring(0, 50)}...</span></p>
             </div>
             <p class="text-sm text-gray-500 mt-3">¿Está seguro de continuar?</p>
           </div>
@@ -188,7 +244,8 @@ export default function ModalPlanilla({
           conductorId: parseInt(formData.conductorId),
           ayudanteId: formData.ayudanteId ? parseInt(formData.ayudanteId) : 0,
           placa: formData.placa.trim(),
-          precinto: formData.precinto.trim()
+          precinto: formData.precinto.trim(),
+          destinoFinal: formData.destinoFinal.trim()
         }
       );
 
@@ -269,7 +326,6 @@ export default function ModalPlanilla({
 
       console.log("Número planilla:", numeroPlanilla);
 
-      // Mostrar mensaje de carga
       Swal.fire({
         title: 'Generando Planilla...',
         text: 'Obteniendo datos para el PDF',
@@ -277,21 +333,18 @@ export default function ModalPlanilla({
         didOpen: () => Swal.showLoading()
       });
 
-      // Extraer número para la URL
       const numero = numeroPlanilla.replace("PLAN-", "");
 
-      // URL de la API - MISMO FORMATO QUE FACTURA
       const apiUrl = `${API_BASE}/pedidos/ApiGenerarPDFPlanilla.php`;
 
       console.log("Enviando solicitud a API...");
 
-      // ✅ CAMBIO PRINCIPAL: Solicitar como FORM-DATA, no JSON
       const formData = new FormData();
       formData.append('numeroPlanilla', numero);
 
       const response = await fetch(apiUrl, {
         method: 'POST',
-        body: formData  // ← Enviar como form-data, igual que factura
+        body: formData
       });
 
       console.log("Respuesta HTTP:", response.status);
@@ -302,7 +355,6 @@ export default function ModalPlanilla({
         throw new Error(`Error del servidor: ${response.status}`);
       }
 
-      // ✅ CAMBIO: Obtener directamente como BLOB
       const pdfBlob = await response.blob();
 
       if (!pdfBlob || pdfBlob.size === 0) {
@@ -311,10 +363,8 @@ export default function ModalPlanilla({
 
       console.log("✅ Blob obtenido, tamaño:", pdfBlob.size, "type:", pdfBlob.type);
 
-      // Crear URL para el blob
       const fileURL = URL.createObjectURL(pdfBlob);
 
-      // Mostrar en visor
       setUrlPDF(fileURL);
       setMostrarVisor(true);
 
@@ -326,7 +376,6 @@ export default function ModalPlanilla({
 
       Swal.close();
 
-      // Método de respaldo temporal
       Swal.fire({
         icon: 'warning',
         title: 'Error al cargar en visor',
@@ -352,6 +401,95 @@ export default function ModalPlanilla({
     }
   };
 
+  // Componente de formulario reutilizable para ambos modos
+  const renderFormFields = (disabled = false) => (
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+      <div>
+        <label className="block text-xs font-medium text-gray-700 mb-0.5">
+          Conductor <span className="text-red-500">*</span>
+        </label>
+        <select
+          value={formData.conductorId}
+          onChange={(e) => handleFormChange('conductorId', e.target.value)}
+          className="w-full border rounded px-2 py-1.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          disabled={disabled}
+        >
+          <option value="">Seleccionar conductor</option>
+          {conductores.map((conductor) => (
+            <option key={conductor.id} value={conductor.id}>
+              {conductor.nombre}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <div>
+        <label className="block text-xs font-medium text-gray-700 mb-0.5">
+          Placa del Vehículo <span className="text-red-500">*</span>
+        </label>
+        <input
+          type="text"
+          value={formData.placa}
+          onChange={(e) => handleFormChange('placa', e.target.value.toUpperCase())}
+          className="w-full border rounded px-2 py-1.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          placeholder="ABC-123"
+          maxLength="50"
+          disabled={disabled}
+        />
+      </div>
+
+      <div>
+        <label className="block text-xs font-medium text-gray-700 mb-0.5">
+          Ayudante
+        </label>
+        <select
+          value={formData.ayudanteId}
+          onChange={(e) => handleFormChange('ayudanteId', e.target.value)}
+          className="w-full border rounded px-2 py-1.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          disabled={disabled}
+        >
+          <option value="">Sin ayudante</option>
+          {ayudantes.map((ayudante) => (
+            <option key={ayudante.id} value={ayudante.id}>
+              {ayudante.nombre}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <div>
+        <label className="block text-xs font-medium text-gray-700 mb-0.5">
+          N° Precinto <span className="text-red-500">*</span>
+        </label>
+        <input
+          type="text"
+          value={formData.precinto}
+          onChange={(e) => handleFormChange('precinto', e.target.value)}
+          className="w-full border rounded px-2 py-1.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          placeholder="000001"
+          disabled={disabled}
+        />
+      </div>
+
+      <div className="sm:col-span-2">
+        <label className="block text-xs font-medium text-gray-700 mb-0.5">
+          Destino Final <span className="text-red-500">*</span>
+        </label>
+        <textarea
+          value={formData.destinoFinal}
+          onChange={(e) => handleFormChange('destinoFinal', e.target.value)}
+          className="w-full border rounded px-2 py-1.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          placeholder="Dirección de destino final"
+          rows="2"
+          disabled={disabled}
+        />
+        <p className="text-xs text-gray-400 mt-0.5">
+          Dirección del cliente como valor predeterminado
+        </p>
+      </div>
+    </div>
+  );
+
   // ============================================
   // 1. MODAL PARA PLANILLA EXISTENTE
   // ============================================
@@ -359,185 +497,96 @@ export default function ModalPlanilla({
     return (
       <>
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl">
-            <div className="p-6 border-b">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-semibold text-gray-800">📋 Planilla ya Generada</h3>
-                <button
-                  onClick={onClose}
-                  className="text-gray-500 hover:text-gray-700"
-                  disabled={cargando || cargandoPlanilla}
-                >
-                  ✕
-                </button>
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-xl">
+            {/* Header compacto */}
+            <div className="flex justify-between items-center px-4 py-3 border-b bg-gray-50 rounded-t-xl">
+              <div className="flex items-center gap-2">
+                <h3 className="text-base font-semibold text-gray-800">📋 Planilla {numeroPlanillaExistente}</h3>
+                <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">Creada</span>
+              </div>
+              <button
+                onClick={onClose}
+                className="text-gray-400 hover:text-gray-600 text-lg leading-none"
+                disabled={cargando || cargandoPlanilla}
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="p-4 space-y-3">
+              {/* Datos de la planilla */}
+              <div className="flex gap-3 text-xs text-gray-600 bg-blue-50 rounded p-2">
+                <span>Pedido: <strong>{pedidoNumero}</strong></span>
+                <span className="text-gray-300">|</span>
+                <span>Factura: <strong>{numeroFacturaExistente || "N/A"}</strong></span>
               </div>
 
-              <div className="mb-6">
-                <div className="text-center p-3 bg-blue-50 rounded-lg border border-blue-200 mb-4">
-                  <p className="text-gray-700 mb-1">Este pedido ya tiene una planilla asignada:</p>
-                  <div className="text-2xl font-bold text-blue-600">
-                    {numeroPlanillaExistente || "PLAN-0000"}
-                  </div>
-                  <p className="text-sm text-gray-500 mt-1">Puedes modificarla o imprimirla</p>
-                </div>
+              {/* Formulario */}
+              {renderFormFields(cargando)}
 
-                {/* Formulario para modificar */}
-                <div className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {/* Conductor */}
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Conductor <span className="text-red-500">*</span>
-                      </label>
-                      <select
-                        value={formData.conductorId}
-                        onChange={(e) => handleFormChange('conductorId', e.target.value)}
-                        className="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        disabled={cargando}
-                      >
-                        <option value="">Seleccionar conductor</option>
-                        {conductores.map((conductor) => (
-                          <option key={conductor.id} value={conductor.id}>
-                            {conductor.nombre}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-
-                    {/* Ayudante */}
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Ayudante
-                      </label>
-                      <select
-                        value={formData.ayudanteId}
-                        onChange={(e) => handleFormChange('ayudanteId', e.target.value)}
-                        className="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        disabled={cargando}
-                      >
-                        <option value="">Sin ayudante</option>
-                        {ayudantes.map((ayudante) => (
-                          <option key={ayudante.id} value={ayudante.id}>
-                            {ayudante.nombre}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-
-                    {/* Placa */}
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Placa del Vehículo <span className="text-red-500">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        value={formData.placa}
-                        onChange={(e) => handleFormChange('placa', e.target.value.toUpperCase())}
-                        className="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        placeholder="ABC-123"
-                        maxLength="10"
-                        disabled={cargando}
-                      />
-                    </div>
-
-                    {/* Precinto */}
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Número de Precinto <span className="text-red-500">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        value={formData.precinto}
-                        onChange={(e) => handleFormChange('precinto', e.target.value)}
-                        className="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        placeholder="000001"
-                        disabled={cargando}
-                      />
-                    </div>
-                  </div>
-
-                  {/* Información adicional */}
-                  <div className="p-3 bg-gray-50 rounded-lg border text-xs text-gray-600">
-                    <p className="font-medium text-gray-700 mb-1">Información del pedido:</p>
-                    <p>• Factura asociada: <span className="font-semibold">{numeroFacturaExistente || "Sin factura"}</span></p>
-                    <p>• Pedido: <span className="font-semibold">{pedidoNumero}</span></p>
-                    <p>• Los campos marcados con <span className="text-red-500">*</span> son obligatorios</p>
-                  </div>
-                </div>
+              {/* Información adicional */}
+              <div className="text-xs text-gray-500">
+                <span className="text-red-500">*</span> Campos obligatorios. Si cambia el conductor, la placa se actualizará automáticamente.
               </div>
+            </div>
 
-              {/* Botones de acción */}
-              <div className="flex flex-col sm:flex-row gap-2">
-                {/* Botón para actualizar */}
+            {/* Footer con botones */}
+            <div className="px-4 py-3 border-t bg-gray-50 rounded-b-xl">
+              <div className="flex flex-wrap gap-2">
                 <button
                   onClick={handleGenerarPlanilla}
                   disabled={cargando}
-                  className={`flex-1 px-4 py-3 rounded-lg flex items-center justify-center gap-2 transition-colors ${cargando
-                    ? 'bg-gray-400 text-gray-300 cursor-not-allowed'
+                  className={`flex-1 min-w-[140px] px-3 py-2 rounded-lg flex items-center justify-center gap-1.5 text-sm transition-colors ${cargando
+                    ? 'bg-gray-400 text-white cursor-not-allowed'
                     : 'bg-blue-600 text-white hover:bg-blue-700'
                     }`}
                 >
                   {cargando ? (
                     <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      <div className="animate-spin rounded-full h-3.5 w-3.5 border-b-2 border-white"></div>
                       <span>Actualizando...</span>
                     </>
                   ) : (
                     <>
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                      </svg>
-                      <span>Actualizar Planilla</span>
+                      <span>💾</span>
+                      <span>Actualizar</span>
                     </>
                   )}
                 </button>
 
-                {/* Botón para imprimir */}
                 <button
                   onClick={handleImprimirPlanilla}
                   disabled={cargandoPlanilla}
-                  className={`flex-1 px-4 py-3 rounded-lg flex items-center justify-center gap-2 transition-colors ${cargandoPlanilla
-                    ? 'bg-gray-400 text-gray-300 cursor-not-allowed'
+                  className={`flex-1 min-w-[140px] px-3 py-2 rounded-lg flex items-center justify-center gap-1.5 text-sm transition-colors ${cargandoPlanilla
+                    ? 'bg-gray-400 text-white cursor-not-allowed'
                     : 'bg-green-600 text-white hover:bg-green-700'
                     }`}
                 >
                   {cargandoPlanilla ? (
                     <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                      <span>Generando PDF...</span>
+                      <div className="animate-spin rounded-full h-3.5 w-3.5 border-b-2 border-white"></div>
+                      <span>PDF...</span>
                     </>
                   ) : (
                     <>
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
-                      </svg>
-                      <span>📄 Imprimir Planilla</span>
+                      <span>📄</span>
+                      <span>Imprimir</span>
                     </>
                   )}
                 </button>
 
-                {/* Botón para cerrar */}
                 <button
                   onClick={onClose}
-                  className="flex-1 px-4 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+                  className="px-3 py-2 border border-gray-300 rounded-lg text-gray-600 hover:bg-white text-sm transition-colors"
                   disabled={cargando || cargandoPlanilla}
                 >
                   Cerrar
                 </button>
               </div>
-
-              <div className="mt-6 text-xs text-gray-500 bg-gray-50 p-3 rounded-lg">
-                <p className="font-medium text-gray-600 mb-1">Información:</p>
-                <p>• Puedes modificar los datos de la planilla cuantas veces necesites</p>
-                <p>• Los cambios se guardarán automáticamente al hacer clic en "Actualizar Planilla"</p>
-                <p>• Puedes imprimir la planilla actualizada cuantas veces necesites</p>
-                <p>• La planilla incluye 3 documentos: Carta Policía, Carta Aerolínea y Despacho</p>
-              </div>
             </div>
           </div>
         </div>
 
-        {/* VISOR DE PDF */}
         {mostrarVisor && urlPDF && (
           <ModalVisorPreliminar
             url={urlPDF}
@@ -556,197 +605,111 @@ export default function ModalPlanilla({
   return (
     <>
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50">
-        <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl">
-          <div className="p-6 border-b">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold text-gray-800">📋 Generar Planilla</h3>
-              <button
-                onClick={onClose}
-                className="text-gray-500 hover:text-gray-700"
-                disabled={cargando}
-              >
-                ✕
-              </button>
+        <div className="bg-white rounded-xl shadow-2xl w-full max-w-xl">
+          {/* Header compacto */}
+          <div className="flex justify-between items-center px-4 py-3 border-b bg-gray-50 rounded-t-xl">
+            <h3 className="text-base font-semibold text-gray-800">📋 Generar Planilla</h3>
+            <button
+              onClick={onClose}
+              className="text-gray-400 hover:text-gray-600 text-lg leading-none"
+              disabled={cargando}
+            >
+              ✕
+            </button>
+          </div>
+
+          <div className="p-4 space-y-3">
+            {/* Indicador de pedido */}
+            <div className="text-xs text-gray-600 bg-blue-50 rounded p-2">
+              Pedido: <strong>{pedidoNumero}</strong>
             </div>
 
-            {error ? (
-              <div className="p-3 bg-red-50 rounded-lg border border-red-200 mb-4">
-                <p className="text-sm text-red-600">{error}</p>
+            {/* Error */}
+            {error && (
+              <div className="p-2 bg-red-50 rounded border border-red-200 text-xs text-red-600">
+                {error}
                 <button
-                  onClick={cargarUltimoNumeroPlanilla}
-                  className="mt-2 text-sm text-red-700 hover:text-red-900 font-medium"
+                  onClick={cargarDatosPlanillaNueva}
+                  className="ml-2 text-red-700 hover:text-red-900 font-medium underline"
                 >
                   Reintentar
                 </button>
               </div>
-            ) : null}
+            )}
 
-            <div className="mb-4">
-              <p className="text-sm text-gray-600 mb-3">
-                Se generará una nueva planilla para el pedido <span className="font-semibold">{pedidoNumero}</span>
-              </p>
+            {/* Validación de factura */}
+            {!facturaExistente && (
+              <div className="p-2 bg-red-50 rounded border border-red-200 text-xs text-red-600">
+                ⚠️ Este pedido no tiene factura asignada. Genere una factura primero.
+              </div>
+            )}
 
-              {/* Validación de factura */}
-              {!facturaExistente && (
-                <div className="p-3 bg-red-50 rounded-lg border border-red-200 mb-4">
-                  <p className="text-sm text-red-600 font-medium">⚠️ Advertencia:</p>
-                  <p className="text-sm text-red-600">Este pedido no tiene factura asignada. Debe generar una factura primero.</p>
-                </div>
-              )}
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
-                {/* Última planilla generada */}
-                <div className="p-3 bg-gray-50 rounded-lg border">
-                  <div className="text-xs text-gray-500 mb-1">Última planilla</div>
-                  <div className="text-sm font-semibold">
-                    {ultimoNumero !== null
-                      ? ultimoNumero > 0
-                        ? `PLAN-${String(ultimoNumero).padStart(4, "0")}`
-                        : "Ninguna"
-                      : cargando ? "Cargando..." : "---"
-                    }
-                  </div>
-                </div>
-
-                {/* Próxima planilla */}
-                <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
-                  <div className="text-xs text-gray-600 mb-1">Próxima planilla</div>
-                  <div className="text-lg font-bold text-blue-600">
-                    {siguienteNumero || (cargando ? "Cargando..." : "---")}
-                  </div>
+            {/* Última / Próxima planilla */}
+            <div className="grid grid-cols-2 gap-2">
+              <div className="p-2 bg-gray-50 rounded border text-center">
+                <div className="text-xs text-gray-500">Última planilla</div>
+                <div className="text-sm font-semibold">
+                  {ultimoNumero !== null
+                    ? ultimoNumero > 0
+                      ? `PLAN-${String(ultimoNumero).padStart(4, "0")}`
+                      : "Ninguna"
+                    : cargando ? "..." : "---"
+                  }
                 </div>
               </div>
-
-              {/* Formulario */}
-              <div className="space-y-4 mt-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* Conductor */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Conductor <span className="text-red-500">*</span>
-                    </label>
-                    <select
-                      value={formData.conductorId}
-                      onChange={(e) => handleFormChange('conductorId', e.target.value)}
-                      className="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      disabled={cargando}
-                    >
-                      <option value="">Seleccionar conductor</option>
-                      {conductores.map((conductor) => (
-                        <option key={conductor.id} value={conductor.id}>
-                          {conductor.nombre}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {/* Ayudante */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Ayudante
-                    </label>
-                    <select
-                      value={formData.ayudanteId}
-                      onChange={(e) => handleFormChange('ayudanteId', e.target.value)}
-                      className="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      disabled={cargando}
-                    >
-                      <option value="">Sin ayudante</option>
-                      {ayudantes.map((ayudante) => (
-                        <option key={ayudante.id} value={ayudante.id}>
-                          {ayudante.nombre}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {/* Placa */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Placa del Vehículo <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.placa}
-                      onChange={(e) => handleFormChange('placa', e.target.value.toUpperCase())}
-                      className="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      placeholder="ABC-123"
-                      maxLength="10"
-                      disabled={cargando}
-                    />
-                  </div>
-
-                  {/* Precinto */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Número de Precinto <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.precinto}
-                      onChange={(e) => handleFormChange('precinto', e.target.value)}
-                      className="w-full border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      placeholder="000001"
-                      defaultValue="0"
-                      disabled={cargando}
-                    />
-                  </div>
-                </div>
-
-                {/* Información adicional */}
-                <div className="text-xs text-gray-500 p-3 bg-blue-50 rounded border border-blue-100 mt-3">
-                  <div className="font-medium text-blue-700 mb-1">✓ ¿Qué pasará al generar la planilla?</div>
-                  <ul className="list-disc pl-4 space-y-1 mt-1">
-                    <li>Se asignará el número <span className="font-semibold">{siguienteNumero || "PLAN-XXXX"}</span> al pedido</li>
-                    <li>Se generarán 3 documentos: Carta Policía, Carta Aerolínea y Despacho</li>
-                    <li>Los datos del conductor y vehículo quedarán registrados</li>
-                    <li>Podrás imprimir la planilla completa desde el botón de impresión</li>
-                    <li>Podrás modificar los datos después si es necesario</li>
-                  </ul>
+              <div className="p-2 bg-blue-50 rounded border border-blue-200 text-center">
+                <div className="text-xs text-gray-600">Próxima planilla</div>
+                <div className="text-base font-bold text-blue-600">
+                  {siguienteNumero || (cargando ? "..." : "---")}
                 </div>
               </div>
             </div>
+
+            {/* Formulario */}
+            {renderFormFields(cargando)}
+
+            {/* Información adicional */}
+            <div className="text-xs text-gray-500">
+              <span className="text-red-500">*</span> Campos obligatorios. Al seleccionar un conductor, la placa se carga automáticamente. El destino final se pre-carga con la dirección del cliente.
+            </div>
           </div>
 
-          <div className="p-6 border-t">
-            <div className="flex justify-end gap-2">
+          {/* Footer */}
+          <div className="px-4 py-3 border-t bg-gray-50 rounded-b-xl">
+            <div className="flex flex-wrap gap-2">
               <button
                 onClick={onClose}
-                className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 disabled:opacity-50 transition-colors"
+                className="px-3 py-2 border border-gray-300 rounded-lg text-gray-600 hover:bg-white text-sm transition-colors disabled:opacity-50"
                 disabled={cargando}
               >
                 Cancelar
               </button>
+              <div className="flex-1"></div>
               <button
                 onClick={handleGenerarPlanilla}
                 disabled={cargando || !siguienteNumero || !facturaExistente}
-                className={`px-4 py-2 rounded-lg flex items-center gap-2 transition-colors ${cargando || !siguienteNumero || !facturaExistente
+                className={`px-4 py-2 rounded-lg flex items-center gap-1.5 text-sm transition-colors ${cargando || !siguienteNumero || !facturaExistente
                   ? 'bg-gray-400 text-gray-300 cursor-not-allowed'
                   : 'bg-blue-600 text-white hover:bg-blue-700'
                   }`}
               >
                 {cargando ? (
                   <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    <div className="animate-spin rounded-full h-3.5 w-3.5 border-b-2 border-white"></div>
                     <span>Generando...</span>
                   </>
                 ) : (
                   <>
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
+                    <span>📋</span>
                     <span>Generar Planilla</span>
                   </>
                 )}
               </button>
             </div>
 
-            {/* Advertencia importante */}
-            <div className="mt-4 p-2 bg-amber-50 border border-amber-200 rounded text-xs text-amber-800">
-              <p className="font-medium">⚠️ Requisitos:</p>
-              <p>1. El pedido debe tener factura asignada</p>
-              <p>2. Conductor y placa son obligatorios</p>
-              <p>3. Precinto debe ser un número válido (0 por defecto)</p>
+            {/* Advertencia de requisitos */}
+            <div className="mt-2 p-1.5 bg-amber-50 border border-amber-200 rounded text-xs text-amber-800">
+              <strong>Requisitos:</strong> Factura asignada • Conductor y placa obligatorios • Precinto válido • Destino final obligatorio
             </div>
           </div>
         </div>

@@ -293,3 +293,45 @@ export function calcularTotalesPago(facturas = []) {
     costoTransferencia: 0, // Se calculará según el medio de pago
   };
 }
+
+/**
+ * Prorratea el costo de transferencia de un pago entre sus facturas,
+ * en proporción al valor pagado de cada una.
+ * El costo de transferencia es un gasto a nivel de encabezado de pago; para
+ * el reporte por factura se distribuye proporcionalmente para poder calcular
+ * el neto recibido por factura.
+ * @param {Array} facturas - Array de facturas con campo valorPago
+ * @param {number} costoTotal - Costo de transferencia del encabezado del pago
+ * @returns {Array<number>} Costo prorrateado por factura (mismo orden)
+ */
+export function prorratearCostoTransferencia(facturas = [], costoTotal = 0) {
+  const costo = parseFloat(costoTotal) || 0;
+  const total = facturas.reduce(
+    (s, f) => s + (parseFloat(f.valorPago) || 0),
+    0,
+  );
+
+  // Evitar división por cero: sin valor pagado no hay prorrateo
+  if (total <= 0) {
+    return facturas.map(() => 0);
+  }
+
+  return facturas.map((f) => {
+    const vp = parseFloat(f.valorPago) || 0;
+    return Math.round(costo * (vp / total) * 100) / 100;
+  });
+}
+
+/**
+ * Calcula el neto recibido por factura (valorPago − costo prorrateado).
+ * @param {Array} facturas - Array de facturas con campo valorPago
+ * @param {number} costoTotal - Costo de transferencia del encabezado del pago
+ * @returns {Array<number>} Neto recibido por factura (mismo orden)
+ */
+export function calcularNetoRecibido(facturas = [], costoTotal = 0) {
+  const prorrateos = prorratearCostoTransferencia(facturas, costoTotal);
+  return facturas.map((f, i) => {
+    const vp = parseFloat(f.valorPago) || 0;
+    return Math.round((vp - prorrateos[i]) * 100) / 100;
+  });
+}

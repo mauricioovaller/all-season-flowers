@@ -75,6 +75,9 @@ if (!$stmtEnc->fetch()) {
 }
 $stmtEnc->close();
 
+$esUSD = mb_stripos($moneda, 'dólar') !== false;
+$decMoneda = $esUSD ? 3 : 2;
+
 // 🔴 CONSULTA 2: DETALLE DE PRODUCTOS CON DATOS DE DEVOLUCIÓN
 $sqlDetalle = "SELECT
                 dp.IdDetProducto,
@@ -249,7 +252,7 @@ class PDF_Devolucion extends FPDF
     {
         $this->SetY(-15);
         $this->SetFont('Helvetica', 'I', 8);
-        $this->Cell(0, 10, 'Página ' . $this->PageNo() . '/{nb}', 0, 0, 'C');
+        $this->Cell(0, 10, utf8_decode('Página ' . $this->PageNo() . '/{nb}'), 0, 0, 'C');
     }
 
     function addSeparatorLine()
@@ -321,12 +324,12 @@ foreach ($detalle as $item) {
     $pdf->Cell($anchoVar, 5, utf8_decode(substr($item['variedad'], 0, 10)), 1, 0, 'L');
     $pdf->Cell($anchoGrado, 5, utf8_decode($item['grado']), 1, 0, 'L');
     $pdf->Cell($anchoTallos, 5, $item['tallos'], 1, 0, 'C');
-    $pdf->Cell($anchoPrecio, 5, '$' . number_format($item['precio'], 2), 1, 0, 'R');
+    $pdf->Cell($anchoPrecio, 5, '$' . number_format($item['precio'], $decMoneda), 1, 0, 'R');
     $pdf->Cell($anchoMotivo, 5, utf8_decode(substr($item['motivo'], 0, 12)), 1, 0, 'L');
-    $pdf->Cell($anchoFlete, 5, '$' . number_format($item['flete'], 2), 1, 0, 'R');
-    $pdf->Cell($anchoFumi, 5, '$' . number_format($item['fumigacion'], 2), 1, 0, 'R');
-    $pdf->Cell($anchoOtros, 5, '$' . number_format($item['otros'], 2), 1, 0, 'R');
-    $pdf->Cell($anchoTotal, 5, '$' . number_format($item['total'], 2), 1, 1, 'R');
+    $pdf->Cell($anchoFlete, 5, '$' . number_format($item['flete'], $decMoneda), 1, 0, 'R');
+    $pdf->Cell($anchoFumi, 5, '$' . number_format($item['fumigacion'], $decMoneda), 1, 0, 'R');
+    $pdf->Cell($anchoOtros, 5, '$' . number_format($item['otros'], $decMoneda), 1, 0, 'R');
+    $pdf->Cell($anchoTotal, 5, '$' . number_format($item['total'], $decMoneda), 1, 1, 'R');
 }
 
 // Línea separadora
@@ -336,30 +339,30 @@ $pdf->addSeparatorLine();
 $pdf->SetFont('Helvetica', 'B', 9);
 $pdf->Cell(135, 6, '', 0, 0, 'L');
 $pdf->Cell(36, 6, 'Subtotal:', 0, 0, 'R');
-$pdf->Cell(20, 6, '$' . number_format($totalSubtotal, 2), 0, 1, 'R');
+$pdf->Cell(20, 6, '$' . number_format($totalSubtotal, $decMoneda), 0, 1, 'R');
 
 $pdf->Cell(135, 6, '', 0, 0, 'L');
 $pdf->Cell(36, 6, 'Flete:', 0, 0, 'R');
-$pdf->Cell(20, 6, '$' . number_format($totalFlete, 2), 0, 1, 'R');
+$pdf->Cell(20, 6, '$' . number_format($totalFlete, $decMoneda), 0, 1, 'R');
 
 $pdf->Cell(135, 6, '', 0, 0, 'L');
 $pdf->Cell(36, 6, utf8_decode('Fumigación:'), 0, 0, 'R');
-$pdf->Cell(20, 6, '$' . number_format($totalFumigacion, 2), 0, 1, 'R');
+$pdf->Cell(20, 6, '$' . number_format($totalFumigacion, $decMoneda), 0, 1, 'R');
 
 $pdf->Cell(135, 6, '', 0, 0, 'L');
 $pdf->Cell(36, 6, 'Otros:', 0, 0, 'R');
-$pdf->Cell(20, 6, '$' . number_format($totalOtros, 2), 0, 1, 'R');
+$pdf->Cell(20, 6, '$' . number_format($totalOtros, $decMoneda), 0, 1, 'R');
 
 if ($tiene_iva == 1) {
     $pdf->Cell(135, 6, '', 0, 0, 'L');
     $pdf->Cell(36, 6, 'IVA (19%):', 0, 0, 'R');
-    $pdf->Cell(20, 6, '$' . number_format($iva, 2), 0, 1, 'R');
+    $pdf->Cell(20, 6, '$' . number_format($iva, $decMoneda), 0, 1, 'R');
 }
 
 $pdf->SetFont('Helvetica', 'B', 11);
 $pdf->Cell(135, 8, '', 0, 0, 'L');
 $pdf->Cell(36, 8, 'TOTAL:', 0, 0, 'R');
-$pdf->Cell(20, 8, '$' . number_format($totalFinal, 2), 0, 1, 'R');
+$pdf->Cell(20, 8, '$' . number_format($totalFinal, $decMoneda), 0, 1, 'R');
 
 $pdf->Ln(5);
 $pdf->SetFont('Helvetica', 'I', 8);

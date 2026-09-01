@@ -1,6 +1,6 @@
 // src/services/ayudantes/ayudantesService.js
-import { apiUrl } from '../../config/api.js';
-const API_URL = apiUrl('ayudantes');
+import { apiUrl } from "../../config/api.js";
+const API_URL = apiUrl("ayudantes");
 
 /**
  * Obtiene la lista de ayudantes con filtros
@@ -18,7 +18,7 @@ export async function getAyudantes(filtros = {}) {
     if (!res.ok) throw new Error(`Error HTTP: ${res.status}`);
 
     const data = await res.json();
-    
+
     if (!data.success) {
       throw new Error(data.message || "Error al obtener ayudantes");
     }
@@ -31,7 +31,7 @@ export async function getAyudantes(filtros = {}) {
       ayudantes: [],
       estadisticas: { total: 0, activos: 0, inactivos: 0 },
       total: 0,
-      message: err.message
+      message: err.message,
     };
   }
 }
@@ -52,7 +52,7 @@ export async function getAyudanteById(idAyudante) {
     if (!res.ok) throw new Error(`Error HTTP: ${res.status}`);
 
     const data = await res.json();
-    
+
     if (!data.success) {
       throw new Error(data.message || "Ayudante no encontrado");
     }
@@ -71,13 +71,14 @@ export async function guardarAyudante(ayudanteData) {
   try {
     const datosParaEnviar = {
       ...ayudanteData,
-      ACTIVO: ayudanteData.ACTIVO ? 1 : 0
+      ACTIVO: ayudanteData.ACTIVO ? 1 : 0,
     };
 
-    // Convertir NoCedula a número o null
-    if (datosParaEnviar.NoCedula !== undefined && datosParaEnviar.NoCedula !== '') {
-      datosParaEnviar.NoCedula = parseInt(datosParaEnviar.NoCedula);
-    } else {
+    // NoCedula se envía como string (puede contener / y -)
+    if (
+      datosParaEnviar.NoCedula === undefined ||
+      datosParaEnviar.NoCedula === ""
+    ) {
       datosParaEnviar.NoCedula = null;
     }
 
@@ -95,7 +96,7 @@ export async function guardarAyudante(ayudanteData) {
     }
 
     const data = await res.json();
-    
+
     if (!data.success) {
       throw new Error(data.message || "Error al guardar ayudante");
     }
@@ -103,9 +104,9 @@ export async function guardarAyudante(ayudanteData) {
     return data;
   } catch (err) {
     console.error("Error al guardar ayudante:", err);
-    
+
     let mensajeError = err.message;
-    
+
     if (err.message.includes("Ya existe un ayudante con ese nombre")) {
       mensajeError = "Ya existe un ayudante con ese nombre.";
     } else if (err.message.includes("Ya existe un ayudante con esa cédula")) {
@@ -115,7 +116,7 @@ export async function guardarAyudante(ayudanteData) {
     } else if (err.message.includes("Failed to fetch")) {
       mensajeError = "No se pudo conectar con el servidor.";
     }
-    
+
     throw new Error(mensajeError);
   }
 }
@@ -136,7 +137,7 @@ export async function eliminarAyudante(idAyudante) {
     if (!res.ok) throw new Error(`Error HTTP: ${res.status}`);
 
     const data = await res.json();
-    
+
     if (!data.success) {
       throw new Error(data.message || "Error al eliminar ayudante");
     }
@@ -151,9 +152,13 @@ export async function eliminarAyudante(idAyudante) {
 /**
  * Valida si un campo único ya existe
  */
-export async function validarCampoUnicoAyudante(campo, valor, idExcluir = null) {
+export async function validarCampoUnicoAyudante(
+  campo,
+  valor,
+  idExcluir = null,
+) {
   try {
-    if (!valor || valor === '' || !campo) {
+    if (!valor || valor === "" || !campo) {
       return false;
     }
 
@@ -162,21 +167,23 @@ export async function validarCampoUnicoAyudante(campo, valor, idExcluir = null) 
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ 
+      body: JSON.stringify({
         campo: campo,
         valor: campo === "NoCedula" ? parseInt(valor) : valor.trim(),
-        idExcluir: idExcluir || 0
+        idExcluir: idExcluir || 0,
       }),
     });
 
     if (!res.ok) {
-      console.warn("Error validando campo único, asumiendo válido:", res.status);
+      console.warn(
+        "Error validando campo único, asumiendo válido:",
+        res.status,
+      );
       return false;
     }
 
     const data = await res.json();
     return data.existe || false;
-    
   } catch (err) {
     console.error("Error al validar campo único:", err);
     return false;
@@ -199,27 +206,28 @@ export async function getEstadisticasAyudantes() {
     if (!res.ok) throw new Error(`Error HTTP: ${res.status}`);
 
     const data = await res.json();
-    
+
     if (data.success) {
-      return data.estadisticas || {
-        total: 0,
-        activos: 0,
-        inactivos: 0
-      };
+      return (
+        data.estadisticas || {
+          total: 0,
+          activos: 0,
+          inactivos: 0,
+        }
+      );
     }
-    
+
     return {
       total: 0,
       activos: 0,
-      inactivos: 0
+      inactivos: 0,
     };
-    
   } catch (err) {
     console.error("Error al obtener estadísticas:", err);
     return {
       total: 0,
       activos: 0,
-      inactivos: 0
+      inactivos: 0,
     };
   }
 }

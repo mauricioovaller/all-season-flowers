@@ -44,7 +44,7 @@ try {
             FROM SAS_EncabCompra ec
             INNER JOIN GEN_Proveedores p ON ec.IdProveedor = p.IdProveedor
             INNER JOIN GEN_Compradores c ON ec.IdComprador = c.IdComprador
-            WHERE ec.Anulado = 0"; // Solo compras no anuladas
+            WHERE 1=1"; // Se muestran también las anuladas (marcadas con badge)
     
     // Aplicar filtros
     $params = [];
@@ -70,7 +70,7 @@ try {
     }
     
     if (!empty($filtroFecha)) {
-        $sql .= " AND DATE(ec.FechaSolicitud) = ?";
+        $sql .= " AND DATE(ec.FechaEntrega) = ?";
         $params[] = $filtroFecha;
         $types .= "s";
     }

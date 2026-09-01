@@ -15,6 +15,62 @@
   animation: asf-float 5s ease-in-out infinite;
 }
 
+/* ══════════════════════════════════════════════════════════
+   SweetAlert2 – Botones siempre visibles
+   ══════════════════════════════════════════════════════════ */
+
+:root {
+  --swal2-confirm-button-background-color: #16a34a;
+  --swal2-confirm-button-color: #ffffff;
+  --swal2-confirm-button-border-radius: 0.5rem;
+  --swal2-deny-button-background-color: #ef4444;
+  --swal2-deny-button-color: #ffffff;
+  --swal2-deny-button-border-radius: 0.5rem;
+  --swal2-cancel-button-background-color: #64748b;
+  --swal2-cancel-button-color: #ffffff;
+  --swal2-cancel-button-border-radius: 0.5rem;
+}
+
+.swal2-actions {
+  gap: 0.75rem !important;
+}
+
+html body .swal2-popup .swal2-actions button.swal2-confirm.swal2-styled,
+html body .swal2-popup .swal2-actions button.swal2-deny.swal2-styled,
+html body .swal2-popup .swal2-actions button.swal2-cancel.swal2-styled {
+  font-weight: 600 !important;
+  padding: 0.6rem 1.6rem !important;
+  min-width: 6.5rem !important;
+  border-radius: 0.5rem !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  color: #ffffff !important;
+}
+
+html body .swal2-popup .swal2-actions button.swal2-confirm.swal2-styled {
+  background-color: #16a34a !important;
+  box-shadow: 0 2px 8px rgba(22, 163, 74, 0.45) !important;
+}
+html body .swal2-popup .swal2-actions button.swal2-confirm.swal2-styled:hover {
+  background-color: #15803d !important;
+}
+
+html body .swal2-popup .swal2-actions button.swal2-cancel.swal2-styled {
+  background-color: #64748b !important;
+  box-shadow: 0 2px 8px rgba(100, 116, 139, 0.4) !important;
+}
+html body .swal2-popup .swal2-actions button.swal2-cancel.swal2-styled:hover {
+  background-color: #475569 !important;
+}
+
+html body .swal2-popup .swal2-actions button.swal2-deny.swal2-styled {
+  background-color: #ef4444 !important;
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.45) !important;
+}
+html body .swal2-popup .swal2-actions button.swal2-deny.swal2-styled:hover {
+  background-color: #dc2626 !important;
+}
+
 @keyframes asf-gradient-shift {
   0%,  100% { background-position: 0%   50%; }
   50%       { background-position: 100% 50%; }

@@ -2,7 +2,7 @@
 import React, { useRef, useState, useEffect } from "react";
 import { CLIENTE } from "../../config/cliente.js";
 import Swal from "sweetalert2";
-import { Search, Save, Plus, Download, CreditCard } from 'lucide-react';
+import { Search, Save, Plus, Download, CreditCard, XCircle } from 'lucide-react';
 import PedidoHeader from "./PedidoHeader";
 import PedidoEmpaque from "./PedidoEmpaque";
 import ModalBuscarPedidos from "./ModalBuscarPedidos";
@@ -10,7 +10,7 @@ import ModalFactura from "./ModalFactura";
 import ModalPlanilla from "./ModalPlanilla";
 import ModalEtiqueta from "./ModalEtiqueta";
 import ModalFitosanitario from "./ModalFitosanitario";
-import { getDatosSelect, guardarPedidoCompleto, getPedidoEspecifico } from "../../services/pedidos/pedidosService";
+import { getDatosSelect, guardarPedidoCompleto, getPedidoEspecifico, razonSocialPorDefecto, anularPedido } from "../../services/pedidos/pedidosService";
 
 // Datos mock temporales - para fallback
 const datosMock = {
@@ -95,11 +95,13 @@ export default function Pedidos() {
   // --------------------------------------------------------------
   const [header, setHeader] = useState({
     noPedido: `PED-000000`,
+    idRazonSocial: "",
     cliente: "",
     ejecutivo: "",
     fechaSolicitud: todayISODate(),
     fechaEntrega: "",
     moneda: "USD",
+    monedaNombre: "",
     trm: "",
     poCodeEncab: "",
     observaciones: "",
@@ -110,6 +112,7 @@ export default function Pedidos() {
     agencia: "",
     puertoSalida: "",
     estadoPedido: "Pendiente",
+    anulado: false,
     noInvoice: "0",
     noEtiqueta: "0",
     noPlanilla: "0",
@@ -145,11 +148,13 @@ export default function Pedidos() {
     predios: [],
     conductores: [],
     ayudantes: [],
+    razonesSociales: [],
   });
 
   // Estados de carga inicial
   const [loadingDatos, setLoadingDatos] = useState(true);
   const [guardando, setGuardando] = useState(false);
+  const [anulando, setAnulando] = useState(false);
   const [menuCompacto, setMenuCompacto] = useState(false);
 
   // --------------------------------------------------------------
@@ -252,10 +257,11 @@ export default function Pedidos() {
             nombre: p.NombrePredio || ''
           })) || [],
 
-          // Conductores: IdConductor, NombreConductor
+          // Conductores: IdConductor, NombreConductor, Placas
           conductores: datosAPI.conductores?.map(c => ({
             id: c.IdConductor.toString(),
-            nombre: c.NombreConductor || ''
+            nombre: c.NombreConductor || '',
+            placas: c.Placas || ''
           })) || [],
 
           // Ayudantes: IdAyudante, NomAyudante
@@ -263,9 +269,24 @@ export default function Pedidos() {
             id: a.IdAyudante.toString(),
             nombre: a.NomAyudante || ''
           })) || [],
+
+          // Razones sociales ("Empresa Emisora"): IdRazonSocial, Nombre, PorDefecto
+          razonesSociales: datosAPI.razonesSociales?.map(r => ({
+            id: r.IdRazonSocial.toString(),
+            nombre: r.Nombre || '',
+            porDefecto: r.PorDefecto === 1 || r.PorDefecto === true
+          })) || [],
         };
 
         setDatosSelect(datosMapeados);
+
+        // Preseleccionar la razón social por defecto para pedidos nuevos
+        const razonSocialDefault = razonSocialPorDefecto(datosMapeados.razonesSociales);
+        setHeader(prev => ({
+          ...prev,
+          idRazonSocial: razonSocialDefault ? razonSocialDefault.id : ""
+        }));
+
         setLoadingDatos(false);
 
       } catch (err) {
@@ -512,6 +533,11 @@ export default function Pedidos() {
     if (!header.fechaSolicitud) errores.push("Fecha de solicitud es obligatoria");
     if (!header.fechaEntrega) errores.push("Fecha de entrega es obligatoria");
     if (!header.moneda) errores.push("Moneda es obligatoria");
+    // "Empresa Emisora" es obligatoria SOLO cuando la funcionalidad existe
+    // (cliente AllSeason). Para otros clientes el API devuelve lista vacía y no aplica.
+    if (datosSelect.razonesSociales.length > 0 && !header.idRazonSocial) {
+      errores.push("Empresa emisora es obligatoria");
+    }
 
     // TRM es obligatorio y mayor a 0
     const trmValue = parseFloat(header.trm);
@@ -675,6 +701,8 @@ export default function Pedidos() {
       PuertoSalida: header.puertoSalida || '',
       IVA: header.tieneIVA ? 1 : 0,
       Estado: "Pendiente",
+      // Razón social ("Empresa Emisora") — 0 si no aplica
+      IdRazonSocial: header.idRazonSocial ? parseInt(header.idRazonSocial) : 0,
       // Si no es nuevo, incluir el ID del pedido
       ...(header.noPedido !== "PED-000000" && {
         IdEncabPedido: parseInt(header.noPedido.replace("PED-", ""))
@@ -955,13 +983,16 @@ export default function Pedidos() {
       cancelButtonText: 'Cancelar'
     }).then((result) => {
       if (result.isConfirmed) {
+        const razonSocialDefault = razonSocialPorDefecto(datosSelect.razonesSociales);
         setHeader({
           noPedido: `PED-000000`,
+          idRazonSocial: razonSocialDefault ? razonSocialDefault.id : "",
           cliente: "",
           ejecutivo: "",
           fechaSolicitud: todayISODate(),
           fechaEntrega: "",
           moneda: "USD",
+          monedaNombre: "",
           trm: "",
           poCodeEncab: "",
           observaciones: "",
@@ -972,6 +1003,7 @@ export default function Pedidos() {
           agencia: "",
           puertoSalida: "",
           estadoPedido: "Pendiente",
+          anulado: false,
           noInvoice: "0",
           noEtiqueta: "0",
           noPlanilla: "0",
@@ -1089,13 +1121,18 @@ export default function Pedidos() {
         const headerData = datosPedido.header;
 
         // Primero establecer el encabezado básico
+        const razonSocialDefault = razonSocialPorDefecto(datosSelect.razonesSociales);
         const nuevoHeader = {
           noPedido: headerData.NumeroPedido || `PED-${String(headerData.IdEncabPedido).padStart(6, "0")}`,
+          idRazonSocial: headerData.IdRazonSocial
+            ? String(headerData.IdRazonSocial)
+            : (razonSocialDefault ? razonSocialDefault.id : ""),
           cliente: String(headerData.IdCliente),
           ejecutivo: String(headerData.IdEjecutivo),
           fechaSolicitud: headerData.FechaSolicitud || todayISODate(),
           fechaEntrega: headerData.FechaEntrega || "",
           moneda: String(headerData.IdMoneda),
+          monedaNombre: headerData.MonedaNombre || "",
           trm: String(headerData.TRM || ""),
           poCodeEncab: headerData.PO_Cliente || "",
           observaciones: headerData.Observaciones || "",
@@ -1106,6 +1143,7 @@ export default function Pedidos() {
           agencia: String(headerData.IdAgencia || ""),
           puertoSalida: headerData.PuertoSalida || "",
           estadoPedido: headerData.Estado || "Pendiente",
+          anulado: headerData.Anulado === 1,
           noInvoice: String(headerData.Factura || "0"),
           noEtiqueta: "0",
           noPlanilla: String(headerData.NoPlanilla || "0"),
@@ -1277,22 +1315,54 @@ export default function Pedidos() {
 
         setEmpaques(empaquesTransformados);
 
-        // 5. Mostrar mensaje de éxito con resumen
-        Swal.fire({
-          icon: 'success',
-          title: 'Pedido Cargado',
-          html: `
-          <div class="text-left">
-            <p><strong>Pedido:</strong> ${headerData.NumeroPedido || `PED-${headerData.IdEncabPedido}`}</p>
-            <p><strong>Empaques:</strong> ${empaquesTransformados.length}</p>
-            <p><strong>Piezas totales:</strong> ${totalPiezas}</p>
-            <p><strong>Fulles totales:</strong> ${totalFulles.toFixed(3)}</p>
-            <p><strong>Tallos totales:</strong> ${totalTallos}</p>
-            <p><strong>Valor total:</strong> $${valorVenta.toLocaleString()}</p>
-          </div>
-        `,
-          timer: 3000
-        });
+        // Si es duplicado, limpiar IDs para que se guarde como nuevo
+        if (pedido.duplicar) {
+          setHeader(prev => ({
+            ...prev,
+            noPedido: 'PED-000000',
+            noInvoice: '0',
+            noEtiqueta: '0',
+            noPlanilla: '0',
+            noFito: '0',
+            anulado: false,
+            estadoPedido: 'Pendiente',
+          }));
+          setDocumentos({
+            factura: { numero: '', fecha: '', generado: false },
+            planilla: { numero: '', fecha: '', generado: false },
+            etiqueta: { numero: '', fecha: '', generado: false },
+            fitosanitario: { numero: '', fecha: '', generado: false },
+          });
+          Swal.fire({
+            icon: 'info',
+            title: 'Pedido Duplicado',
+            html: `
+            <div class="text-left">
+              <p>Se ha duplicado el pedido como <strong>nuevo</strong>.</p>
+              <p>Modifique lo necesario y guárdelo.</p>
+              <p class="mt-2"><strong>Empaques:</strong> ${empaquesTransformados.length}</p>
+              <p><strong>Valor total:</strong> $${valorVenta.toLocaleString()}</p>
+            </div>
+          `,
+          });
+        } else {
+          // 5. Mostrar mensaje de éxito con resumen
+          Swal.fire({
+            icon: 'success',
+            title: 'Pedido Cargado',
+            html: `
+            <div class="text-left">
+              <p><strong>Pedido:</strong> ${headerData.NumeroPedido || `PED-${headerData.IdEncabPedido}`}</p>
+              <p><strong>Empaques:</strong> ${empaquesTransformados.length}</p>
+              <p><strong>Piezas totales:</strong> ${totalPiezas}</p>
+              <p><strong>Fulles totales:</strong> ${totalFulles.toFixed(3)}</p>
+              <p><strong>Tallos totales:</strong> ${totalTallos}</p>
+              <p><strong>Valor total:</strong> $${valorVenta.toLocaleString()}</p>
+            </div>
+          `,
+            timer: 3000
+          });
+        }
 
       } else {
         throw new Error(res.message || "Error al cargar el pedido");
@@ -1308,6 +1378,91 @@ export default function Pedidos() {
       setCargandoPedido(false);
     }
   };
+
+  // --------------------------------------------------------------
+  // Anular pedido (doble confirmación + motivo obligatorio)
+  // --------------------------------------------------------------
+  async function handleAnular() {
+    if (header.noPedido === "PED-000000") {
+      Swal.fire("Aviso", "No hay un pedido para anular", "info");
+      return;
+    }
+    if (header.anulado) {
+      Swal.fire("Aviso", "Este pedido ya está anulado", "info");
+      return;
+    }
+
+    // 1ª confirmación
+    const primera = await Swal.fire({
+      title: "¿Está seguro?",
+      html: `Va a anular el pedido <strong>${header.noPedido}</strong>.<br/>Esta acción es <strong>irreversible</strong> y afectará todos los procesos relacionados.`,
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#d33",
+      cancelButtonColor: "#3085d6",
+      confirmButtonText: "Sí, continuar",
+      cancelButtonText: "Cancelar",
+      reverseButtons: true,
+    });
+    if (!primera.isConfirmed) return;
+
+    // 2ª confirmación con motivo obligatorio
+    const segunda = await Swal.fire({
+      title: "Confirmación final",
+      html: '<input id="motivo-anulacion-pedido" class="swal2-input" placeholder="Motivo de la anulación (obligatorio)" maxlength="300" />',
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#d33",
+      cancelButtonColor: "#3085d6",
+      confirmButtonText: "Anular definitivamente",
+      cancelButtonText: "Cancelar",
+      reverseButtons: true,
+      preConfirm: () => {
+        const motivo = document.getElementById("motivo-anulacion-pedido").value.trim();
+        if (!motivo) {
+          Swal.showValidationMessage("Debe indicar el motivo de la anulación");
+          return false;
+        }
+        return motivo;
+      },
+    });
+    if (!segunda.isConfirmed) return;
+
+    const idPedido = parseInt(header.noPedido.replace("PED-", "")) || 0;
+    if (!idPedido) {
+      Swal.fire("Aviso", "No se pudo determinar el pedido a anular", "warning");
+      return;
+    }
+
+    setAnulando(true);
+    try {
+      Swal.fire({
+        title: "Anulando pedido...",
+        text: "Por favor espere",
+        allowOutsideClick: false,
+        didOpen: () => Swal.showLoading(),
+      });
+
+      const resultado = await anularPedido(idPedido, segunda.value);
+
+      if (resultado.success) {
+        Swal.fire({
+          icon: "success",
+          title: "¡Anulado!",
+          text: resultado.message,
+          timer: 2000,
+          showConfirmButton: false,
+        });
+        setHeader(prev => ({ ...prev, anulado: true, estadoPedido: "Anulado" }));
+      } else {
+        throw new Error(resultado.message || "Error al anular el pedido");
+      }
+    } catch (err) {
+      Swal.fire("Error", err.message || "No se pudo anular el pedido", "error");
+    } finally {
+      setAnulando(false);
+    }
+  }
 
   // --------------------------------------------------------------
   // Renderizado
@@ -1362,9 +1517,9 @@ export default function Pedidos() {
             </button>
             <button
               onClick={handleSave}
-              disabled={guardando}
+              disabled={guardando || header.anulado}
               className={`flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 transition-all duration-200 font-semibold text-sm flex-1 min-w-[85px] ${
-                guardando
+                guardando || header.anulado
                   ? 'bg-slate-700 text-slate-500 cursor-not-allowed'
                   : 'bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-500 hover:to-green-500 text-white shadow-md shadow-green-900/40'
               }`}
@@ -1394,11 +1549,34 @@ export default function Pedidos() {
               <Download className="w-4 h-4 flex-shrink-0" />
               <span>Excel</span>
             </button>
+            <button
+              onClick={handleAnular}
+              disabled={header.noPedido === "PED-000000" || header.anulado || anulando}
+              title={header.anulado ? "Este pedido ya está anulado" : "Anular el pedido"}
+              className={`flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 transition-all duration-200 font-semibold text-sm flex-1 min-w-[85px] ${
+                header.noPedido !== "PED-000000" && !header.anulado
+                  ? 'bg-gradient-to-r from-red-600 to-rose-700 hover:from-red-500 hover:to-rose-600 text-white shadow-md shadow-red-900/40'
+                  : 'bg-slate-700 text-slate-500 cursor-not-allowed'
+              }`}
+            >
+              {anulando ? (
+                <><div className="animate-spin rounded-full h-3.5 w-3.5 border-b-2 border-slate-400 flex-shrink-0" /><span>Anulando...</span></>
+              ) : (
+                <><XCircle className="w-4 h-4 flex-shrink-0" /><span>{header.anulado ? "Anulado" : "Anular"}</span></>
+              )}
+            </button>
           </div>
         </div>
       </div>
 
+      {header.anulado && (
+        <div className="flex items-center gap-2 bg-red-600/15 border border-red-500/40 text-red-300 rounded-xl px-4 py-3 text-sm font-semibold">
+          ⛔ Este pedido está <strong>ANULADO</strong> y no puede modificarse. Solo lectura.
+        </div>
+      )}
+
       {/* Encabezado del pedido */}
+      <fieldset disabled={header.anulado} className="min-w-0 border-0 p-0 m-0">
       <PedidoHeader
         header={header}
         onChange={handleHeaderChange}
@@ -1407,6 +1585,7 @@ export default function Pedidos() {
         monedas={datosSelect.monedas}
         aerolineas={datosSelect.aerolineas}
         agencias={datosSelect.agencias}
+        razonesSociales={datosSelect.razonesSociales}
         inputRefs={headerRefs}
       />
 
@@ -1573,7 +1752,9 @@ export default function Pedidos() {
         tiposEmpaque={datosSelect.tiposEmpaque}
         unidadesFacturacion={datosSelect.unidadesFacturacion}
         predios={datosSelect.predios}
+        monedaNombre={header.monedaNombre}
       />
+      </fieldset>
 
       {/* Información adicional - COMPACTA */}
       <div className="bg-white rounded-lg md:rounded-xl shadow-sm md:shadow-md p-3 md:p-4">

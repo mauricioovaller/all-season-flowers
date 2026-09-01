@@ -8,6 +8,7 @@ const ModalBuscarPagosClientes = ({ isOpen, onClose, onSeleccionarPago }) => {
   const [filtros, setFiltros] = useState({
     numeroPago: "",
     idCliente: "",
+    numeroFactura: "",
     fechaDesde: "",
     fechaHasta: "",
     idMedioPago: ""

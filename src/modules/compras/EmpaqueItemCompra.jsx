@@ -2,11 +2,13 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { getVariedadesYGrados } from "../../services/compras/comprasService";
 
-function formatCurrency(v) {
+function formatCurrency(v, isUSD = false) {
+  const dec = isUSD ? 3 : 0;
   return new Intl.NumberFormat("es-CO", {
     style: "currency",
-    currency: "COP",
-    minimumFractionDigits: 0,
+    currency: isUSD ? "USD" : "COP",
+    minimumFractionDigits: dec,
+    maximumFractionDigits: dec,
   }).format(v || 0);
 }
 
@@ -20,7 +22,9 @@ export default function EmpaqueItemCompra({
   predios = [],
   cantidadEmpaque = 1,
   estaExpandido: empaqueExpandido,
+  monedaNombre = '',
 }) {
+  const esUSD = monedaNombre && /d[oó]lar/i.test(monedaNombre);
   const [variedadesPorProducto, setVariedadesPorProducto] = useState({});
   const [gradosPorProducto, setGradosPorProducto] = useState({});
   const [cargandoVariedades, setCargandoVariedades] = useState({});
@@ -457,7 +461,7 @@ export default function EmpaqueItemCompra({
           <div className="text-xs">
             <span className="font-medium">
               {items.reduce((sum, item) => sum + (item.totTallosRegistro || 0), 0)} tallos •{" "}
-              {formatCurrency(items.reduce((sum, item) => sum + (item.valorRegistro || 0), 0))}
+              {formatCurrency(items.reduce((sum, item) => sum + (item.valorRegistro || 0), 0), esUSD)}
             </span>
           </div>
         </div>
@@ -529,7 +533,7 @@ export default function EmpaqueItemCompra({
                   <div className="flex items-center gap-2 flex-shrink-0">
                     <div className="text-right">
                       <div className="text-xs font-medium">{item.totTallosRegistro || 0} tallos</div>
-                      <div className="text-xs font-bold text-green-600">{formatCurrency(item.valorRegistro || 0)}</div>
+                      <div className="text-xs font-bold text-green-600">{formatCurrency(item.valorRegistro || 0, esUSD)}</div>
                     </div>
                     <button
                       type="button"
@@ -811,7 +815,7 @@ export default function EmpaqueItemCompra({
                     </div>
                     <div className="text-center">
                       <div className="text-gray-600">Valor Total</div>
-                      <div className="font-medium text-green-600">{formatCurrency(item.valorRegistro || 0)}</div>
+                      <div className="font-medium text-green-600">{formatCurrency(item.valorRegistro || 0, esUSD)}</div>
                     </div>
                   </div>
                 </div>

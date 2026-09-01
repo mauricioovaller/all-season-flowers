@@ -1,6 +1,6 @@
 // src/services/compras/comprasService.js
-import { apiUrl } from '../../config/api.js';
-const API_URL = apiUrl('compras');
+import { apiUrl } from "../../config/api.js";
+const API_URL = apiUrl("compras");
 
 /**
  * Obtiene datos para los selects del formulario de compras
@@ -28,16 +28,13 @@ export async function getDatosSelectCompras() {
  */
 export async function getVariedadesYGrados(idProducto) {
   try {
-    const res = await fetch(
-      `${apiUrl('pedidos')}/ApiGetSelecVariedGrado.php`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ idProducto }),
+    const res = await fetch(`${apiUrl("pedidos")}/ApiGetSelecVariedGrado.php`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
       },
-    );
+      body: JSON.stringify({ idProducto }),
+    });
 
     if (!res.ok) {
       throw new Error(`Error HTTP: ${res.status}`);
@@ -142,14 +139,48 @@ export async function getCompraEspecifica(idCompra) {
 }
 
 /**
+ * Anular una compra (marca Anulado = 1 en encabezado y detalles)
+ * @param {number} idCompra - ID de la compra
+ * @param {string} motivo - Motivo de la anulación (obligatorio)
+ * @returns {Promise<Object>} { success, message }
+ */
+export async function anularCompra(idCompra, motivo) {
+  try {
+    const res = await fetch(`${API_URL}/ApiAnularCompra.php`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ idCompra, motivo }),
+    });
+
+    const data = await res.json().catch(() => null);
+
+    if (!res.ok) {
+      throw new Error((data && data.message) || `Error HTTP: ${res.status}`);
+    }
+
+    return data;
+  } catch (err) {
+    console.error("Error al anular compra:", err);
+    throw err;
+  }
+}
+
+/**
  * Genera el PDF de orden de compra
  * VERSIÓN SIMPLIFICADA - Retorna blob para usar en ModalVisorPreliminar
  * @param {number} idCompra - ID de la compra
  * @returns {Promise<Blob>} PDF como blob
  */
-export async function generarPDFOrdenCompra(idCompra) {
+export async function generarPDFOrdenCompra(idCompra, conPrecio = true) {
   try {
-    console.log("Generando PDF de orden de compra para ID:", idCompra);
+    console.log(
+      "Generando PDF de orden de compra para ID:",
+      idCompra,
+      "| Con precio:",
+      conPrecio,
+    );
 
     const res = await fetch(`${API_URL}/ApiGenerarPDFOrdenCompra.php`, {
       method: "POST",
@@ -158,6 +189,7 @@ export async function generarPDFOrdenCompra(idCompra) {
       },
       body: JSON.stringify({
         numeroOrdenCompra: idCompra,
+        conPrecio: conPrecio,
       }),
     });
 

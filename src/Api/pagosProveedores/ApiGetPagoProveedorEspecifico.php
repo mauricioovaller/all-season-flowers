@@ -87,40 +87,57 @@ try {
 
     $stmtEnc->close();
 
-    // Obtener compras del pago (sistema nuevo: SAS_DetPagoProveedor)
-    $queryComprasNuevo = "
+    // Obtener compras del pago (actuales + legacy)
+    $queryCompras = "
         SELECT
             dpp.IdDetPagoProveedor,
             dpp.IdEncabCompra as idCompra,
             dpp.ValorPago as valorPago,
-            CONCAT('COMP-', LPAD(ec.IdEncabCompra, 6, '0')) as numeroCompraFormateado,
-            ec.FechaEntrega as fechaCompra,
-            ec.IdMoneda as idMoneda,
-            m.Moneda as moneda,
-            ec.TRM as trm,
-            COALESCE((SELECT SUM(dc.Tallos_Ramo * dc.Ramos_Caja * dc.Precio_Compra)
-                      FROM SAS_DetProductoCompra dc
-                      WHERE dc.IdEncabCompra = ec.IdEncabCompra), 0) as totalCompra,
-            COALESCE((SELECT SUM(dc2.TallosDevolucion * dc2.Precio_Compra)
-                      FROM SAS_DetProductoCompra dc2
-                      WHERE dc2.IdEncabCompra = ec.IdEncabCompra
-                      AND dc2.TallosDevolucion > 0), 0) as totalDevolucion,
-            COALESCE((SELECT SUM(dpp2.ValorPago)
-                      FROM SAS_DetPagoProveedor dpp2
-                      INNER JOIN SAS_EncabPagoProveedor epp2 ON dpp2.IdEncabPagoProveedor = epp2.IdEncabPagoProveedor
-                      WHERE dpp2.IdEncabCompra = ec.IdEncabCompra
-                      AND dpp2.Anulado = 0
-                      AND epp2.Anulado = 0
-                      AND dpp2.IdEncabPagoProveedor != ?), 0) as otrosPagos
+            COALESCE(
+                CONCAT('COMP-', LPAD(ec.IdEncabCompra, 6, '0')),
+                CONCAT('LEG-', (SELECT leg.NumeroDocumento FROM SAS_LegacyMovimientos leg WHERE leg.Tipo='P' AND leg.IdLegacyMovimiento = ABS(dpp.IdEncabCompra) LIMIT 1))
+            ) as numeroCompraFormateado,
+            COALESCE(ec.FechaEntrega,
+                (SELECT leg.Fecha FROM SAS_LegacyMovimientos leg WHERE leg.Tipo='P' AND leg.IdLegacyMovimiento = ABS(dpp.IdEncabCompra) LIMIT 1)
+            ) as fechaCompra,
+            COALESCE(ec.IdMoneda,
+                (SELECT leg.IdMoneda FROM SAS_LegacyMovimientos leg WHERE leg.Tipo='P' AND leg.IdLegacyMovimiento = ABS(dpp.IdEncabCompra) LIMIT 1)
+            ) as idMoneda,
+            COALESCE(m.Moneda,
+                (SELECT m2.Moneda FROM SAS_LegacyMovimientos leg2 LEFT JOIN GEN_Monedas m2 ON leg2.IdMoneda = m2.IdMoneda WHERE leg2.Tipo='P' AND leg2.IdLegacyMovimiento = ABS(dpp.IdEncabCompra) LIMIT 1)
+            ) as moneda,
+            COALESCE(ec.TRM,
+                (SELECT leg.TRM FROM SAS_LegacyMovimientos leg WHERE leg.Tipo='P' AND leg.IdLegacyMovimiento = ABS(dpp.IdEncabCompra) LIMIT 1)
+            ) as trm,
+            COALESCE(
+                (SELECT SUM(dc.Tallos_Ramo * dc.Ramos_Caja * dc.Precio_Compra)
+                 FROM SAS_DetProductoCompra dc WHERE dc.IdEncabCompra = ec.IdEncabCompra),
+                (SELECT leg.Valor FROM SAS_LegacyMovimientos leg WHERE leg.Tipo='P' AND leg.IdLegacyMovimiento = ABS(dpp.IdEncabCompra) LIMIT 1)
+            ) as totalCompra,
+            COALESCE(
+                (SELECT SUM(dc2.TallosDevolucion * dc2.Precio_Compra)
+                 FROM SAS_DetProductoCompra dc2
+                 WHERE dc2.IdEncabCompra = ec.IdEncabCompra AND dc2.TallosDevolucion > 0),
+                (SELECT leg.Credito FROM SAS_LegacyMovimientos leg WHERE leg.Tipo='P' AND leg.IdLegacyMovimiento = ABS(dpp.IdEncabCompra) LIMIT 1)
+            ) as totalDevolucion,
+            COALESCE(
+                (SELECT SUM(dpp2.ValorPago)
+                 FROM SAS_DetPagoProveedor dpp2
+                 INNER JOIN SAS_EncabPagoProveedor epp2 ON dpp2.IdEncabPagoProveedor = epp2.IdEncabPagoProveedor
+                 WHERE dpp2.IdEncabCompra = ec.IdEncabCompra
+                 AND dpp2.Anulado = 0 AND epp2.Anulado = 0
+                 AND dpp2.IdEncabPagoProveedor != ?), 0
+            ) as otrosPagos,
+            CASE WHEN ec.IdEncabCompra IS NULL THEN 1 ELSE 0 END as esLegacy
         FROM SAS_DetPagoProveedor dpp
-        INNER JOIN SAS_EncabCompra ec ON dpp.IdEncabCompra = ec.IdEncabCompra
+        LEFT JOIN SAS_EncabCompra ec ON dpp.IdEncabCompra = ec.IdEncabCompra
         LEFT JOIN GEN_Monedas m ON ec.IdMoneda = m.IdMoneda
         WHERE dpp.IdEncabPagoProveedor = ?
         AND dpp.Anulado = 0
         ORDER BY dpp.IdDetPagoProveedor
     ";
 
-    $stmtDet = $enlace->prepare($queryComprasNuevo);
+    $stmtDet = $enlace->prepare($queryCompras);
     if (!$stmtDet) {
         throw new Exception("Error preparando consulta de compras: " . $enlace->error);
     }
@@ -128,7 +145,6 @@ try {
     $stmtDet->bind_param("ii", $idPagoProveedor, $idPagoProveedor);
     $stmtDet->execute();
 
-    // Vincular resultados de compras
     $stmtDet->bind_result(
         $detIdDetPago,
         $detIdCompra,
@@ -140,12 +156,12 @@ try {
         $detTRM,
         $detTotalCompra,
         $detTotalDevolucion,
-        $detOtrosPagos
+        $detOtrosPagos,
+        $detEsLegacy
     );
 
     $compras = [];
 
-    // Obtener resultados de compras
     while ($stmtDet->fetch()) {
         $totalCompra   = floatval($detTotalCompra);
         $totalDevol    = floatval($detTotalDevolucion);
@@ -153,16 +169,17 @@ try {
         $saldoCompra   = $totalCompra - $totalDevol - $otrosPagos;
 
         $compras[] = [
-            'idDetPagoProveedor'    => intval($detIdDetPago),
-            'idCompra'              => intval($detIdCompra),
-            'numeroCompraFormateado' => $detNumeroCompra,
-            'fechaCompra'           => $detFechaCompra,
-            'idMoneda'              => intval($detIdMoneda),
-            'moneda'                => $detMoneda,
-            'trm'                   => floatval($detTRM),
-            'totalCompra'           => $totalCompra,
-            'saldoCompra'           => max(0, $saldoCompra),
-            'valorPago'             => floatval($detValorPago)
+            'idDetPagoProveedor'     => intval($detIdDetPago),
+            'idCompra'               => intval($detIdCompra),
+            'numeroCompraFormateado'  => $detNumeroCompra,
+            'fechaCompra'            => $detFechaCompra,
+            'idMoneda'               => intval($detIdMoneda),
+            'moneda'                 => $detMoneda,
+            'trm'                    => floatval($detTRM),
+            'totalCompra'            => $totalCompra,
+            'saldoCompra'            => max(0, $saldoCompra),
+            'valorPago'              => floatval($detValorPago),
+            'esLegacy'               => (bool)$detEsLegacy
         ];
     }
     $stmtDet->close();

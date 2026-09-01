@@ -36,6 +36,8 @@ const MODULES = [
   { id: 'estado-cuenta-clientes',    label: 'Cuenta Clientes',        cat: 'Informes',   Icon: FileText,        catColor: 'text-amber-400 bg-amber-400/10'     },
   { id: 'consolidados-ventas',       label: 'Consolidados Ventas',    cat: 'Informes',   Icon: BarChart3,       catColor: 'text-amber-400 bg-amber-400/10'     },
   { id: 'consolidados-compras',      label: 'Consolidados Compras',   cat: 'Informes',   Icon: BarChart3,       catColor: 'text-amber-400 bg-amber-400/10'     },
+  { id: 'consolidados-devoluciones-clientes', label: 'Consolidados Dev. Clientes', cat: 'Informes', Icon: BarChart3, catColor: 'text-amber-400 bg-amber-400/10' },
+  { id: 'consolidados-devoluciones-proveedores', label: 'Consolidados Dev. Proveedores', cat: 'Informes', Icon: BarChart3, catColor: 'text-amber-400 bg-amber-400/10' },
   { id: 'exportacion-contable',      label: 'Exportación Contable',   cat: 'Informes',   Icon: Download,        catColor: 'text-amber-400 bg-amber-400/10'     },
   { id: 'tablero-control',           label: 'Tablero de Control',     cat: 'Informes',   Icon: LayoutDashboard, catColor: 'text-amber-400 bg-amber-400/10'     },
   { id: 'inventario',                label: 'Inventarios',            cat: 'Informes',   Icon: ClipboardList,   catColor: 'text-amber-400 bg-amber-400/10'     },

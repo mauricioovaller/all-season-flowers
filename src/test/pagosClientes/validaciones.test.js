@@ -6,6 +6,8 @@ import { describe, it, expect } from "vitest";
 import {
   validarPagoCliente,
   calcularTotalesPago,
+  prorratearCostoTransferencia,
+  calcularNetoRecibido,
 } from "../../services/pagosClientes/pagosClientesService";
 
 // ─── Datos de base reutilizables ────────────────────────────────────────────
@@ -158,5 +160,57 @@ describe("validarPagoCliente — validaciones de facturas", () => {
     const resultado = validarPagoCliente(headerValido, facturas);
     expect(resultado.valido).toBe(true);
     expect(resultado.errores).toHaveLength(0);
+  });
+});
+
+// ─── prorratearCostoTransferencia / calcularNetoRecibido ─────────────────────
+
+describe("prorratearCostoTransferencia", () => {
+  it("retorna ceros cuando no hay facturas", () => {
+    expect(prorratearCostoTransferencia([], 500)).toEqual([]);
+  });
+
+  it("prorratea proporcionalmente y la suma coincide con el costo total", () => {
+    const facturas = [
+      { valorPago: 100 },
+      { valorPago: 300 },
+      { valorPago: 600 },
+    ];
+    const prorrateos = prorratearCostoTransferencia(facturas, 50);
+    // 100/1000, 300/1000, 600/1000 → 5, 15, 30
+    expect(prorrateos).toEqual([5, 15, 30]);
+    const suma = prorrateos.reduce((a, b) => a + b, 0);
+    expect(suma).toBe(50);
+  });
+
+  it("asigna todo el costo si hay una sola factura", () => {
+    expect(prorratearCostoTransferencia([{ valorPago: 500 }], 100)).toEqual([100]);
+  });
+
+  it("protege la división por cero cuando el total es 0", () => {
+    expect(prorratearCostoTransferencia([{ valorPago: 0 }], 100)).toEqual([0]);
+  });
+
+  it("trata el costo no numérico como 0", () => {
+    expect(prorratearCostoTransferencia([{ valorPago: 100 }], "abc")).toEqual([0]);
+  });
+});
+
+describe("calcularNetoRecibido", () => {
+  it("resta el costo prorrateado del valor pagado", () => {
+    const facturas = [{ valorPago: 100 }, { valorPago: 300 }];
+    // total 400, costo 40 → prorrateos [10, 30]
+    expect(calcularNetoRecibido(facturas, 40)).toEqual([90, 270]);
+  });
+
+  it("suma de netos = valor total − costo", () => {
+    const facturas = [{ valorPago: 100 }, { valorPago: 300 }, { valorPago: 600 }];
+    const netos = calcularNetoRecibido(facturas, 50);
+    const suma = netos.reduce((a, b) => a + b, 0);
+    expect(suma).toBe(950); // 1000 − 50
+  });
+
+  it("sin costo devuelve el valor pagado", () => {
+    expect(calcularNetoRecibido([{ valorPago: 250 }, { valorPago: 250 }], 0)).toEqual([250, 250]);
   });
 });

@@ -135,7 +135,8 @@ const ModalSeleccionarFacturas = ({
       return {
         idFactura,
         invoice: factura?.numeroFactura, // Número comercial de factura (ep.Factura), NO IdEncabPedido
-        numeroFactura: factura?.numeroFactura || factura?.numeroFacturaFormateado || idFactura,
+          numeroFactura: factura?.numeroFactura || factura?.numeroFacturaFormateado || idFactura,
+          esLegacy: factura?.esLegacy || false,
         fechaFactura: factura?.fechaFactura,
         totalFactura: factura?.valorFactura || 0,
         saldoFactura: factura?.saldoPendiente || 0,
@@ -253,6 +254,11 @@ const ModalSeleccionarFacturas = ({
                             <div>
                               <p className="font-medium text-gray-800">
                                 {factura.numeroFacturaFormateado || factura.numeroFactura || factura.idFactura}
+                                {factura.esLegacy && (
+                                  <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-800">
+                                    Legacy
+                                  </span>
+                                )}
                               </p>
                               <p className="text-sm text-gray-600">
                                 Fecha: {factura.fechaFactura}

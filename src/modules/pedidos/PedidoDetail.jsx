@@ -2,11 +2,13 @@
 import React, { useEffect, useState } from "react";
 import { getVariedadesYGrados } from "../../services/pedidos/pedidosService";
 
-function formatCurrency(v) {
+function formatCurrency(v, isUSD = false) {
+  const dec = isUSD ? 3 : 0;
   return new Intl.NumberFormat("es-CO", {
     style: "currency",
-    currency: "COP",
-    minimumFractionDigits: 0,
+    currency: isUSD ? "USD" : "COP",
+    minimumFractionDigits: dec,
+    maximumFractionDigits: dec,
   }).format(v || 0);
 }
 
@@ -18,7 +20,9 @@ export default function PedidoDetail({
   unidadesFacturacion = [],
   predios = [],
   itemRefsRef,
+  monedaNombre = '',
 }) {
+  const esUSD = monedaNombre && /d[oó]lar/i.test(monedaNombre);
   // Estado local para variedades y grados por producto
   const [variedadesPorProducto, setVariedadesPorProducto] = useState({});
   const [gradosPorProducto, setGradosPorProducto] = useState({});
@@ -271,7 +275,7 @@ export default function PedidoDetail({
         </div>
         <div className="text-center">
           <div className="text-xs text-gray-600 font-medium">Total Valor</div>
-          <div className="text-lg font-bold text-green-600">{formatCurrency(totalValor)}</div>
+          <div className="text-lg font-bold text-green-600">{formatCurrency(totalValor, esUSD)}</div>
         </div>
       </div>
 
@@ -460,7 +464,7 @@ export default function PedidoDetail({
 
                   {/* Valor Registro (readonly) */}
                   <td className="p-2 text-right text-green-600 font-medium">
-                    {formatCurrency(it.valorRegistro || 0)}
+{formatCurrency(it.valorRegistro || 0, esUSD)}
                   </td>
 
                   {/* Predio */}

@@ -8,14 +8,12 @@ import {
 } from "../../services/ayudantes/ayudantesService";
 
 function mockFetch(body, ok = true, status = 200) {
-  return vi
-    .fn()
-    .mockResolvedValue({
-      ok,
-      status,
-      json: async () => body,
-      text: async () => JSON.stringify(body),
-    });
+  return vi.fn().mockResolvedValue({
+    ok,
+    status,
+    json: async () => body,
+    text: async () => JSON.stringify(body),
+  });
 }
 
 afterEach(() => vi.unstubAllGlobals());
@@ -78,7 +76,7 @@ describe("guardarAyudante — normalización de datos", () => {
     expect(body.NoCedula).toBeNull();
   });
 
-  it("convierte NoCedula string a número entero", async () => {
+  it("mantiene NoCedula como string (permite separadores / y -)", async () => {
     vi.stubGlobal("fetch", mockFetch({ success: true }));
     await guardarAyudante({
       NOMBRE: "Test",
@@ -86,7 +84,7 @@ describe("guardarAyudante — normalización de datos", () => {
       NoCedula: "98765432",
     });
     const body = JSON.parse(fetch.mock.calls[0][1].body);
-    expect(body.NoCedula).toBe(98765432);
+    expect(body.NoCedula).toBe("98765432");
   });
 });
 

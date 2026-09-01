@@ -6,6 +6,7 @@ import {
   getCompraEspecifica,
   formatearNumeroCompra,
   getVariedadesYGrados,
+  anularCompra,
 } from "../../services/compras/comprasService";
 
 function mockFetch(body, ok = true, status = 200) {
@@ -141,5 +142,51 @@ describe("getVariedadesYGrados (compras)", () => {
     const res = await getVariedadesYGrados(1);
     expect(res.variedades).toEqual([]);
     expect(res.grados).toEqual([]);
+  });
+});
+
+// ─── anularCompra ────────────────────────────────────────────────────────────
+
+describe("anularCompra", () => {
+  it("retorna éxito y envía idCompra + motivo al endpoint correcto", async () => {
+    const respuesta = {
+      success: true,
+      message: "Compra anulada correctamente",
+      idEncabCompra: 7,
+    };
+    const fetchMock = mockFetch(respuesta);
+    vi.stubGlobal("fetch", fetchMock);
+
+    const res = await anularCompra(7, "Compra duplicada");
+
+    expect(res.success).toBe(true);
+    expect(res.idEncabCompra).toBe(7);
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining("ApiAnularCompra.php"),
+      expect.objectContaining({ method: "POST" }),
+    );
+    const body = JSON.parse(fetchMock.mock.calls[0][1].body);
+    expect(body.idCompra).toBe(7);
+    expect(body.motivo).toBe("Compra duplicada");
+  });
+
+  it("propaga el mensaje de negocio cuando la API rechaza con HTTP 400", async () => {
+    vi.stubGlobal(
+      "fetch",
+      mockFetch(
+        {
+          success: false,
+          message: "No se puede anular: la compra tiene pagos a proveedores asociados",
+        },
+        false,
+        400,
+      ),
+    );
+    await expect(anularCompra(1, "motivo")).rejects.toThrow("tiene pagos");
+  });
+
+  it("lanza excepción ante error de red", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("Network")));
+    await expect(anularCompra(1, "motivo")).rejects.toThrow("Network");
   });
 });

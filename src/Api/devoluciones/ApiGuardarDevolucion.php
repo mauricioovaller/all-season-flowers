@@ -38,6 +38,22 @@ if (!$idFactura || empty($fechaDevolucion) || empty($detalles)) {
 $enlace->begin_transaction();
 
 try {
+    // 0. Guard: no permitir devoluciones sobre pedidos anulados
+    $sqlGuard = "SELECT Anulado FROM SAS_EncabPedido WHERE IdEncabPedido = ?";
+    $stmtGuard = $enlace->prepare($sqlGuard);
+    if (!$stmtGuard) {
+        throw new Exception("Error preparando consulta de validación: " . $enlace->error);
+    }
+    $stmtGuard->bind_param("i", $idFactura);
+    $stmtGuard->execute();
+    $stmtGuard->bind_result($anuladoPedido);
+    $stmtGuard->fetch();
+    $stmtGuard->close();
+
+    if ($anuladoPedido == 1) {
+        throw new Exception("No se puede registrar la devolución: el pedido está anulado");
+    }
+
     // 1. Verificar si la factura ya tiene un IdDevolucion asignado
     $sqlCheck = "SELECT IdDevolucion FROM SAS_EncabPedido WHERE IdEncabPedido = ?";
     $stmtCheck = $enlace->prepare($sqlCheck);

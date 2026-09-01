@@ -77,18 +77,26 @@ try {
 
     $stmtEnc->close();
 
-    // Obtener compras del pago desde SAS_DetPagoProveedor
+    $esUSD = mb_stripos($encMoneda, 'dólar') !== false;
+    $decMoneda = $esUSD ? 3 : 2;
+
+    // Obtener compras del pago (actuales + legacy)
     $queryCompras = "
         SELECT
             dpp.IdEncabCompra as idCompra,
             dpp.ValorPago as valorPago,
-            CONCAT('COMP-', LPAD(ec.IdEncabCompra, 6, '0')) as numeroCompra,
-            ec.FechaEntrega as fechaCompra,
+            COALESCE(
+                CONCAT('COMP-', LPAD(ec.IdEncabCompra, 6, '0')),
+                CONCAT('LEG-', (SELECT leg.NumeroDocumento FROM SAS_LegacyMovimientos leg WHERE leg.Tipo='P' AND leg.IdLegacyMovimiento = ABS(dpp.IdEncabCompra) LIMIT 1))
+            ) as numeroCompra,
+            COALESCE(ec.FechaEntrega,
+                (SELECT leg.Fecha FROM SAS_LegacyMovimientos leg WHERE leg.Tipo='P' AND leg.IdLegacyMovimiento = ABS(dpp.IdEncabCompra) LIMIT 1)
+            ) as fechaCompra,
             COALESCE((
                 SELECT SUM(dc.Tallos_Ramo * dc.Ramos_Caja * dc.Precio_Compra)
                 FROM SAS_DetProductoCompra dc
                 WHERE dc.IdEncabCompra = ec.IdEncabCompra
-            ), 0) as totalCompra,
+            ), (SELECT leg.Valor FROM SAS_LegacyMovimientos leg WHERE leg.Tipo='P' AND leg.IdLegacyMovimiento = ABS(dpp.IdEncabCompra) LIMIT 1)) as totalCompra,
             COALESCE((
                 SELECT SUM(dc2.TallosDevolucion * dc2.Precio_Compra)
                 FROM SAS_DetProductoCompra dc2
@@ -96,7 +104,7 @@ try {
                 AND dc2.TallosDevolucion > 0
             ), 0) as totalDevolucion
         FROM SAS_DetPagoProveedor dpp
-        INNER JOIN SAS_EncabCompra ec ON dpp.IdEncabCompra = ec.IdEncabCompra
+        LEFT JOIN SAS_EncabCompra ec ON dpp.IdEncabCompra = ec.IdEncabCompra
         WHERE dpp.IdEncabPagoProveedor = ?
         AND dpp.Anulado = 0
         ORDER BY dpp.IdDetPagoProveedor
@@ -208,9 +216,6 @@ try {
     $pdf->Cell($etW, 6, utf8_decode('Moneda:'), 0, 0, 'L');
     $pdf->Cell($valW, 6, utf8_decode($encMoneda), 0, 1, 'L');
 
-    $pdf->Cell($etW, 6, utf8_decode('TRM:'), 0, 0, 'L');
-    $pdf->Cell($valW, 6, '$' . number_format(floatval($encTRM), 2), 0, 1, 'L');
-
     if (!empty($encObservaciones)) {
         $pdf->Cell($etW, 6, utf8_decode('Observaciones:'), 0, 0, 'L');
         $pdf->Cell($valW, 6, utf8_decode($encObservaciones), 0, 1, 'L');
@@ -225,11 +230,10 @@ try {
     $pdf->Ln(2);
 
     // Anchos de columna (total usable ~188mm)
-    $cCompra  = 38;
-    $cFecha   = 32;
-    $cTotal   = 38;
-    $cDevol   = 38;
-    $cPagado  = 42;
+    $cCompra  = 44;
+    $cFecha   = 44;
+    $cTotal   = 50;
+    $cPagado  = 50;
 
     // Encabezados de tabla
     $pdf->SetFont('Helvetica', 'B', 9);
@@ -237,7 +241,6 @@ try {
     $pdf->Cell($cCompra,  7, utf8_decode('No. Compra'),   1, 0, 'C', true);
     $pdf->Cell($cFecha,   7, utf8_decode('Fecha'),        1, 0, 'C', true);
     $pdf->Cell($cTotal,   7, utf8_decode('Total Compra'), 1, 0, 'C', true);
-    $pdf->Cell($cDevol,   7, utf8_decode('Devolucion'),   1, 0, 'C', true);
     $pdf->Cell($cPagado,  7, utf8_decode('Valor Pagado'), 1, 1, 'C', true);
 
     // Filas con colores alternados
@@ -247,20 +250,19 @@ try {
         $fill = ($fila % 2 === 0);
         $pdf->SetFillColor(245, 252, 245);
         $fechaC = date('d/m/Y', strtotime($compra['fechaCompra']));
-        $pdf->Cell($cCompra,  7, utf8_decode($compra['numeroCompra']),               1, 0, 'C', $fill);
-        $pdf->Cell($cFecha,   7, $fechaC,                                            1, 0, 'C', $fill);
-        $pdf->Cell($cTotal,   7, '$' . number_format($compra['totalCompra'], 2),     1, 0, 'R', $fill);
-        $pdf->Cell($cDevol,   7, '$' . number_format($compra['totalDevolucion'], 2), 1, 0, 'R', $fill);
-        $pdf->Cell($cPagado,  7, '$' . number_format($compra['valorPago'], 2),       1, 1, 'R', $fill);
+        $pdf->Cell($cCompra,  7, utf8_decode($compra['numeroCompra']),           1, 0, 'C', $fill);
+        $pdf->Cell($cFecha,   7, $fechaC,                                        1, 0, 'C', $fill);
+        $pdf->Cell($cTotal,   7, '$' . number_format($compra['totalCompra'], $decMoneda), 1, 0, 'R', $fill);
+        $pdf->Cell($cPagado,  7, '$' . number_format($compra['valorPago'], $decMoneda),   1, 1, 'R', $fill);
         $fila++;
     }
 
     // Fila total
     $pdf->SetFont('Helvetica', 'B', 9);
     $pdf->SetFillColor(210, 240, 210);
-    $anchoEtiqueta = $cCompra + $cFecha + $cTotal + $cDevol;
+    $anchoEtiqueta = $cCompra + $cFecha + $cTotal;
     $pdf->Cell($anchoEtiqueta, 8, utf8_decode('TOTAL PAGADO:'), 1, 0, 'R', true);
-    $pdf->Cell($cPagado, 8, '$' . number_format($valorTotalPago, 2), 1, 1, 'R', true);
+    $pdf->Cell($cPagado, 8, '$' . number_format($valorTotalPago, $decMoneda), 1, 1, 'R', true);
 
     $pdf->Ln(18);
 

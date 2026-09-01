@@ -40,61 +40,62 @@ try {
                 c.NOMBRE AS nombreCliente,
                 e.NOMEJECUTIVO AS nombreEjecutivo,
                 ep.Estado,
-                ep.PO_Cliente
+                ep.PO_Cliente,
+                ep.Anulado
             FROM SAS_EncabPedido ep
             INNER JOIN GEN_Clientes c ON ep.IdCliente = c.IdCliente
             LEFT JOIN GEN_Ejecutivos e ON ep.IdEjecutivo = e.IdEjecutivo
             WHERE 1=1";
-    
+
     // Aplicar filtros
     $params = [];
     $types = "";
-    
+
     if (!empty($filtroNumero)) {
         if (is_numeric($filtroNumero)) {
             $sql .= " AND ep.IdEncabPedido = ?";
             $params[] = $filtroNumero;
             $types .= "i";
         } else {
-            $sql .= " AND ep.NumeroPedido LIKE ?";
+            $sql .= " AND ep.Factura LIKE ?";
             $params[] = "%" . $filtroNumero . "%";
             $types .= "s";
         }
     }
-    
+
     if (!empty($filtroCliente)) {
         $sql .= " AND c.NOMBRE LIKE ?";
         $params[] = "%" . $filtroCliente . "%";
         $types .= "s";
     }
-    
+
     if (!empty($filtroFecha)) {
-        $sql .= " AND DATE(ep.FechaSolicitud) = ?";
+        $sql .= " AND DATE(ep.FechaEntrega) = ?";
         $params[] = $filtroFecha;
         $types .= "s";
     }
-    
+
     if (!empty($filtroEstado) && $filtroEstado !== "todos") {
         $sql .= " AND ep.Estado = ?";
         $params[] = $filtroEstado;
         $types .= "s";
     }
-    
+
     $sql .= " ORDER BY ep.IdEncabPedido DESC LIMIT 100";
-    
+
     // Preparar y ejecutar
     $stmt = $enlace->prepare($sql);
-    
+
     if (!$stmt) {
         throw new Exception("Error preparando consulta: " . $enlace->error);
     }
-    
+
     if (!empty($params)) {
         $stmt->bind_param($types, ...$params);
     }
-    
+
     $stmt->execute();
-    
+
     // Vincular resultados
     $stmt->bind_result(
         $idPedido,
@@ -104,11 +105,12 @@ try {
         $nombreCliente,
         $nombreEjecutivo,
         $estado,
-        $po_cliente
+        $po_cliente,
+        $anulado
     );
-    
+
     $pedidos = [];
-    
+
     // Obtener resultados
     while ($stmt->fetch()) {
         $pedidos[] = [
@@ -120,29 +122,28 @@ try {
             "ejecutivo" => $nombreEjecutivo,
             "estado" => $estado ?? "Pendiente",
             "purchaseOrder" => $po_cliente,
+            "anulado" => $anulado,
             "valorTotal" => 0  // Valor por defecto
         ];
     }
-    
+
     $stmt->close();
     $enlace->close();
-    
+
     echo json_encode([
         "success" => true,
         "pedidos" => $pedidos,
         "total" => count($pedidos)
     ]);
-    
 } catch (Exception $e) {
     error_log("Error en buscarPedidos.php: " . $e->getMessage());
-    
+
     if (isset($enlace)) {
         $enlace->close();
     }
-    
+
     echo json_encode([
         "success" => false,
         "message" => "Error interno del servidor"
     ]);
 }
-?>

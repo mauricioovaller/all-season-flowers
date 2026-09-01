@@ -23,6 +23,47 @@ export async function getDatosSelect() {
 }
 
 /**
+ * Obtiene las razones sociales activas ("Empresa Emisora")
+ * @returns {Promise<Object>} { success, razonesSociales }
+ */
+export async function getRazonesSociales() {
+  try {
+    const res = await fetch(`${API_URL}/ApiGetRazonesSociales.php`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({}),
+    });
+
+    if (!res.ok) {
+      throw new Error(`Error HTTP: ${res.status}`);
+    }
+
+    return await res.json();
+  } catch (err) {
+    console.error("Error al obtener razones sociales:", err);
+    return { success: false, razonesSociales: [] };
+  }
+}
+
+/**
+ * Selecciona la razón social por defecto de una lista.
+ * Prioriza la marcada con porDefecto; si no hay, la primera; si está vacía, null.
+ * @param {Array} razones - Lista con { id, nombre, porDefecto }
+ * @returns {Object|null}
+ */
+export function razonSocialPorDefecto(razones = []) {
+  if (!Array.isArray(razones) || razones.length === 0) return null;
+  return (
+    razones.find((r) => r.porDefecto === true) ||
+    razones.find((r) => r.porDefecto === 1) ||
+    razones[0] ||
+    null
+  );
+}
+
+/**
  * Obtiene variedades y grados según el producto seleccionado
  * @param {number} idProducto - ID del producto
  * @returns {Promise<Object>} Datos de variedades y grados
@@ -162,6 +203,35 @@ export async function getPedidoEspecifico(idPedido) {
     return await res.json();
   } catch (err) {
     console.error("Error al obtener pedido específico:", err);
+    throw err;
+  }
+}
+
+/**
+ * Anular un pedido (marca Anulado = 1 en encabezado y detalles)
+ * @param {number} idPedido - ID del pedido
+ * @param {string} motivo - Motivo de la anulación (obligatorio)
+ * @returns {Promise<Object>} { success, message }
+ */
+export async function anularPedido(idPedido, motivo) {
+  try {
+    const res = await fetch(`${API_URL}/ApiAnularPedido.php`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ idPedido, motivo }),
+    });
+
+    const data = await res.json().catch(() => null);
+
+    if (!res.ok) {
+      throw new Error((data && data.message) || `Error HTTP: ${res.status}`);
+    }
+
+    return data;
+  } catch (err) {
+    console.error("Error al anular pedido:", err);
     throw err;
   }
 }
@@ -596,6 +666,37 @@ export function abrirPDF(pdfBlob, nombreArchivo = "factura.pdf") {
 // ============================================
 // SERVICIOS PARA PLANILLAS
 // ============================================
+
+/**
+ * Obtiene el destino completo (dirección) calculado para un pedido
+ * Usado para pre-cargar el campo DestinoFinal en el modal de planilla
+ * @param {number} idPedido - ID del pedido
+ * @returns {Promise<Object>} { success: boolean, destino_completo: string }
+ */
+export async function obtenerDestinoPedido(idPedido) {
+  try {
+    const res = await fetch(`${API_URL}/ApiGetDestinoPedido.php`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ idPedido }),
+    });
+
+    if (!res.ok) {
+      throw new Error(`Error HTTP: ${res.status}`);
+    }
+
+    return await res.json();
+  } catch (err) {
+    console.error("Error al obtener destino del pedido:", err);
+    return {
+      success: false,
+      destino_completo: "",
+      message: err.message
+    };
+  }
+}
 
 /**
  * Obtiene el último número de planilla utilizado

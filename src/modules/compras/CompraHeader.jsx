@@ -12,6 +12,8 @@ export default function CompraHeader({
 }) {
 
   const [showTotales, setShowTotales] = useState(true);
+  const esUSD = header.monedaNombre && /d[oó]lar/i.test(header.monedaNombre);
+  const dec = esUSD ? 3 : 2;
 
   return (
     <section className="bg-white rounded-lg md:rounded-xl shadow-sm md:shadow-md p-3 md:p-4">
@@ -234,19 +236,19 @@ export default function CompraHeader({
             <div className="text-center">
               <div className="text-xs text-gray-600">Valor Compra</div>
               <div className="text-sm font-bold text-green-600">
-                ${header.valorCompra ? Number(header.valorCompra).toLocaleString() : "0"}
+                ${header.valorCompra ? Number(header.valorCompra).toLocaleString('es-CO', { minimumFractionDigits: dec, maximumFractionDigits: dec }) : "0"}
               </div>
             </div>
             <div className="text-center">
               <div className="text-xs text-gray-600">IVA (19%)</div>
               <div className="text-sm font-bold">
-                ${header.iva ? Number(header.iva).toLocaleString() : "0"}
+                ${header.iva ? Number(header.iva).toLocaleString('es-CO', { minimumFractionDigits: dec, maximumFractionDigits: dec }) : "0"}
               </div>
             </div>
             <div className="text-center">
               <div className="text-xs text-gray-600">Total Compra</div>
               <div className="text-sm font-bold text-green-600">
-                ${header.totalCompra ? Number(header.totalCompra).toLocaleString() : "0"}
+                ${header.totalCompra ? Number(header.totalCompra).toLocaleString('es-CO', { minimumFractionDigits: dec, maximumFractionDigits: dec }) : "0"}
               </div>
             </div>
           </div>

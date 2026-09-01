@@ -110,8 +110,7 @@ try {
             dpc.Invoice,
             dpc.ValorPago,
             dpc.Anulado,
-            ep.Factura as numeroFactura,
-            -- Calcular total de la factura
+            COALESCE(ep.Factura, CAST(dpc.Invoice AS UNSIGNED)) as numeroFactura,
             COALESCE((
                 SELECT SUM(
                     CASE 
@@ -122,8 +121,11 @@ try {
                 FROM SAS_DetEmpaque de
                 INNER JOIN SAS_DetProducto dp ON de.IdDetEmpaque = dp.IdDetEmpaque
                 WHERE de.IdEncabPedido = ep.IdEncabPedido
-            ), 0) as totalFactura,
-            -- Calcular saldo pendiente (total - devoluciones - pagos realizados)
+            ), 
+            -- Fallback legacy: usar datos de SAS_LegacyMovimientos
+            (SELECT leg.Valor FROM SAS_LegacyMovimientos leg 
+             WHERE leg.Tipo = 'C' AND CAST(leg.NumeroDocumento AS UNSIGNED) = dpc.Invoice AND leg.Anulado = 0 LIMIT 1)
+            ) as totalFactura,
             COALESCE((
                 SELECT SUM(
                     CASE 
@@ -150,14 +152,18 @@ try {
             - COALESCE((
                 SELECT SUM(dpc2.ValorPago)
                 FROM SAS_DetPagoCliente dpc2
-                WHERE dpc2.Invoice = ep.Factura
+                WHERE dpc2.Invoice = COALESCE(ep.Factura, dpc.Invoice)
                 AND dpc2.Anulado = 0
             ), 0) as saldoFactura,
-            ep.IdMoneda as idMonedaFactura,
-            mf.Moneda as monedaFactura
+            COALESCE(ep.IdMoneda, (SELECT leg.IdMoneda FROM SAS_LegacyMovimientos leg 
+             WHERE leg.Tipo = 'C' AND CAST(leg.NumeroDocumento AS UNSIGNED) = dpc.Invoice AND leg.Anulado = 0 LIMIT 1)) as idMonedaFactura,
+            COALESCE(mf.Moneda, (SELECT m2.Moneda FROM SAS_LegacyMovimientos leg2 
+             LEFT JOIN GEN_Monedas m2 ON leg2.IdMoneda = m2.IdMoneda
+             WHERE leg2.Tipo = 'C' AND CAST(leg2.NumeroDocumento AS UNSIGNED) = dpc.Invoice AND leg2.Anulado = 0 LIMIT 1)) as monedaFactura,
+            CASE WHEN ep.Factura IS NULL THEN 1 ELSE 0 END as esLegacy
         FROM SAS_DetPagoCliente dpc
-        INNER JOIN SAS_EncabPedido ep ON dpc.Invoice = ep.Factura
-        INNER JOIN GEN_Monedas mf ON ep.IdMoneda = mf.IdMoneda
+        LEFT JOIN SAS_EncabPedido ep ON dpc.Invoice = ep.Factura
+        LEFT JOIN GEN_Monedas mf ON ep.IdMoneda = mf.IdMoneda
         WHERE dpc.IdEncabPagoCliente = ?
         AND dpc.Anulado = 0
         ORDER BY dpc.IdDetPagoCliente
@@ -181,7 +187,8 @@ try {
         $totalFactura,
         $saldoFactura,
         $idMonedaFactura,
-        $monedaFactura
+        $monedaFactura,
+        $esLegacy
     );
 
     $facturas = [];
@@ -197,7 +204,8 @@ try {
             'saldoFactura' => floatval($saldoFactura),
             'idMonedaFactura' => $idMonedaFactura,
             'monedaFactura' => $monedaFactura,
-            'anulado' => $Anulado
+            'anulado' => $Anulado,
+            'esLegacy' => (bool)$esLegacy
         ];
         $valorTotalPago += floatval($ValorPago);
     }

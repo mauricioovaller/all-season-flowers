@@ -106,14 +106,16 @@ try {
 
     $stmtEnc->close();
 
+    $esUSD = mb_stripos($encabezado['moneda'], 'dólar') !== false;
+    $decMoneda = $esUSD ? 3 : 2;
+
     // Consulta para obtener las facturas asociadas al pago
     $queryFacturas = "
         SELECT 
             dpc.Invoice,
             dpc.ValorPago,
-            ep.Factura as numeroFactura,
-            ep.FechaEntrega as fechaFactura,
-            -- Calcular total de la factura
+            COALESCE(ep.Factura, CAST(dpc.Invoice AS UNSIGNED)) as numeroFactura,
+            COALESCE(ep.FechaEntrega, (SELECT leg.Fecha FROM SAS_LegacyMovimientos leg WHERE leg.Tipo='C' AND CAST(leg.NumeroDocumento AS UNSIGNED) = dpc.Invoice AND leg.Anulado = 0 LIMIT 1)) as fechaFactura,
             COALESCE((
                 SELECT SUM(
                     CASE 
@@ -124,42 +126,22 @@ try {
                 FROM SAS_DetEmpaque de
                 INNER JOIN SAS_DetProducto dp ON de.IdDetEmpaque = dp.IdDetEmpaque
                 WHERE de.IdEncabPedido = ep.IdEncabPedido
-            ), 0) as totalFactura,
-            -- Calcular saldo pendiente (total - devoluciones - pagos realizados)
+            ), (SELECT leg.Valor FROM SAS_LegacyMovimientos leg WHERE leg.Tipo='C' AND CAST(leg.NumeroDocumento AS UNSIGNED) = dpc.Invoice AND leg.Anulado = 0 LIMIT 1)) as totalFactura,
             COALESCE((
-                SELECT SUM(
-                    CASE 
-                        WHEN dp.IdUnidad = 4 THEN de.Cantidad * (dp.Tallos_Ramo * dp.Ramos_Caja) * dp.Precio_Venta
-                        ELSE de.Cantidad * dp.Ramos_Caja * dp.Precio_Venta
-                    END
-                )
-                FROM SAS_DetEmpaque de
-                INNER JOIN SAS_DetProducto dp ON de.IdDetEmpaque = dp.IdDetEmpaque
-                WHERE de.IdEncabPedido = ep.IdEncabPedido
-            ), 0)
-            - COALESCE((
                 SELECT SUM(
                     (COALESCE(dp2.TallosDevolucion, 0) * COALESCE(dp2.Precio_Venta, 0)) +
-                    COALESCE(dp2.Flete, 0) +
-                    COALESCE(dp2.Fumigacion, 0) +
-                    COALESCE(dp2.Otros, 0)
+                    COALESCE(dp2.Flete, 0) + COALESCE(dp2.Fumigacion, 0) + COALESCE(dp2.Otros, 0)
                 )
                 FROM SAS_DetEmpaque de2
                 INNER JOIN SAS_DetProducto dp2 ON de2.IdDetEmpaque = dp2.IdDetEmpaque
                 WHERE de2.IdEncabPedido = ep.IdEncabPedido
                 AND COALESCE(dp2.TallosDevolucion, 0) > 0
-            ), 0)
-            - COALESCE((
-                SELECT SUM(dpc2.ValorPago)
-                FROM SAS_DetPagoCliente dpc2
-                WHERE dpc2.Invoice = ep.Factura
-                AND dpc2.Anulado = 0
-            ), 0) as saldoFactura,
-            ep.IdMoneda as idMonedaFactura,
-            mf.Moneda as monedaFactura
+            ), 0) as totalDevolucion,
+            COALESCE(ep.IdMoneda, (SELECT leg.IdMoneda FROM SAS_LegacyMovimientos leg WHERE leg.Tipo='C' AND CAST(leg.NumeroDocumento AS UNSIGNED) = dpc.Invoice AND leg.Anulado = 0 LIMIT 1)) as idMonedaFactura,
+            COALESCE(mf.Moneda, (SELECT m2.Moneda FROM SAS_LegacyMovimientos leg2 LEFT JOIN GEN_Monedas m2 ON leg2.IdMoneda = m2.IdMoneda WHERE leg2.Tipo='C' AND CAST(leg2.NumeroDocumento AS UNSIGNED) = dpc.Invoice AND leg2.Anulado = 0 LIMIT 1)) as monedaFactura
         FROM SAS_DetPagoCliente dpc
-        INNER JOIN SAS_EncabPedido ep ON dpc.Invoice = ep.Factura
-        INNER JOIN GEN_Monedas mf ON ep.IdMoneda = mf.IdMoneda
+        LEFT JOIN SAS_EncabPedido ep ON dpc.Invoice = ep.Factura
+        LEFT JOIN GEN_Monedas mf ON ep.IdMoneda = mf.IdMoneda
         WHERE dpc.IdEncabPagoCliente = ?
         AND dpc.Anulado = 0
         ORDER BY dpc.IdDetPagoCliente
@@ -180,7 +162,7 @@ try {
         $numeroFactura,
         $fechaFactura,
         $totalFactura,
-        $saldoFactura,
+        $totalDevolucion,
         $idMonedaFactura,
         $monedaFactura
     );
@@ -189,13 +171,14 @@ try {
     $valorTotalPago = 0;
 
     while ($stmtFact->fetch()) {
+        $totalF = floatval($totalFactura);
         $facturas[] = [
             'invoice' => $Invoice,
             'numeroFactura' => $numeroFactura,
             'fechaFactura' => $fechaFactura,
             'valorPago' => floatval($ValorPago),
-            'totalFactura' => floatval($totalFactura),
-            'saldoFactura' => floatval($saldoFactura),
+            'totalFactura' => $totalF,
+            'saldoFactura' => $totalF - floatval($totalDevolucion),
             'idMonedaFactura' => $idMonedaFactura,
             'monedaFactura' => $monedaFactura
         ];
@@ -279,9 +262,6 @@ try {
     $pdf->Cell($etW, 6, utf8_decode('Moneda:'), 0, 0, 'L');
     $pdf->Cell($valW, 6, utf8_decode($encabezado['moneda']), 0, 1, 'L');
 
-    $pdf->Cell($etW, 6, utf8_decode('TRM:'), 0, 0, 'L');
-    $pdf->Cell($valW, 6, '$' . number_format($encabezado['TRM'], 2), 0, 1, 'L');
-
     $pdf->Cell($etW, 6, utf8_decode('Observaciones:'), 0, 0, 'L');
     $pdf->Cell($valW, 6, utf8_decode($encabezado['Observaciones'] ?: 'Ninguna'), 0, 1, 'L');
 
@@ -295,11 +275,10 @@ try {
         $pdf->Ln(2);
 
         // Anchos de columna (total usable ~188mm)
-        $cFactura   = 32;
-        $cFecha     = 36;
-        $cTotal     = 38;
-        $cSaldo     = 40;
-        $cPagado    = 42;
+        $cFactura   = 42;
+        $cFecha     = 42;
+        $cTotal     = 52;
+        $cPagado    = 52;
 
         // Encabezados de tabla
         $pdf->SetFont('Helvetica', 'B', 9);
@@ -307,7 +286,6 @@ try {
         $pdf->Cell($cFactura,  7, utf8_decode('Factura'),        1, 0, 'C', true);
         $pdf->Cell($cFecha,    7, utf8_decode('Fecha Factura'),  1, 0, 'C', true);
         $pdf->Cell($cTotal,    7, utf8_decode('Total Factura'),  1, 0, 'C', true);
-        $pdf->Cell($cSaldo,    7, utf8_decode('Saldo Anterior'), 1, 0, 'C', true);
         $pdf->Cell($cPagado,   7, utf8_decode('Valor Pagado'),   1, 1, 'C', true);
 
         // Filas con colores alternados
@@ -319,9 +297,8 @@ try {
             $pdf->SetFillColor(245, 252, 245);
             $pdf->Cell($cFactura,  7, utf8_decode('FACT-' . str_pad($factura['numeroFactura'], 6, '0', STR_PAD_LEFT)), 1, 0, 'C', $fill);
             $pdf->Cell($cFecha,    7, utf8_decode($factura['fechaFactura']),                                           1, 0, 'C', $fill);
-            $pdf->Cell($cTotal,    7, '$' . number_format($factura['totalFactura'], 2),                                1, 0, 'R', $fill);
-            $pdf->Cell($cSaldo,    7, '$' . number_format($factura['saldoFactura'] + $factura['valorPago'], 2),        1, 0, 'R', $fill);
-            $pdf->Cell($cPagado,   7, '$' . number_format($factura['valorPago'], 2),                                   1, 1, 'R', $fill);
+            $pdf->Cell($cTotal,    7, '$' . number_format($factura['totalFactura'], $decMoneda),                                1, 0, 'R', $fill);
+            $pdf->Cell($cPagado,   7, '$' . number_format($factura['valorPago'], $decMoneda),                                   1, 1, 'R', $fill);
             $totalPagado += $factura['valorPago'];
             $fila++;
         }
@@ -329,16 +306,16 @@ try {
         // Fila total
         $pdf->SetFont('Helvetica', 'B', 9);
         $pdf->SetFillColor(210, 240, 210);
-        $anchoEtiqueta = $cFactura + $cFecha + $cTotal + $cSaldo;
+        $anchoEtiqueta = $cFactura + $cFecha + $cTotal;
         $pdf->Cell($anchoEtiqueta, 8, utf8_decode('TOTAL PAGADO:'), 1, 0, 'R', true);
-        $pdf->Cell($cPagado, 8, '$' . number_format($totalPagado, 2), 1, 1, 'R', true);
+        $pdf->Cell($cPagado, 8, '$' . number_format($totalPagado, $decMoneda), 1, 1, 'R', true);
 
-        // Costo de transferencia si aplica
+        // Costo de transferencia si aplica: se resta del total pagado (neto recibido)
         if ($encabezado['CostoTransferencia'] > 0) {
             $pdf->Cell($anchoEtiqueta, 8, utf8_decode('Costo Transferencia:'), 1, 0, 'R', true);
-            $pdf->Cell($cPagado, 8, '$' . number_format($encabezado['CostoTransferencia'], 2), 1, 1, 'R', true);
-            $pdf->Cell($anchoEtiqueta, 8, utf8_decode('TOTAL GENERAL:'), 1, 0, 'R', true);
-            $pdf->Cell($cPagado, 8, '$' . number_format($totalPagado + $encabezado['CostoTransferencia'], 2), 1, 1, 'R', true);
+            $pdf->Cell($cPagado, 8, '-$' . number_format($encabezado['CostoTransferencia'], $decMoneda), 1, 1, 'R', true);
+            $pdf->Cell($anchoEtiqueta, 8, utf8_decode('TOTAL RECIBIDO:'), 1, 0, 'R', true);
+            $pdf->Cell($cPagado, 8, '$' . number_format($totalPagado - $encabezado['CostoTransferencia'], $decMoneda), 1, 1, 'R', true);
         }
     }
 

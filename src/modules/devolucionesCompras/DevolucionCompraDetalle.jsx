@@ -4,7 +4,8 @@ import React from "react";
 export default function DevolucionCompraDetalle({
   detalle = [],
   onChangeItem,
-  soloLectura = false
+  soloLectura = false,
+  monedaNombre = ''
 }) {
   const handleChange = (index, field, value) => {
     const nuevoValor = field === "motivo" ? value : parseFloat(value) || 0;
@@ -17,11 +18,14 @@ export default function DevolucionCompraDetalle({
     return tallos * precio;
   };
 
-  const formatMoneda = (valor) => {
+  const esUSD = monedaNombre && /d[oó]lar/i.test(monedaNombre);
+  const formatMoneda = (valor, isUSD) => {
+    const d = (isUSD ?? esUSD) ? 3 : 0;
     return new Intl.NumberFormat('es-CO', {
       style: 'currency',
-      currency: 'COP',
-      minimumFractionDigits: 0
+      currency: (isUSD ?? esUSD) ? 'USD' : 'COP',
+      minimumFractionDigits: d,
+      maximumFractionDigits: d
     }).format(valor || 0);
   };
 

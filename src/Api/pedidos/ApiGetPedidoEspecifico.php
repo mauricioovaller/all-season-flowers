@@ -15,6 +15,21 @@ error_reporting(E_ALL);
 // ===================
 require_once __DIR__ . '/../config/empresa.php';
 require_once CONEXION_BD_PATH;
+// Helper multi-cliente de razones sociales ("Empresa Emisora").
+// Si la carpeta helpers/ no está desplegada en el servidor de un cliente,
+// no debe romper el endpoint: se definen fallbacks seguros que desactivan
+// la funcionalidad y todo cae a las constantes de empresa.php (original).
+if (file_exists(__DIR__ . '/helpers/razon_social.php')) {
+    require_once __DIR__ . '/helpers/razon_social.php';
+}
+if (!function_exists('razon_social_columna_existe')) {
+    function razon_social_tabla_existe($enlace): bool { return false; }
+    function razon_social_columna_existe($enlace): bool { return false; }
+    function razon_social_disponible($enlace): bool { return false; }
+    function razon_social_obtener($enlace, $idRazonSocial): ?array { return null; }
+    function razon_social_de_pedido($enlace, $idEncabPedido): ?array { return null; }
+    function razon_social_logo_absoluto($razonSocial): ?string { return null; }
+}
 
 if ($enlace->connect_error) {
     echo json_encode(["success" => false, "message" => "Error de conexión: " . $enlace->connect_error]);
@@ -37,6 +52,10 @@ try {
     // ==============================================
     // 1. ENCABEZADO DEL PEDIDO (SIEMPRE 1 REGISTRO)
     // ==============================================
+    // Razón social ("Empresa Emisora"): columna condicional (multi-cliente)
+    $conRazonSocial = razon_social_columna_existe($enlace);
+    $columnaRazonSocial = $conRazonSocial ? ", ep.IdRazonSocial" : "";
+
     $sqlEnc = "SELECT 
         ep.IdEncabPedido,
         ep.IdCliente,
@@ -57,8 +76,12 @@ try {
         ep.Estado,
         ep.Factura,
         ep.NoPlanilla,
-        ep.NoFito    
+        ep.NoFito,
+        ep.Anulado,
+        COALESCE(m.Moneda, '') AS monedaNombre
+        " . $columnaRazonSocial . "
     FROM SAS_EncabPedido ep
+    LEFT JOIN GEN_Monedas m ON ep.IdMoneda = m.IdMoneda
     WHERE ep.IdEncabPedido = ?";
     
     $stmtEnc = $enlace->prepare($sqlEnc);
@@ -78,12 +101,22 @@ try {
     }
     
     // Obtener el encabezado
-    $stmtEnc->bind_result(
-        $idEncabPedido, $idCliente, $idEjecutivo, $fechaSolicitud, $fechaEntrega,
-        $idMoneda, $trm, $poCliente, $observaciones, $awb, $awbHija, $awbNieta,
-        $idAerolinea, $idAgencia, $puertoSalida, $iva, $estado, $factura,
-        $noPlanilla, $noFito
-    );
+    $idRazonSocial = null;
+    if ($conRazonSocial) {
+        $stmtEnc->bind_result(
+            $idEncabPedido, $idCliente, $idEjecutivo, $fechaSolicitud, $fechaEntrega,
+            $idMoneda, $trm, $poCliente, $observaciones, $awb, $awbHija, $awbNieta,
+            $idAerolinea, $idAgencia, $puertoSalida, $iva, $estado, $factura,
+            $noPlanilla, $noFito, $anulado, $monedaNombre, $idRazonSocial
+        );
+    } else {
+        $stmtEnc->bind_result(
+            $idEncabPedido, $idCliente, $idEjecutivo, $fechaSolicitud, $fechaEntrega,
+            $idMoneda, $trm, $poCliente, $observaciones, $awb, $awbHija, $awbNieta,
+            $idAerolinea, $idAgencia, $puertoSalida, $iva, $estado, $factura,
+            $noPlanilla, $noFito, $anulado, $monedaNombre
+        );
+    }
     
     $stmtEnc->fetch();
     $stmtEnc->close();
@@ -260,6 +293,7 @@ try {
                 "FechaSolicitud" => $fechaSolicitud,
                 "FechaEntrega" => $fechaEntrega,
                 "IdMoneda" => $idMoneda,
+                "MonedaNombre" => $monedaNombre,
                 "TRM" => $trm,
                 "PO_Cliente" => $poCliente,
                 "Observaciones" => $observaciones,
@@ -273,7 +307,9 @@ try {
                 "Estado" => $estado,
                 "Factura" => $factura,
                 "NoPlanilla" => $noPlanilla,
-                "NoFito" => $noFito
+                "NoFito" => $noFito,
+                "Anulado" => $anulado,
+                "IdRazonSocial" => $conRazonSocial ? $idRazonSocial : null
             ],
             "empaques" => $empaques  // Puede ser array vacío
         ]

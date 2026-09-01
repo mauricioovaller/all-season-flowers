@@ -6,6 +6,21 @@ ini_set('max_execution_time', '300');
 require_once __DIR__ . '/../config/empresa.php';
 require_once FPDF_PATH;
 require_once CONEXION_BD_PATH;
+// Helper multi-cliente de razones sociales ("Empresa Emisora").
+// Si la carpeta helpers/ no está desplegada en el servidor de un cliente,
+// no debe romper el endpoint: se definen fallbacks seguros que desactivan
+// la funcionalidad y todo cae a las constantes de empresa.php (original).
+if (file_exists(__DIR__ . '/helpers/razon_social.php')) {
+    require_once __DIR__ . '/helpers/razon_social.php';
+}
+if (!function_exists('razon_social_columna_existe')) {
+    function razon_social_tabla_existe($enlace): bool { return false; }
+    function razon_social_columna_existe($enlace): bool { return false; }
+    function razon_social_disponible($enlace): bool { return false; }
+    function razon_social_obtener($enlace, $idRazonSocial): ?array { return null; }
+    function razon_social_de_pedido($enlace, $idEncabPedido): ?array { return null; }
+    function razon_social_logo_absoluto($razonSocial): ?string { return null; }
+}
 $enlace->set_charset("utf8mb4");
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
@@ -204,13 +219,17 @@ if (count($detalles) === 0) {
 }
 
 // 🔴 INFORMACIÓN DE LA EMPRESA (centralizada en config/empresa.php)
-$empresa_nombre   = EMPRESA_NOMBRE;
-$nit_empresa      = EMPRESA_NIT;
-$direccion_empresa = EMPRESA_DIRECCION;
-$ciudad_empresa   = EMPRESA_CIUDAD;
-$telefono_empresa = EMPRESA_TELEFONO;
-$email_empresa    = EMPRESA_EMAIL;
-$registro_ica     = EMPRESA_REGISTRO_ICA;
+// Razón social ("Empresa Emisora") — multi-cliente: si el pedido tiene una
+// razón social guardada se usan sus datos y logo; si no, constantes actuales.
+$razonSocial = razon_social_de_pedido($enlace, $idEncabPedido);
+$empresa_nombre    = !empty($razonSocial['Nombre']) ? $razonSocial['Nombre'] : EMPRESA_NOMBRE;
+$nit_empresa       = !empty($razonSocial['NIT']) ? $razonSocial['NIT'] : EMPRESA_NIT;
+$direccion_empresa = !empty($razonSocial['Direccion']) ? $razonSocial['Direccion'] : EMPRESA_DIRECCION;
+$ciudad_empresa    = !empty($razonSocial['Ciudad']) ? $razonSocial['Ciudad'] : EMPRESA_CIUDAD;
+$telefono_empresa  = !empty($razonSocial['Telefono']) ? $razonSocial['Telefono'] : EMPRESA_TELEFONO;
+$email_empresa     = !empty($razonSocial['Email']) ? $razonSocial['Email'] : EMPRESA_EMAIL;
+$registro_ica      = !empty($razonSocial['RegistroICA']) ? $razonSocial['RegistroICA'] : EMPRESA_REGISTRO_ICA;
+$logo_etiqueta     = razon_social_logo_absoluto($razonSocial) ?: EMPRESA_LOGO_PATH;
 
 // Clase PDF personalizada para etiquetas
 class PDF_Etiqueta extends FPDF
@@ -252,37 +271,37 @@ class PDF_Etiqueta extends FPDF
         $this->SetTextColor(0, 0, 0);
 
         // Logo
-        $logo_path = EMPRESA_LOGO_PATH;
+        $logo_path = $this->empresa_data['logo'] ?? EMPRESA_LOGO_PATH;
         if (file_exists($logo_path)) {
             $this->Image($logo_path, 1, 9, 25);
         }
 
-        // Nombre de la empresa
-        $this->SetXY(25, 7);
-        $this->Cell(25, 3, $this->empresa_data['nombre'], 0, 1, 'L');
+        // Nombre de la empresa — centrado verticalmente en el espacio del encabezado
+        $this->SetXY(25, 13);
+        $this->Cell(25, 3, utf8_decode($this->empresa_data['nombre']), 0, 1, 'L');
 
-        // Dirección de la empresa
-        $this->SetFont('Helvetica', '', 7);
-        $this->SetX(25);
-        $this->Cell(25, 3, $this->empresa_data['direccion'], 0, 1, 'L');
+        // [COMENTADO] Dirección de la empresa — oculto por solicitud del usuario
+        // $this->SetFont('Helvetica', '', 7);
+        // $this->SetX(25);
+        // $this->Cell(25, 3, utf8_decode($this->empresa_data['direccion']), 0, 1, 'L');
 
-        // Ciudad y país
-        $this->SetX(25);
-        $this->Cell(25, 3, $this->empresa_data['ciudad'], 0, 1, 'L');
+        // [COMENTADO] Ciudad y país — oculto por solicitud del usuario
+        // $this->SetX(25);
+        // $this->Cell(25, 3, utf8_decode($this->empresa_data['ciudad']), 0, 1, 'L');
         
-        // Registro ICA
-        $this->SetFont('Helvetica', 'B', 7);
-        $this->SetX(25);
-        $this->Cell(25, 3, $this->empresa_data['registro_ica'], 0, 1, 'L');
+        // [COMENTADO] Registro ICA — oculto por solicitud del usuario
+        // $this->SetFont('Helvetica', 'B', 7);
+        // $this->SetX(25);
+        // $this->Cell(25, 3, utf8_decode($this->empresa_data['registro_ica']), 0, 1, 'L');
 
-        // Email
+        // Email — centrado verticalmente en el espacio del encabezado
         $this->SetFont('Helvetica', '', 7);
         $this->SetX(25);
-        $this->Cell(25, 3, $this->empresa_data['email'], 0, 1, 'L');
+        $this->Cell(25, 3, utf8_decode($this->empresa_data['email']), 0, 1, 'L');
 
-        // Teléfono
-        $this->SetX(25);
-        $this->Cell(25, 3, 'Phone ' . $this->empresa_data['telefono'], 0, 1, 'L');
+        // [COMENTADO] Teléfono — oculto por solicitud del usuario
+        // $this->SetX(25);
+        // $this->Cell(25, 3, 'Phone ' . utf8_decode($this->empresa_data['telefono']), 0, 1, 'L');
         
         // Línea separadora
         $this->SetLineWidth(0.3);
@@ -290,122 +309,123 @@ class PDF_Etiqueta extends FPDF
         $this->Line(8, 26, 75, 26);
 
         // ========== INFORMACIÓN DEL CLIENTE ==========
-        $this->SetFont('Helvetica', 'B', 8);
+        $this->SetFont('Helvetica', 'B', 9);
         $this->SetY(27);
-        $this->Cell(15, 10, 'Client:', 0, 0, 'L');
-        $this->SetFont('Helvetica', '', 8);
-        $this->Cell(0, 10, substr($this->pedido_data['cliente_nombre'], 0, 50), 0, 1, 'L');
+        $this->Cell(15, 5, 'Client:', 0, 0, 'L');
+        $this->SetFont('Helvetica', 'B', 9);
+        $this->MultiCell(0, 5, $this->pedido_data['cliente_nombre'], 0, 'L');
 
-        // AWB
-        $this->SetFont('Helvetica', 'B', 8);
-        $this->Cell(15, 5, 'AWB:', 0, 0, 'L');
-        $this->SetFont('Helvetica', '', 8);
-        $this->Cell(0, 5, !empty($this->pedido_data['awb']) ? $this->pedido_data['awb'] : 'N/A', 0, 1, 'L');
+        // AWB — Fuente grande y negrilla para resaltar
+        $this->SetFont('Helvetica', 'B', 9);
+        $this->Cell(15, 4, 'AWB:', 0, 0, 'L');
+        $this->SetFont('Helvetica', 'B', 12);
+        $awb_text = !empty($this->pedido_data['awb']) ? $this->pedido_data['awb'] : 'N/A';
+        $this->Cell(0, 5, $awb_text, 0, 1, 'L');
 
-        // HAWB (AWB_HIJA)
-        $this->SetFont('Helvetica', 'B', 8);
-        $this->Cell(15, 5, 'HAWB:', 0, 0, 'L');
-        $this->SetFont('Helvetica', '', 8);
-        $this->Cell(0, 5, !empty($this->pedido_data['awb_hija']) ? $this->pedido_data['awb_hija'] : 'N/A', 0, 1, 'L');
+        // HAWB (AWB_HIJA) — Fuente grande y negrilla para resaltar
+        $this->SetFont('Helvetica', 'B', 9);
+        $this->Cell(15, 4, 'HAWB:', 0, 0, 'L');
+        $this->SetFont('Helvetica', 'B', 12);
+        $hawb_text = !empty($this->pedido_data['awb_hija']) ? $this->pedido_data['awb_hija'] : 'N/A';
+        $this->Cell(0, 5, $hawb_text, 0, 1, 'L');
 
         // PO (Purchase Order)
-        $this->SetFont('Helvetica', 'B', 8);
-        $this->Cell(15, 5, 'P.O.:', 0, 0, 'L');
-        $this->SetFont('Helvetica', '', 8);
+        $this->SetFont('Helvetica', 'B', 7);
+        $this->Cell(15, 4, 'P.O.:', 0, 0, 'L');
+        $this->SetFont('Helvetica', '', 7);
         $po_value = !empty($this->pedido_data['po_cliente']) ? $this->pedido_data['po_cliente'] : 'N_A';
-        $this->Cell(0, 5, $po_value, 0, 1, 'L');
+        $this->Cell(0, 4, $po_value, 0, 1, 'L');
 
         // Código
-        $this->SetFont('Helvetica', 'B', 8);
-        $this->Cell(15, 5, 'Code:', 0, 0, 'L');
-        $this->SetFont('Helvetica', '', 8);
+        $this->SetFont('Helvetica', 'B', 7);
+        $this->Cell(15, 4, 'Code:', 0, 0, 'L');
+        $this->SetFont('Helvetica', '', 7);
         $code_value = !empty($producto['po_empaque']) ? $producto['po_empaque'] : 'N_A';
-        $this->Cell(0, 5, 'Code 1.: ' . substr($code_value, 0, 15), 0, 1, 'L');
+        $this->Cell(0, 4, 'Code 1.: ' . substr($code_value, 0, 15), 0, 1, 'L');
 
-        // Línea separadora
+        // Línea separadora (posición dinámica según el cliente)
+        $sep_y = $this->GetY() + 4;
         $this->SetLineWidth(0.3);
-        $this->Line(8, 56, 75, 56);
+        $this->Line(8, $sep_y, 75, $sep_y);
 
         // ========== INFORMACIÓN DEL PRODUCTO ==========
-        $this->SetY(56);
+        $this->SetY($sep_y + 2);
 
         // Packing (Tipo de empaque)
         $this->SetFont('Helvetica', 'B', 8);
-        $this->Cell(15, 5, 'Packing:', 0, 0, 'L');
+        $this->Cell(15, 4, 'Packing:', 0, 0, 'L');
         $this->SetFont('Helvetica', '', 8);
         $packing_text = !empty($producto['descripcion_empaque']) ?
             $producto['descripcion_empaque'] :
             $producto['tipo_empaque'];
-        $this->Cell(0, 5, $packing_text, 0, 1, 'L');
+        $this->Cell(0, 4, $packing_text, 0, 1, 'L');
 
         // Product - Manejar múltiples productos
         $this->SetFont('Helvetica', 'B', 8);
-        $this->Cell(15, 5, 'Product:', 0, 0, 'L');
+        $this->Cell(15, 4, 'Product:', 0, 0, 'L');
         $this->SetFont('Helvetica', '', 8);
 
         if ($producto['num_productos_empaque'] > 1) {
-            // Si hay más de un producto, mostrar "Mix" o "Assorted"
-            $this->Cell(0, 5, 'MIX / ASSORTED', 0, 1, 'L');
+            $this->Cell(0, 4, 'MIX / ASSORTED', 0, 1, 'L');
 
-            // Opcional: Mostrar la cantidad de productos diferentes
             $this->SetFont('Helvetica', 'I', 7);
             $this->Cell(15, 3, '', 0, 0, 'L');
             $this->Cell(0, 3, '(' . $producto['num_productos_empaque'] . ' items)', 0, 1, 'L');
             $this->SetFont('Helvetica', '', 8);
         } else {
-            // Si solo hay un producto, mostrar su nombre
-            $this->Cell(0, 5, $producto['nombre_producto_ejemplo'], 0, 1, 'L');
+            $this->Cell(0, 4, $producto['nombre_producto_ejemplo'], 0, 1, 'L');
         }
 
-        // Variet (Variedad) - Manejar múltiples variedades
+        // Variet (Variedad)
         $this->SetFont('Helvetica', 'B', 8);
-        $this->Cell(15, 5, 'Variet:', 0, 0, 'L');
+        $this->Cell(15, 4, 'Variet:', 0, 0, 'L');
         $this->SetFont('Helvetica', '', 8);
 
         if ($producto['num_productos_empaque'] > 1) {
-            // Si hay múltiples productos, mostrar "Assorted"
-            $this->Cell(0, 5, 'ASSORTED', 0, 1, 'L');
+            $this->Cell(0, 4, 'ASSORTED', 0, 1, 'L');
         } else {
-            // Si solo hay una variedad
             $variety_text = !empty($producto['nombre_variedad_ejemplo']) ?
                 $producto['nombre_variedad_ejemplo'] :
                 'N/A';
-            $this->Cell(0, 5, $variety_text, 0, 1, 'L');
+            $this->Cell(0, 4, $variety_text, 0, 1, 'L');
         }
 
         // Grade
         $this->SetFont('Helvetica', 'B', 8);
-        $this->Cell(15, 5, 'Grade:', 0, 0, 'L');
+        $this->Cell(15, 4, 'Grade:', 0, 0, 'L');
         $this->SetFont('Helvetica', '', 8);
 
         if ($producto['num_productos_empaque'] > 1) {
-            $this->Cell(0, 5, 'MIXED', 0, 1, 'L');
+            $this->Cell(0, 4, 'MIXED', 0, 1, 'L');
         } else {
             $grade_text = !empty($producto['nombre_grado']) ?
                 $producto['nombre_grado'] :
                 'N/A';
-            $this->Cell(0, 5, $grade_text, 0, 1, 'L');
+            $this->Cell(0, 4, $grade_text, 0, 1, 'L');
         }
 
-        // Stems - Usar el total sumado de todos los productos
+        // Stems
         $this->SetFont('Helvetica', 'B', 8);
-        $this->Cell(15, 5, 'Stems:', 0, 0, 'L');
+        $this->Cell(15, 4, 'Stems:', 0, 0, 'L');
         $this->SetFont('Helvetica', '', 8);
-        $this->Cell(0, 5, $producto['total_tallos_por_empaque'], 0, 1, 'L');
+        $this->Cell(0, 4, $producto['total_tallos_por_empaque'], 0, 1, 'L');
 
-        // Línea separadora gruesa
+        // Línea separadora gruesa (dinámica)
+        $bottom_sep_y = $this->GetY() + 2;
         $this->SetLineWidth(0.5);
         $this->SetDrawColor(0, 0, 0);
-        $this->Line(8, 86, 75, 86);
+        $this->Line(8, $bottom_sep_y, 75, $bottom_sep_y);
 
         // ========== NÚMERO DE CAJA ==========
-        $this->SetY(92);
-        $this->SetFont('Helvetica', 'B', 12);
-        $this->Cell(75, 5, 'BOX #  ' . $box_num . '   de   ' . $this->total_boxes, 0, 0, 'C');
+        $box_y = $bottom_sep_y + 2;
+        $this->SetY($box_y);
+        $this->SetFont('Helvetica', 'B', 11);
+        $this->Cell(75, 4, 'BOX #  ' . $box_num . '   de   ' . $this->total_boxes, 0, 0, 'C');
 
         // Línea final en el borde inferior
+        $final_y = $box_y + 4;
         $this->SetLineWidth(0.2);
-        $this->Line(5, 97, 75, 97);
+        $this->Line(5, $final_y, 75, $final_y);
     }
 }
 
@@ -416,7 +436,8 @@ $empresa_data = [
     'ciudad' => $ciudad_empresa,
     'registro_ica' => $registro_ica,
     'email' => $email_empresa,
-    'telefono' => $telefono_empresa
+    'telefono' => $telefono_empresa,
+    'logo' => $logo_etiqueta
 ];
 
 $pedido_data = [

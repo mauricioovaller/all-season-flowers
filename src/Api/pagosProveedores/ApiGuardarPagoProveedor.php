@@ -54,37 +54,76 @@ $enlace->begin_transaction();
 
 try {
     // Validar saldo disponible por cada compra
+    $idLegacyActualizados = [];
+
     foreach ($compras as $c) {
         $idC        = intval($c['idCompra'] ?? 0);
         $valorPagoC = floatval($c['valorPago'] ?? 0);
+        $esLegacy   = !empty($c['esLegacy']);
 
         if ($idC <= 0 || $valorPagoC <= 0) continue;
 
-        $sqlSaldo = "
-            SELECT
-                COALESCE((SELECT SUM(dc.Tallos_Ramo * dc.Ramos_Caja * dc.Precio_Compra)
-                          FROM SAS_DetProductoCompra dc WHERE dc.IdEncabCompra = ?), 0)
-                - COALESCE((SELECT SUM(dc2.TallosDevolucion * dc2.Precio_Compra)
-                            FROM SAS_DetProductoCompra dc2
-                            WHERE dc2.IdEncabCompra = ? AND dc2.TallosDevolucion > 0), 0)
-                - COALESCE((SELECT SUM(dpp.ValorPago)
-                            FROM SAS_DetPagoProveedor dpp
-                            WHERE dpp.IdEncabCompra = ? AND dpp.Anulado = 0
-                            AND dpp.IdEncabPagoProveedor != ?), 0)
-                as saldo
-        ";
+        if ($esLegacy) {
+            // ── COMPRA LEGACY ──
+            $sqlLegacy = "SELECT leg.IdLegacyMovimiento, leg.IdMoneda, leg.IdEntidad,
+                                 leg.Valor, leg.Credito, leg.Pago,
+                                 (leg.Valor - leg.Credito - leg.Pago) as saldoPendiente
+                          FROM SAS_LegacyMovimientos leg
+                          WHERE leg.Tipo = 'P'
+                            AND leg.IdLegacyMovimiento = ?
+                            AND leg.Anulado = 0
+                          LIMIT 1";
+            $stmtLeg = $enlace->prepare($sqlLegacy);
+            if (!$stmtLeg) throw new Exception("Error preparando consulta legacy: " . $enlace->error);
+            $stmtLeg->bind_param("i", $idC);
+            $stmtLeg->execute();
+            $stmtLeg->bind_result($idLegMov, $idMonedaLeg, $idProvLeg, $valorLeg, $creditoLeg, $pagoLeg, $saldoLeg);
+            if (!$stmtLeg->fetch()) {
+                $stmtLeg->close();
+                throw new Exception("Compra legacy $idC no encontrada");
+            }
+            $stmtLeg->close();
+            $saldo = floatval($saldoLeg);
 
-        $stmtS = $enlace->prepare($sqlSaldo);
-        if (!$stmtS) throw new Exception("Error preparando saldo: " . $enlace->error);
-        $stmtS->bind_param("iiii", $idC, $idC, $idC, $idEncabPagoProveedor);
-        $stmtS->execute();
-        $stmtS->bind_result($saldo);
-        $stmtS->fetch();
-        $stmtS->close();
+            if ($idProvLeg != $idProveedor) {
+                throw new Exception("La compra legacy no pertenece al proveedor seleccionado");
+            }
+            if ($idMonedaLeg != $idMoneda) {
+                throw new Exception("La compra legacy tiene moneda diferente a la seleccionada para el pago");
+            }
+            if ($valorPagoC > ($saldo + 0.01)) {
+                throw new Exception("Compra legacy: el pago ($valorPagoC) excede el saldo pendiente ($saldo)");
+            }
 
-        if ($valorPagoC > ($saldo + 0.01)) {
-            $numCompra = "COMP-" . str_pad($idC, 6, "0", STR_PAD_LEFT);
-            throw new Exception("Compra $numCompra: el pago (" . number_format($valorPagoC, 2) . ") excede el saldo pendiente (" . number_format($saldo, 2) . ")");
+            $idLegacyActualizados[] = $idLegMov;
+        } else {
+            // ── COMPRA ACTUAL ──
+            $sqlSaldo = "
+                SELECT
+                    COALESCE((SELECT SUM(dc.Tallos_Ramo * dc.Ramos_Caja * dc.Precio_Compra)
+                              FROM SAS_DetProductoCompra dc WHERE dc.IdEncabCompra = ?), 0)
+                    - COALESCE((SELECT SUM(dc2.TallosDevolucion * dc2.Precio_Compra)
+                                FROM SAS_DetProductoCompra dc2
+                                WHERE dc2.IdEncabCompra = ? AND dc2.TallosDevolucion > 0), 0)
+                    - COALESCE((SELECT SUM(dpp.ValorPago)
+                                FROM SAS_DetPagoProveedor dpp
+                                WHERE dpp.IdEncabCompra = ? AND dpp.Anulado = 0
+                                AND dpp.IdEncabPagoProveedor != ?), 0)
+                    as saldo
+            ";
+
+            $stmtS = $enlace->prepare($sqlSaldo);
+            if (!$stmtS) throw new Exception("Error preparando saldo: " . $enlace->error);
+            $stmtS->bind_param("iiii", $idC, $idC, $idC, $idEncabPagoProveedor);
+            $stmtS->execute();
+            $stmtS->bind_result($saldo);
+            $stmtS->fetch();
+            $stmtS->close();
+
+            if ($valorPagoC > ($saldo + 0.01)) {
+                $numCompra = "COMP-" . str_pad($idC, 6, "0", STR_PAD_LEFT);
+                throw new Exception("Compra $numCompra: el pago (" . number_format($valorPagoC, 2) . ") excede el saldo pendiente (" . number_format($saldo, 2) . ")");
+            }
         }
     }
 
@@ -147,16 +186,39 @@ try {
     foreach ($compras as $c) {
         $idC        = intval($c['idCompra'] ?? 0);
         $valorPagoC = floatval($c['valorPago'] ?? 0);
+        $esLegacy   = !empty($c['esLegacy']);
         if ($idC <= 0 || $valorPagoC <= 0) continue;
+
+        // Para compras legacy, usar ID negativo para evitar conflicto con compras reales
+        $idCompraAlmacenar = $esLegacy ? (-$idC) : $idC;
 
         $sqlDet = "INSERT INTO SAS_DetPagoProveedor (IdEncabPagoProveedor, IdEncabCompra, ValorPago, Anulado)
                    VALUES (?,?,?,0)";
         $stmtDet = $enlace->prepare($sqlDet);
         if (!$stmtDet) throw new Exception("Error preparando detalle: " . $enlace->error);
-        $stmtDet->bind_param("iid", $idEncabPagoProveedor, $idC, $valorPagoC);
+        $stmtDet->bind_param("iid", $idEncabPagoProveedor, $idCompraAlmacenar, $valorPagoC);
         $stmtDet->execute();
         if ($stmtDet->errno) throw new Exception("Error insertando detalle: " . $stmtDet->error);
         $stmtDet->close();
+    }
+
+    // 5. Actualizar Pago en SAS_LegacyMovimientos para compras legacy
+    foreach ($idLegacyActualizados as $idLegMov) {
+        $sqlRecalcPago = "
+            UPDATE SAS_LegacyMovimientos leg
+            SET leg.Pago = COALESCE((
+                SELECT SUM(dpp.ValorPago)
+                FROM SAS_DetPagoProveedor dpp
+                WHERE dpp.IdEncabCompra = (-leg.IdLegacyMovimiento)
+                  AND dpp.Anulado = 0
+            ), 0)
+            WHERE leg.IdLegacyMovimiento = ?";
+        $stmtRecalc = $enlace->prepare($sqlRecalcPago);
+        if (!$stmtRecalc) throw new Exception("Error preparando actualización pago legacy: " . $enlace->error);
+        $stmtRecalc->bind_param("i", $idLegMov);
+        $stmtRecalc->execute();
+        if ($stmtRecalc->errno) throw new Exception("Error actualizando pago legacy: " . $stmtRecalc->error);
+        $stmtRecalc->close();
     }
 
     $enlace->commit();

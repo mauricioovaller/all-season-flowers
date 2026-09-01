@@ -106,6 +106,7 @@ const ModalSeleccionarCompras = ({
             return {
                 idCompra,
                 numeroCompraFormateado: compra?.numeroCompraFormateado || `COMP-${String(idCompra).padStart(6, '0')}`,
+          esLegacy: compra?.esLegacy || false,
                 fechaCompra: compra?.fechaCompra,
                 totalCompra: compra?.valorCompra || 0,
                 saldoCompra: compra?.saldoPendiente || 0,
@@ -212,6 +213,11 @@ const ModalSeleccionarCompras = ({
                                                         <div>
                                                             <p className="font-medium text-gray-800">
                                                                 {compra.numeroCompraFormateado}
+                                                                {compra.esLegacy && (
+                                                                  <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-800">
+                                                                    Legacy
+                                                                  </span>
+                                                                )}
                                                             </p>
                                                             <p className="text-sm text-gray-600">
                                                                 Fecha: {compra.fechaCompra}

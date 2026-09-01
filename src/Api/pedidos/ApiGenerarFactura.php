@@ -49,6 +49,22 @@ try {
     // Iniciar transacción
     $enlace->begin_transaction();
     
+    // 0. Guard: no facturar pedidos anulados
+    $sqlAnulado = "SELECT Anulado FROM SAS_EncabPedido WHERE IdEncabPedido = ?";
+    $stmtAnulado = $enlace->prepare($sqlAnulado);
+    if (!$stmtAnulado) {
+        throw new Exception("Error preparando consulta de anulación: " . $enlace->error);
+    }
+    $stmtAnulado->bind_param("i", $idPedido);
+    $stmtAnulado->execute();
+    $stmtAnulado->bind_result($anuladoPedido);
+    $stmtAnulado->fetch();
+    $stmtAnulado->close();
+
+    if ($anuladoPedido == 1) {
+        throw new Exception("No se puede facturar: el pedido está anulado");
+    }
+
     // 1. Actualizar el pedido con el número de factura (como INT)
     $query1 = "UPDATE SAS_EncabPedido 
                SET Factura = ?, 

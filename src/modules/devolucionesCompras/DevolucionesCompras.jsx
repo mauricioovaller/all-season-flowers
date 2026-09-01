@@ -146,8 +146,9 @@ export default function DevolucionesCompras() {
           if (compraSeleccionada) {
             setHeader(prev => ({
               ...prev,
-              moneda: compraSeleccionada.idMoneda?.toString() || "",
-              trm: compraSeleccionada.trm?.toString() || ""
+            moneda: compraSeleccionada.idMoneda?.toString() || "",
+            monedaNombre: compraSeleccionada.nombreMoneda || "",
+            trm: compraSeleccionada.trm?.toString() || ""
             }));
           }
 
@@ -247,6 +248,7 @@ export default function DevolucionesCompras() {
           proveedor: res.encabezado.idProveedor?.toString() || "",
           compra: idCompra.toString(),
           moneda: res.encabezado.idMoneda?.toString() || "",
+          monedaNombre: res.encabezado.monedaNombre || "",
           trm: res.encabezado.trm?.toString() || "",
           observaciones: res.encabezado.observaciones || ""
         }));
@@ -575,6 +577,7 @@ export default function DevolucionesCompras() {
             detalle={detalle}
             onChangeItem={handleDetalleChange}
             soloLectura={false}
+            monedaNombre={header.monedaNombre}
           />
         )
       )}

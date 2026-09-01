@@ -50,50 +50,78 @@ try {
     }
     $stmtCliente->close();
 
-    // 2. Obtener movimientos: un registro por invoice
+    // 2. Obtener movimientos: un registro por invoice (actuales + legacy)
     $sqlMovimientos = "
-        SELECT
-            enc.Factura,
-            enc.FechaEntrega,
-            enc.IdMoneda,
-            COALESCE(m.Moneda, 'Sin moneda') AS moneda,
-            COALESCE(enc.TRM, 1)             AS trm,
-            COALESCE((
-                SELECT SUM(dp.Tallos_Ramo * dp.Ramos_Caja * dp.Precio_Venta)
-                FROM SAS_DetProducto dp
-                WHERE dp.IdEncabPedido = enc.IdEncabPedido
-                  AND dp.Anulado = 0
-            ), 0) AS valorBase,
-            COALESCE((
-                SELECT SUM(dp2.TallosDevolucion * dp2.Precio_Venta)
-                FROM SAS_DetProducto dp2
-                WHERE dp2.IdEncabPedido = enc.IdEncabPedido
-                  AND dp2.TallosDevolucion > 0
-                  AND dp2.Anulado = 0
-            ), 0) AS valorDevolucion,
-            COALESCE((
-                SELECT SUM(dpago.ValorPago)
-                FROM SAS_DetPagoCliente dpago
-                INNER JOIN SAS_EncabPagoCliente epago
-                    ON dpago.IdEncabPagoCliente = epago.IdEncabPagoCliente
-                WHERE dpago.Invoice = enc.Factura
-                  AND dpago.Anulado  = 0
-                  AND epago.Anulado  = 0
-            ), 0) AS valorPagado
-        FROM SAS_EncabPedido enc
-        LEFT JOIN GEN_Monedas m ON enc.IdMoneda = m.IdMoneda
-        WHERE enc.IdCliente    = ?
-          AND enc.Anulado      = 0
-          AND enc.Factura      > 0
-          AND enc.FechaEntrega BETWEEN ? AND ?
-        ORDER BY enc.FechaEntrega ASC, enc.Factura ASC
+        (
+            SELECT
+                enc.Factura AS documento,
+                enc.FechaEntrega,
+                enc.IdMoneda,
+                COALESCE(m.Moneda, 'Sin moneda') AS moneda,
+                COALESCE(enc.TRM, 1)             AS trm,
+                COALESCE((
+                    SELECT SUM(
+                        IF(dpr.IdUnidad = 4,
+                           dem.Cantidad * dpr.Tallos_Ramo * dpr.Ramos_Caja * dpr.Precio_Venta,
+                           dem.Cantidad * dpr.Ramos_Caja * dpr.Precio_Venta)
+                    )
+                    FROM SAS_DetEmpaque dem
+                    INNER JOIN SAS_DetProducto dpr ON dem.IdDetEmpaque = dpr.IdDetEmpaque
+                    WHERE dem.IdEncabPedido = enc.IdEncabPedido
+                      AND dem.Anulado = 0
+                      AND dpr.Anulado = 0
+                ), 0) AS valorBase,
+                COALESCE((
+                    SELECT SUM(dp2.TallosDevolucion * dp2.Precio_Venta)
+                    FROM SAS_DetProducto dp2
+                    WHERE dp2.IdEncabPedido = enc.IdEncabPedido
+                      AND dp2.TallosDevolucion > 0
+                      AND dp2.Anulado = 0
+                ), 0) AS valorDevolucion,
+                COALESCE((
+                    SELECT SUM(dpago.ValorPago)
+                    FROM SAS_DetPagoCliente dpago
+                    INNER JOIN SAS_EncabPagoCliente epago
+                        ON dpago.IdEncabPagoCliente = epago.IdEncabPagoCliente
+                    WHERE dpago.Invoice = enc.Factura
+                      AND dpago.Anulado  = 0
+                      AND epago.Anulado  = 0
+                ), 0) AS valorPagado,
+                0 AS esLegacy
+            FROM SAS_EncabPedido enc
+            LEFT JOIN GEN_Monedas m ON enc.IdMoneda = m.IdMoneda
+            WHERE enc.IdCliente    = ?
+              AND enc.Anulado      = 0
+              AND enc.Factura      > 0
+              AND enc.FechaEntrega BETWEEN ? AND ?
+        )
+        UNION ALL
+        (
+            SELECT
+                CAST(leg.NumeroDocumento AS UNSIGNED) AS documento,
+                leg.Fecha AS FechaEntrega,
+                COALESCE(leg.IdMoneda, 1) AS IdMoneda,
+                COALESCE(m.Moneda, 'Sin moneda') AS moneda,
+                COALESCE(leg.TRM, 1) AS trm,
+                leg.Valor AS valorBase,
+                leg.Credito AS valorDevolucion,
+                leg.Pago AS valorPagado,
+                1 AS esLegacy
+            FROM SAS_LegacyMovimientos leg
+            LEFT JOIN GEN_Monedas m ON leg.IdMoneda = m.IdMoneda
+            WHERE leg.Tipo = 'C'
+              AND leg.IdEntidad = ?
+              AND leg.Anulado = 0
+              AND leg.Fecha BETWEEN ? AND ?
+        )
+        ORDER BY FechaEntrega ASC, documento ASC
     ";
 
     $stmtMov = $enlace->prepare($sqlMovimientos);
     if (!$stmtMov) {
         throw new Exception("Error preparando consulta movimientos: " . $enlace->error);
     }
-    $stmtMov->bind_param("iss", $idCliente, $fechaInicio, $fechaFin);
+    $stmtMov->bind_param("ississ", $idCliente, $fechaInicio, $fechaFin, $idCliente, $fechaInicio, $fechaFin);
     $stmtMov->execute();
     $stmtMov->bind_result(
         $factura,
@@ -103,55 +131,74 @@ try {
         $trm,
         $valorBase,
         $valorDevolucion,
-        $valorPagado
+        $valorPagado,
+        $esLegacy
     );
 
-    $movimientos        = [];
-    $totValorBase       = 0;
-    $totValorDevolucion = 0;
-    $totValorPagado     = 0;
-    $totValorBaseCOP    = 0;
-    $totValorDevCOP     = 0;
-    $totValorPagCOP     = 0;
+    $movimientos      = [];
+    $totValorUSD      = 0;
+    $totValorCOP      = 0;
+    $totDevUSD        = 0;
+    $totDevCOP        = 0;
+    $totPagUSD        = 0;
+    $totPagCOP        = 0;
 
     while ($stmtMov->fetch()) {
         $vBase  = floatval($valorBase);
         $vDev   = floatval($valorDevolucion);
         $vPago  = floatval($valorPagado);
         $vTrm   = floatval($trm) > 0 ? floatval($trm) : 1;
-        $saldo  = $vBase - $vDev - $vPago;
+        $esCOP  = mb_stripos($moneda, 'peso colombiano') !== false;
 
-        $vBaseCOP  = round($vBase  * $vTrm, 2);
-        $vDevCOP   = round($vDev   * $vTrm, 2);
-        $vPagoCOP  = round($vPago  * $vTrm, 2);
-        $saldoCOP  = round($saldo  * $vTrm, 2);
+        if ($esCOP) {
+            $vUSD  = $vTrm > 0 ? round($vBase / $vTrm, 4) : 0;
+            $vCOP  = $vBase;
+            $dUSD  = $vTrm > 0 ? round($vDev  / $vTrm, 4) : 0;
+            $dCOP  = $vDev;
+            $pUSD  = $vTrm > 0 ? round($vPago / $vTrm, 4) : 0;
+            $pCOP  = $vPago;
+            $sCOP  = round($vBase - $vDev - $vPago, 4);
+            $sUSD  = $vTrm > 0 ? round($sCOP / $vTrm, 4) : 0;
+        } else {
+            $vUSD  = $vBase;
+            $vCOP  = round($vBase  * $vTrm, 2);
+            $dUSD  = $vDev;
+            $dCOP  = round($vDev   * $vTrm, 2);
+            $pUSD  = $vPago;
+            $pCOP  = round($vPago  * $vTrm, 2);
+            $sUSD  = round($vBase - $vDev - $vPago, 4);
+            $sCOP  = round($sUSD  * $vTrm, 2);
+        }
 
         $movimientos[] = [
-            'factura'            => intval($factura),
-            'fechaEntrega'       => $fechaEntrega ? substr($fechaEntrega, 0, 10) : '',
-            'idMoneda'           => intval($idMoneda),
-            'moneda'             => $moneda,
-            'valorBase'          => $vBase,
-            'valorBaseCOP'       => $vBaseCOP,
-            'valorDevolucion'    => $vDev,
-            'valorDevolucionCOP' => $vDevCOP,
-            'valorPagado'        => $vPago,
-            'valorPagadoCOP'     => $vPagoCOP,
-            'saldo'              => round($saldo, 4),
-            'saldoCOP'           => $saldoCOP,
+            'factura'       => intval($factura),
+            'fechaEntrega'  => $fechaEntrega ? substr($fechaEntrega, 0, 10) : '',
+            'idMoneda'      => intval($idMoneda),
+            'moneda'        => $moneda,
+            'trm'           => $vTrm,
+            'esCOP'         => $esCOP,
+            'esLegacy'      => (bool)$esLegacy,
+            'valorUSD'      => $vUSD,
+            'valorCOP'      => $vCOP,
+            'devolucionUSD' => $dUSD,
+            'devolucionCOP' => $dCOP,
+            'pagadoUSD'     => $pUSD,
+            'pagadoCOP'     => $pCOP,
+            'saldoUSD'      => $sUSD,
+            'saldoCOP'      => $sCOP,
         ];
 
-        $totValorBase       += $vBase;
-        $totValorDevolucion += $vDev;
-        $totValorPagado     += $vPago;
-        $totValorBaseCOP    += $vBaseCOP;
-        $totValorDevCOP     += $vDevCOP;
-        $totValorPagCOP     += $vPagoCOP;
+        $totValorUSD += $vUSD;
+        $totValorCOP += $vCOP;
+        $totDevUSD   += $dUSD;
+        $totDevCOP   += $dCOP;
+        $totPagUSD   += $pUSD;
+        $totPagCOP   += $pCOP;
     }
     $stmtMov->close();
 
-    $totSaldo    = $totValorBase - $totValorDevolucion - $totValorPagado;
-    $totSaldoCOP = $totValorBaseCOP - $totValorDevCOP - $totValorPagCOP;
+    $totSaldoUSD = $totValorUSD - $totDevUSD - $totPagUSD;
+    $totSaldoCOP = $totValorCOP - $totDevCOP - $totPagCOP;
 
     echo json_encode([
         "success"      => true,
@@ -170,14 +217,14 @@ try {
         "cliente"      => ["id" => intval($cId), "nombre" => $cNombre],
         "movimientos"  => $movimientos,
         "totales"      => [
-            "valorBase"          => round($totValorBase, 4),
-            "valorBaseCOP"       => round($totValorBaseCOP, 2),
-            "valorDevolucion"    => round($totValorDevolucion, 4),
-            "valorDevolucionCOP" => round($totValorDevCOP, 2),
-            "valorPagado"        => round($totValorPagado, 4),
-            "valorPagadoCOP"     => round($totValorPagCOP, 2),
-            "saldo"              => round($totSaldo, 4),
-            "saldoCOP"           => round($totSaldoCOP, 2),
+            "valorUSD"      => round($totValorUSD, 4),
+            "valorCOP"      => round($totValorCOP, 2),
+            "devolucionUSD" => round($totDevUSD, 4),
+            "devolucionCOP" => round($totDevCOP, 2),
+            "pagadoUSD"     => round($totPagUSD, 4),
+            "pagadoCOP"     => round($totPagCOP, 2),
+            "saldoUSD"      => round($totSaldoUSD, 4),
+            "saldoCOP"      => round($totSaldoCOP, 2),
         ],
     ]);
 } catch (Exception $e) {

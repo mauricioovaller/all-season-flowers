@@ -38,6 +38,7 @@ try {
     }
 
     // Consultar datos de la planilla desde SAS_EncabPedido
+    // Incluye: DestinoFinal (guardado) y destino_completo (calculado de dirección del cliente)
     $query = "SELECT 
                 enc.IdEncabPedido,
                 enc.NoPlanilla,
@@ -46,6 +47,8 @@ try {
                 enc.IdAyudante,
                 enc.Placa,
                 enc.Precinto,
+                enc.DestinoFinal,
+                CONCAT(cli.Direc1, ', ', cli.CIUDAD, ', ', cli.ESTADO, ', ', cli.PAIS) AS destino_completo,
                 enc.Factura,
                 CONCAT('FACT-', LPAD(enc.Factura, 6, '0')) AS numero_factura_formateado,
                 enc.Estado,
@@ -90,6 +93,8 @@ try {
         $IdAyudante,
         $Placa,
         $Precinto,
+        $DestinoFinal,
+        $destino_completo,
         $Factura,
         $numero_factura_formateado,
         $Estado,
@@ -125,6 +130,8 @@ try {
         'IdAyudante' => $IdAyudante,
         'Placa' => $Placa,
         'Precinto' => $Precinto,
+        'DestinoFinal' => $DestinoFinal,
+        'destino_completo' => $destino_completo,
         'Factura' => $Factura,
         'numero_factura_formateado' => $numero_factura_formateado,
         'Estado' => $Estado,

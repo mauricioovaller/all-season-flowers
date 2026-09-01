@@ -2,6 +2,21 @@
 require_once __DIR__ . '/../config/empresa.php';
 require_once FPDF_PATH;
 require_once CONEXION_BD_PATH;
+// Helper multi-cliente de razones sociales ("Empresa Emisora").
+// Si la carpeta helpers/ no está desplegada en el servidor de un cliente,
+// no debe romper el endpoint: se definen fallbacks seguros que desactivan
+// la funcionalidad y todo cae a las constantes de empresa.php (original).
+if (file_exists(__DIR__ . '/helpers/razon_social.php')) {
+    require_once __DIR__ . '/helpers/razon_social.php';
+}
+if (!function_exists('razon_social_columna_existe')) {
+    function razon_social_tabla_existe($enlace): bool { return false; }
+    function razon_social_columna_existe($enlace): bool { return false; }
+    function razon_social_disponible($enlace): bool { return false; }
+    function razon_social_obtener($enlace, $idRazonSocial): ?array { return null; }
+    function razon_social_de_pedido($enlace, $idEncabPedido): ?array { return null; }
+    function razon_social_logo_absoluto($razonSocial): ?string { return null; }
+}
 $enlace->set_charset("utf8mb4");
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
@@ -59,9 +74,10 @@ $sql = "SELECT
             '" . EMPRESA_NIT . "' AS nit,
             '" . EMPRESA_REPRESENTANTE . "' AS representante_legal,
             '" . EMPRESA_CC_REPRESENTANTE . "' AS cc_representante,
-            'C.C. 1.073.525.441 DE CAJAMARCA' AS cc_completo,
-            '3114677282' AS telefono_empresa,
-            'FINCA VILLA CLEMENCIA BRR SANTA MARTA VEREDA PRADO - Facatativa, Cundinamarca' AS direccion_empresa,
+            '" . EMPRESA_CC_REPRESENTANTE . "' AS cc_completo,
+            '" . EMPRESA_TELEFONO . "' AS telefono_empresa,
+            '" . EMPRESA_DIRECCION . "' AS direccion_empresa,
+            '" . EMPRESA_CIUDAD . "' AS ciudad_empresa,
             cli.NOMBRE AS cliente_nombre,
             CONCAT(cli.Direc1, ', ', cli.CIUDAD, ', ', cli.ESTADO, ', ', cli.PAIS) AS direccion_cliente,
             enc.PO_Cliente,
@@ -72,6 +88,7 @@ $sql = "SELECT
             COALESCE(age.NOMAGENCIA, 'K&M Handling') AS agencia,
             'ESTADOS UNIDOS' AS destino_pais,
             CONCAT(cli.Direc1,', ', cli.CIUDAD, ', ', cli.ESTADO, ', ', cli.PAIS) AS destino_completo,
+            enc.DestinoFinal,
             COALESCE(empaques.TotalPiezas, 0) AS TotalPiezas,
             COALESCE(empaques.EquivalenciaFulles, 0) AS EquivalenciaFulles,
             COALESCE(productos.TotalTallos, 0) AS TotalTallos,
@@ -137,6 +154,7 @@ $stmt->bind_result(
     $cc_completo,
     $telefono_empresa,
     $direccion_empresa,
+    $ciudad_empresa,
     $cliente_nombre,
     $direccion_cliente,
     $po_cliente,
@@ -147,6 +165,7 @@ $stmt->bind_result(
     $agencia,
     $destino_pais,
     $destino_completo,
+    $destino_final,
     $total_piezas,
     $equivalencia_fulles,
     $total_tallos,
@@ -169,19 +188,38 @@ if (!$stmt->fetch()) {
 }
 $stmt->close();
 
-// Si no hay conductor asignado, usar valores por defecto
+// ── RAZÓN SOCIAL / "Empresa Emisora" (multi-cliente) ─────────────────────
+// Si el pedido tiene una razón social guardada y existe la tabla, se usan sus
+// datos y logo; si no, se mantienen las constantes de empresa.php.
+$razonSocial = razon_social_de_pedido($enlace, $idEncabPedido);
+if ($razonSocial) {
+    $empresa_nombre    = !empty($razonSocial['Nombre']) ? $razonSocial['Nombre'] : $empresa_nombre;
+    $nit               = !empty($razonSocial['NIT']) ? $razonSocial['NIT'] : $nit;
+    $representante_legal = !empty($razonSocial['RepresentanteLegal']) ? $razonSocial['RepresentanteLegal'] : $representante_legal;
+    $cc_representante  = !empty($razonSocial['CCRepresentante']) ? $razonSocial['CCRepresentante'] : $cc_representante;
+    $cc_completo       = $cc_representante;
+    $telefono_empresa  = !empty($razonSocial['Telefono']) ? $razonSocial['Telefono'] : $telefono_empresa;
+    $direccion_empresa = !empty($razonSocial['Direccion']) ? $razonSocial['Direccion'] : $direccion_empresa;
+    $ciudad_empresa    = !empty($razonSocial['Ciudad']) ? $razonSocial['Ciudad'] : $ciudad_empresa;
+}
+$logo_planilla = razon_social_logo_absoluto($razonSocial) ?: EMPRESA_LOGO_PATH;
+
+// Validar y limpiar valores NULL para evitar problemas con utf8_decode
 if (empty($conductor_nombre)) {
     $conductor_nombre = $representante_legal;
 }
-
+if (empty($conductor_cedula)) {
+    $conductor_cedula = "N/A";
+}
 if (empty($ayudante_nombre)) {
     $ayudante_nombre = "";
 }
-
+if (empty($ayudante_cedula)) {
+    $ayudante_cedula = "";
+}
 if (empty($placa)) {
     $placa = "KLN564";
 }
-
 if (empty($precinto)) {
     $precinto = "0";
 }
@@ -189,6 +227,18 @@ if (empty($precinto)) {
 // ============================================
 // 3. CLASE PDF PARA LAS 3 PLANILLAS
 // ============================================
+
+/**
+ * Función auxiliar para decodificar UTF-8 de forma segura
+ * Maneja valores NULL y retorna string seguro
+ */
+function safeUtf8Decode($value)
+{
+    if ($value === null || $value === '') {
+        return '';
+    }
+    return utf8_decode((string)$value);
+}
 
 class PDF_Planilla extends FPDF
 {
@@ -214,7 +264,164 @@ class PDF_Planilla extends FPDF
     {
         $this->SetY(-10);
         $this->SetFont('Helvetica', 'B', 8);
-        $this->Cell(0, 10, 'Address: FINCA VILLA CLEMENCIA BRR SANTA MARTA VEREDA PRADO - Facatativa, Cundinamarca / Tel: 3114677282', 0, 0, 'C');
+        $this->Cell(0, 10, 'Address: ' . utf8_decode($this->datos['direccion_empresa'] ?? EMPRESA_DIRECCION) . ' / Tel: ' . utf8_decode($this->datos['telefono_empresa'] ?? EMPRESA_TELEFONO) . ' / City: ' . utf8_decode($this->datos['ciudad_empresa'] ?? EMPRESA_CIUDAD), 0, 0, 'C');
+    }
+
+    /**
+     * Función auxiliar para campos con etiqueta y valor que puede envolver en múltiples líneas
+     * Detecta automáticamente si el texto cabe en 1 o 2+ líneas
+     * Si cabe en 1 línea: altura normal (6mm)
+     * Si necesita 2+ líneas: altura reducida (3.5mm por línea) para no descuadrar documento
+     * @param string $label - Etiqueta del campo
+     * @param string $value - Valor del campo
+     * @param float $labelWidth - Ancho de la etiqueta (mm)
+     * @param float $lineHeight - Alto de cada línea cuando cabe en 1 línea (mm)
+     */
+    function multiCellWithLabel($label, $value, $labelWidth = 60, $lineHeight = 6)
+    {
+        // Guardar posición Y actual
+        $startY = $this->GetY();
+
+        // Establecer fuente para calcular ancho del valor
+        $this->SetFont('Helvetica', '', 10);
+
+        // Calcular ancho disponible para el valor
+        $valueWidth = $this->w - $this->lMargin - $labelWidth - $this->rMargin;
+
+        // Calcular número de líneas que necesita el valor
+        $stringWidth = $this->GetStringWidth(utf8_decode($value));
+        $numLines = ceil($stringWidth / $valueWidth);
+
+        // Ajustar altura según número de líneas
+        // 1 línea: usar altura normal (6mm)
+        // 2+ líneas: usar altura reducida (3mm por línea) para minimizar espacio
+        if ($numLines == 1) {
+            $cellHeight = $lineHeight;
+            $totalHeight = $lineHeight;
+        } else {
+            $cellHeight = 3;
+            $totalHeight = $cellHeight * $numLines;
+        }
+
+        // Dibujar etiqueta con altura total ajustada (alineada arriba)
+        $this->SetFont('Helvetica', 'B', 10);
+        $this->Cell($labelWidth, $totalHeight, utf8_decode($label), 0, 0, 'T');
+
+        // Dibujar valor con MultiCell usando la altura calculada
+        $this->SetFont('Helvetica', '', 10);
+        $this->MultiCell($valueWidth, $cellHeight, utf8_decode($value), 0, 'L');
+    }
+
+    /**
+     * Función para dibujar los 4 bloques de firmas con separación clara
+     * Permite envolver nombres (hasta 3 líneas) y cédulas (hasta 2 líneas)
+     * Con altura mínima para no expandir el documento
+     */
+    function dibujarBloquesFirmas()
+    {
+        // Definir anchos de bloques iguales y distribuidos horizontalmente
+        $anchoBloque = 47.5;  // aproximadamente 190 / 4
+        $x1 = 10;   // Margen izquierdo
+        $x2 = $x1 + $anchoBloque;
+        $x3 = $x2 + $anchoBloque;
+        $x4 = $x3 + $anchoBloque;
+
+        $y = $this->GetY();
+        $altoLineaMin = 2.5;  // Altura mínima por línea para legibilidad
+
+        // Array para almacenar Y máxima de cada bloque después de nombres
+        $yFinal = $y;
+
+        // --- BLOQUE 1: REPRESENTANTE LEGAL ---
+        $this->SetFont('Helvetica', '', 7.5);
+        $this->SetXY($x1, $y);
+        $yBefore = $this->GetY();
+        $this->MultiCell($anchoBloque - 2, $altoLineaMin, safeUtf8Decode($this->datos['representante_legal']), 0, 'C');
+        $yAfter = $this->GetY();
+        $yFinal = max($yFinal, $yAfter);
+
+        // --- BLOQUE 2: CONDUCTOR ---
+        $this->SetFont('Helvetica', '', 7.5);
+        $this->SetXY($x2, $y);
+        $this->MultiCell($anchoBloque - 2, $altoLineaMin, safeUtf8Decode($this->datos['conductor_nombre']), 0, 'C');
+        $yAfter = $this->GetY();
+        $yFinal = max($yFinal, $yAfter);
+
+        // --- BLOQUE 3: AYUDANTE ---
+        $this->SetFont('Helvetica', '', 7.5);
+        $this->SetXY($x3, $y);
+        $this->MultiCell($anchoBloque - 2, $altoLineaMin, safeUtf8Decode($this->datos['ayudante_nombre'] ?: 'N/A'), 0, 'C');
+        $yAfter = $this->GetY();
+        $yFinal = max($yFinal, $yAfter);
+
+        // --- BLOQUE 4: AGENCIA ---
+        $this->SetFont('Helvetica', '', 7.5);
+        $this->SetXY($x4, $y);
+        $this->MultiCell($anchoBloque - 2, $altoLineaMin, safeUtf8Decode($this->datos['agencia']), 0, 'C');
+        $yAfter = $this->GetY();
+        $yFinal = max($yFinal, $yAfter);
+
+        // Posicionar Y después de los nombres
+        $y = $yFinal + 1;
+
+        // --- CÉDULAS ---
+        $yFinal = $y;
+
+        $this->SetFont('Helvetica', '', 6.5);
+        $this->SetXY($x1, $y);
+        $this->MultiCell($anchoBloque - 2, $altoLineaMin, safeUtf8Decode($this->datos['cc_completo']), 0, 'C');
+        $yAfter = $this->GetY();
+        $yFinal = max($yFinal, $yAfter);
+
+        $this->SetXY($x2, $y);
+        $this->MultiCell($anchoBloque - 2, $altoLineaMin, safeUtf8Decode($this->datos['conductor_cedula']), 0, 'C');
+        $yAfter = $this->GetY();
+        $yFinal = max($yFinal, $yAfter);
+
+        $this->SetXY($x3, $y);
+        $this->MultiCell($anchoBloque - 2, $altoLineaMin, safeUtf8Decode($this->datos['ayudante_cedula']), 0, 'C');
+        $yAfter = $this->GetY();
+        $yFinal = max($yFinal, $yAfter);
+
+        // Agencia no tiene cédula
+        $this->SetXY($x4, $y);
+        $this->MultiCell($anchoBloque - 2, $altoLineaMin, '', 0, 'C');
+
+        // Posicionar Y después de las cédulas
+        $y = $yFinal + 2;
+
+        // --- LÍNEAS DE FIRMA ---
+        $this->SetDrawColor(0);
+        $this->SetLineWidth(0.3);
+
+        // Línea para Representante Legal
+        $this->Line($x1 + 2, $y, $x1 + $anchoBloque - 3, $y);
+
+        // Línea para Conductor
+        $this->Line($x2 + 2, $y, $x2 + $anchoBloque - 3, $y);
+
+        // Línea para Ayudante
+        $this->Line($x3 + 2, $y, $x3 + $anchoBloque - 3, $y);
+
+        // Línea para Agencia
+        $this->Line($x4 + 2, $y, $x4 + $anchoBloque - 3, $y);
+
+        $y += 4;
+
+        // --- ETIQUETAS ---
+        $this->SetFont('Helvetica', 'B', 8);
+        $this->SetXY($x1, $y);
+        $this->Cell($anchoBloque - 2, 4, utf8_decode('REPRESENTANTE LEGAL'), 0, 0, 'C');
+
+        $this->SetXY($x2, $y);
+        $this->Cell($anchoBloque - 2, 4, utf8_decode('CONDUCTOR'), 0, 0, 'C');
+
+        $this->SetXY($x3, $y);
+        $this->Cell($anchoBloque - 2, 4, utf8_decode('AYUDANTE'), 0, 0, 'C');
+
+        $this->SetXY($x4, $y);
+        $this->Cell($anchoBloque - 2, 4, utf8_decode('AGENCIA'), 0, 0, 'C');
+        $this->SetY($y + 5);
     }
 
     function generarPlanillaPolicia()
@@ -222,8 +429,8 @@ class PDF_Planilla extends FPDF
         $this->AddPage();
 
         // Logo
-        $this->Image(EMPRESA_LOGO_PATH, 150, 10, 60);
-        $this->Ln(18);
+        $this->Image($this->datos['logo'] ?? EMPRESA_LOGO_PATH, 150, 10, 60);
+        $this->Ln(12);
 
         // Fecha y lugar
         $this->SetFont('Helvetica', 'B', 10);
@@ -236,6 +443,7 @@ class PDF_Planilla extends FPDF
         $this->SetFont('Helvetica', 'B', 11);
         $this->Cell(0, 6, utf8_decode('DIRECCIÓN DE ANTINARCÓTICOS'), 0, 1, 'L');
         $this->Cell(0, 6, utf8_decode('BASE OPERATIVA AEROPUERTO EL DORADO BOGOTÁ'), 0, 1, 'L');
+        $this->Cell(0, 6, utf8_decode('REF: CARTA DE RESPONSABILIDAD'), 0, 1, 'L');
         $this->Ln(3);
 
         // Cuerpo de la carta
@@ -246,96 +454,88 @@ class PDF_Planilla extends FPDF
         $this->MultiCell(0, 5, $texto);
         $this->Ln(2);
 
-        // Tabla de información
-        $this->SetFont('Helvetica', 'B', 10);
-        $this->Cell(60, 6, utf8_decode('FACTURA No.:'), 0, 0);
-        $this->SetFont('Helvetica', '', 10);
-        $this->Cell(0, 6, $this->datos['numero_factura'], 0, 1);
+        // Tabla de información       
 
         $this->SetFont('Helvetica', 'B', 10);
-        $this->Cell(60, 6, utf8_decode('GUÍA AÉREA MASTER No.:'), 0, 0);
+        $this->Cell(60, 5, utf8_decode('GUÍA AÉREA MASTER No.:'), 0, 0);
         $this->SetFont('Helvetica', '', 10);
-        $this->Cell(0, 6, $this->datos['awb'], 0, 1);
+        $this->Cell(0, 5, $this->datos['awb'], 0, 1);
 
         $this->SetFont('Helvetica', 'B', 10);
-        $this->Cell(60, 6, utf8_decode('GUÍA HIJA No.:'), 0, 0);
+        $this->Cell(60, 5, utf8_decode('GUÍA HIJA No.:'), 0, 0);
         $this->SetFont('Helvetica', '', 10);
-        $this->Cell(0, 6, $this->datos['awb_hija'], 0, 1);
+        $this->Cell(0, 5, $this->datos['awb_hija'], 0, 1);
 
         $this->SetFont('Helvetica', 'B', 10);
-        $this->Cell(60, 6, utf8_decode('GUÍA NIETA No.:'), 0, 0);
+        $this->Cell(60, 5, utf8_decode('GUÍA NIETA No.:'), 0, 0);
         $this->SetFont('Helvetica', '', 10);
-        $this->Cell(0, 6, $this->datos['awb_nieta'] ?: 'N/A', 0, 1);
+        $this->Cell(0, 5, $this->datos['awb_nieta'] ?: 'N/A', 0, 1);
 
         $this->SetFont('Helvetica', 'B', 10);
-        $this->Cell(60, 6, utf8_decode('CONSIGNATARIO:'), 0, 0);
+        $this->Cell(60, 5, utf8_decode('CONSIGNATARIO:'), 0, 0);
         $this->SetFont('Helvetica', '', 10);
-        $this->Cell(0, 6, utf8_decode($this->datos['cliente_nombre']), 0, 1);
+        $this->Cell(0, 5, safeUtf8Decode($this->datos['cliente_nombre']), 0, 1);
 
         $this->SetFont('Helvetica', 'B', 10);
-        $this->Cell(60, 6, utf8_decode('DESCRIPCIÓN GENERAL:'), 0, 0);
+        $this->Cell(60, 5, utf8_decode('DESCRIPCIÓN GENERAL:'), 0, 0);
         $this->SetFont('Helvetica', '', 10);
-        $this->Cell(0, 6, utf8_decode($this->datos['descripcion_mercancia']), 0, 1);
+        $this->Cell(0, 5, safeUtf8Decode($this->datos['descripcion_mercancia']), 0, 1);
+
+        $this->multiCellWithLabel(utf8_decode('DESTINO:'), $this->datos['destino_completo'], 60, 5);
+
+        $this->multiCellWithLabel(utf8_decode('DESTINO FINAL:'), $this->datos['destino_final_pdf'], 60, 5);
 
         $this->SetFont('Helvetica', 'B', 10);
-        $this->Cell(60, 6, utf8_decode('DESTINO:'), 0, 0);
+        $this->Cell(60, 5, utf8_decode('AEROLÍNEA:'), 0, 0);
         $this->SetFont('Helvetica', '', 10);
-        $this->Cell(0, 6, utf8_decode($this->datos['destino_completo']), 0, 1);
+        $this->Cell(0, 5, safeUtf8Decode($this->datos['aerolinea']), 0, 1);
 
         $this->SetFont('Helvetica', 'B', 10);
-        $this->Cell(60, 6, utf8_decode('DESTINO FINAL:'), 0, 0);
+        $this->Cell(60, 5, utf8_decode('NÚMERO DE FULLES:'), 0, 0);
         $this->SetFont('Helvetica', '', 10);
-        $this->Cell(0, 6, utf8_decode($this->datos['destino_completo']), 0, 1);
+        $this->Cell(0, 5, number_format($this->datos['equivalencia_fulles'], 2), 0, 1);
 
         $this->SetFont('Helvetica', 'B', 10);
-        $this->Cell(60, 6, utf8_decode('AEROLÍNEA:'), 0, 0);
+        $this->Cell(60, 5, utf8_decode('NÚMERO DE PIEZAS:'), 0, 0);
         $this->SetFont('Helvetica', '', 10);
-        $this->Cell(0, 6, utf8_decode($this->datos['aerolinea']), 0, 1);
+        $this->Cell(0, 5, number_format($this->datos['total_piezas'], 2), 0, 1);
 
         $this->SetFont('Helvetica', 'B', 10);
-        $this->Cell(60, 6, utf8_decode('NÚMERO DE FULLES:'), 0, 0);
+        $this->Cell(60, 5, utf8_decode('TALLOS:'), 0, 0);
         $this->SetFont('Helvetica', '', 10);
-        $this->Cell(0, 6, number_format($this->datos['equivalencia_fulles'], 2), 0, 1);
+        $this->Cell(0, 5, $this->datos['total_tallos'], 0, 1);
 
         $this->SetFont('Helvetica', 'B', 10);
-        $this->Cell(60, 6, utf8_decode('NÚMERO DE PIEZAS:'), 0, 0);
+        $this->Cell(60, 5, utf8_decode('AGENCIA:'), 0, 0);
         $this->SetFont('Helvetica', '', 10);
-        $this->Cell(0, 6, number_format($this->datos['total_piezas'], 2), 0, 1);
+        $this->Cell(0, 5, safeUtf8Decode($this->datos['agencia']), 0, 1);
+
+        $this->multiCellWithLabel(utf8_decode('NOMBRE DEL RESPONSABLE:'), $this->datos['conductor_nombre'], 60, 5);
 
         $this->SetFont('Helvetica', 'B', 10);
-        $this->Cell(60, 6, utf8_decode('TALLOS:'), 0, 0);
+        $this->Cell(60, 5, utf8_decode('CÉDULA DE CIUDADANÍA:'), 0, 0);
         $this->SetFont('Helvetica', '', 10);
-        $this->Cell(0, 6, $this->datos['total_tallos'], 0, 1);
+        $this->Cell(0, 5, safeUtf8Decode($this->datos['conductor_cedula']), 0, 1);
 
         $this->SetFont('Helvetica', 'B', 10);
-        $this->Cell(60, 6, utf8_decode('AGENCIA:'), 0, 0);
+        $this->Cell(60, 5, utf8_decode('TELÉFONO:'), 0, 0);
         $this->SetFont('Helvetica', '', 10);
-        $this->Cell(0, 6, utf8_decode($this->datos['agencia']), 0, 1);
+        $this->Cell(0, 5, $this->datos['telefono_empresa'], 0, 1);
 
         $this->SetFont('Helvetica', 'B', 10);
-        $this->Cell(60, 6, utf8_decode('NOMBRE DEL RESPONSABLE:'), 0, 0);
+        $this->Cell(60, 5, utf8_decode('PLACAS:'), 0, 0);
         $this->SetFont('Helvetica', '', 10);
-        $this->Cell(0, 6, utf8_decode($this->datos['conductor_nombre']), 0, 1);
+        $this->Cell(0, 5, $this->datos['placa'], 0, 1);
 
         $this->SetFont('Helvetica', 'B', 10);
-        $this->Cell(60, 6, utf8_decode('CÉDULA DE CIUDADANÍA:'), 0, 0);
+        $this->Cell(60, 5, utf8_decode('PLANILLA DE CARGA:'), 0, 0);
         $this->SetFont('Helvetica', '', 10);
-        $this->Cell(0, 6, $this->datos['conductor_cedula'], 0, 1);
+        $this->Cell(0, 5, $this->datos['numero_planilla'], 0, 1);
 
         $this->SetFont('Helvetica', 'B', 10);
-        $this->Cell(60, 6, utf8_decode('TELÉFONO:'), 0, 0);
+        $this->Cell(60, 5, utf8_decode('FACTURA No.:'), 0, 0);
         $this->SetFont('Helvetica', '', 10);
-        $this->Cell(0, 6, $this->datos['telefono_empresa'], 0, 1);
-
-        $this->SetFont('Helvetica', 'B', 10);
-        $this->Cell(60, 6, utf8_decode('PLACAS:'), 0, 0);
-        $this->SetFont('Helvetica', '', 10);
-        $this->Cell(0, 6, $this->datos['placa'], 0, 1);
-
-        $this->SetFont('Helvetica', 'B', 10);
-        $this->Cell(60, 6, utf8_decode('PLANILLA DE CARGA:'), 0, 0);
-        $this->SetFont('Helvetica', '', 10);
-        $this->Cell(0, 6, $this->datos['numero_planilla'], 0, 1);
+        $this->Cell(0, 5, $this->datos['numero_factura'], 0, 1);
 
         $this->Ln(1);
 
@@ -355,27 +555,10 @@ class PDF_Planilla extends FPDF
         $this->MultiCell(0, 5, $declaracion);
         $this->SetFont('Helvetica', 'B', 8);
         $this->Cell(60, 6, utf8_decode('Atentamente:'), 0, 1, 'L');
-        $this->Ln(14);
+        $this->Ln(8);
 
-        // Firmas      
-
-        $this->SetFont('Helvetica', '', 8);
-        $this->Cell(55, 5, utf8_decode($this->datos['representante_legal']), 0, 0, 'C');
-        $this->Cell(55, 5, utf8_decode($this->datos['conductor_nombre']), 0, 0, 'C');
-        $this->Cell(50, 5, utf8_decode($this->datos['ayudante_nombre'] ?: 'N/A'), 0, 0, 'C');
-        $this->Cell(40, 5, utf8_decode($this->datos['agencia']), 0, 1, 'C');
-        $this->Ln(0);
-
-        $this->SetFont('Helvetica', '', 8);
-        $this->Cell(55, 5, $this->datos['cc_completo'], 0, 0, 'C');
-        $this->Cell(55, 5, $this->datos['conductor_cedula'], 0, 0, 'C');
-        $this->Cell(50, 5, $this->datos['ayudante_cedula'], 0, 1, 'C');
-
-        $this->SetFont('Helvetica', 'B', 10);
-        $this->Cell(55, 5, utf8_decode('REPRESENTANTE LEGAL'), 0, 0, 'C');
-        $this->Cell(55, 5, utf8_decode('CONDUCTOR'), 0, 0, 'C');
-        $this->Cell(50, 5, utf8_decode('AYUDANTE'), 0, 0, 'C');
-        $this->Cell(40, 5, utf8_decode('AGENCIA'), 0, 1, 'C');
+        // Firmas con bloques separados
+        $this->dibujarBloquesFirmas();
     }
 
     function generarPlanillaAerolinea()
@@ -383,7 +566,7 @@ class PDF_Planilla extends FPDF
         $this->AddPage();
 
         // Logo
-        $this->Image(EMPRESA_LOGO_PATH, 150, 10, 60);
+        $this->Image($this->datos['logo'] ?? EMPRESA_LOGO_PATH, 150, 10, 60);
 
         $this->Ln(14);
 
@@ -396,7 +579,7 @@ class PDF_Planilla extends FPDF
         $this->SetFont('Helvetica', 'B', 10);
         $this->Cell(0, 6, utf8_decode('Señores:'), 0, 1, 'L');
         $this->SetFont('Helvetica', 'B', 11);
-        $this->Cell(0, 6, utf8_decode($this->datos['aerolinea']), 0, 1, 'L');
+        $this->Cell(0, 6, safeUtf8Decode($this->datos['aerolinea']), 0, 1, 'L');
         $this->Cell(0, 6, utf8_decode('DEPARTAMENTO DE SEGURIDAD'), 0, 1, 'L');
         $this->Cell(0, 6, utf8_decode('AEROPUERTO EL DORADO BOGOTÁ'), 0, 1, 'L');
         $this->Cell(0, 6, utf8_decode('REF: CARTA DE RESPONSABILIDAD'), 0, 1, 'L');
@@ -410,96 +593,88 @@ class PDF_Planilla extends FPDF
         $this->MultiCell(0, 5, $texto);
         $this->Ln(1);
 
-        // Tabla de información
+        // Tabla de información        
         $this->SetFont('Helvetica', 'B', 10);
-        $this->Cell(60, 6, utf8_decode('FACTURA No.:'), 0, 0);
+        $this->Cell(60, 5, utf8_decode('GUÍA AÉREA MASTER No.:'), 0, 0);
         $this->SetFont('Helvetica', '', 10);
-        $this->Cell(0, 6, $this->datos['numero_factura'], 0, 1);
+        $this->Cell(0, 5, $this->datos['awb'], 0, 1);
 
         $this->SetFont('Helvetica', 'B', 10);
-        $this->Cell(60, 6, utf8_decode('GUÍA AÉREA MASTER No.:'), 0, 0);
+        $this->Cell(60, 5, utf8_decode('GUÍA HIJA No.:'), 0, 0);
         $this->SetFont('Helvetica', '', 10);
-        $this->Cell(0, 6, $this->datos['awb'], 0, 1);
+        $this->Cell(0, 5, $this->datos['awb_hija'], 0, 1);
 
         $this->SetFont('Helvetica', 'B', 10);
-        $this->Cell(60, 6, utf8_decode('GUÍA HIJA No.:'), 0, 0);
+        $this->Cell(60, 5, utf8_decode('GUÍA NIETA No.:'), 0, 0);
         $this->SetFont('Helvetica', '', 10);
-        $this->Cell(0, 6, $this->datos['awb_hija'], 0, 1);
+        $this->Cell(0, 5, $this->datos['awb_nieta'] ?: 'N/A', 0, 1);
 
         $this->SetFont('Helvetica', 'B', 10);
-        $this->Cell(60, 6, utf8_decode('GUÍA NIETA No.:'), 0, 0);
+        $this->Cell(60, 5, utf8_decode('CONSIGNATARIO:'), 0, 0);
         $this->SetFont('Helvetica', '', 10);
-        $this->Cell(0, 6, $this->datos['awb_nieta'] ?: 'N/A', 0, 1);
+        $this->Cell(0, 5, safeUtf8Decode($this->datos['cliente_nombre']), 0, 1);
 
         $this->SetFont('Helvetica', 'B', 10);
-        $this->Cell(60, 6, utf8_decode('CONSIGNATARIO:'), 0, 0);
+        $this->Cell(60, 5, utf8_decode('DESCRIPCIÓN GENERAL:'), 0, 0);
         $this->SetFont('Helvetica', '', 10);
-        $this->Cell(0, 6, utf8_decode($this->datos['cliente_nombre']), 0, 1);
+        $this->Cell(0, 5, safeUtf8Decode($this->datos['descripcion_mercancia']), 0, 1);
+
+        $this->multiCellWithLabel(utf8_decode('DESTINO:'), $this->datos['destino_completo'], 60, 5);
+
+        $this->multiCellWithLabel(utf8_decode('DESTINO FINAL:'), $this->datos['destino_final_pdf'], 60, 5);
 
         $this->SetFont('Helvetica', 'B', 10);
-        $this->Cell(60, 6, utf8_decode('DESCRIPCIÓN GENERAL:'), 0, 0);
+        $this->Cell(60, 5, utf8_decode('AEROLÍNEA:'), 0, 0);
         $this->SetFont('Helvetica', '', 10);
-        $this->Cell(0, 6, utf8_decode($this->datos['descripcion_mercancia']), 0, 1);
+        $this->Cell(0, 5, safeUtf8Decode($this->datos['aerolinea']), 0, 1);
 
         $this->SetFont('Helvetica', 'B', 10);
-        $this->Cell(60, 6, utf8_decode('DESTINO:'), 0, 0);
+        $this->Cell(60, 5, utf8_decode('NÚMERO DE FULLES:'), 0, 0);
         $this->SetFont('Helvetica', '', 10);
-        $this->Cell(0, 6, utf8_decode($this->datos['destino_completo']), 0, 1);
+        $this->Cell(0, 5, number_format($this->datos['equivalencia_fulles'], 2), 0, 1);
 
         $this->SetFont('Helvetica', 'B', 10);
-        $this->Cell(60, 6, utf8_decode('DESTINO FINAL:'), 0, 0);
+        $this->Cell(60, 5, utf8_decode('NÚMERO DE PIEZAS:'), 0, 0);
         $this->SetFont('Helvetica', '', 10);
-        $this->Cell(0, 6, utf8_decode($this->datos['destino_completo']), 0, 1);
+        $this->Cell(0, 5, number_format($this->datos['total_piezas'], 2), 0, 1);
 
         $this->SetFont('Helvetica', 'B', 10);
-        $this->Cell(60, 6, utf8_decode('AEROLÍNEA:'), 0, 0);
+        $this->Cell(60, 5, utf8_decode('TALLOS:'), 0, 0);
         $this->SetFont('Helvetica', '', 10);
-        $this->Cell(0, 6, utf8_decode($this->datos['aerolinea']), 0, 1);
+        $this->Cell(0, 5, $this->datos['total_tallos'], 0, 1);
 
         $this->SetFont('Helvetica', 'B', 10);
-        $this->Cell(60, 6, utf8_decode('NÚMERO DE FULLES:'), 0, 0);
+        $this->Cell(60, 5, utf8_decode('AGENCIA:'), 0, 0);
         $this->SetFont('Helvetica', '', 10);
-        $this->Cell(0, 6, number_format($this->datos['equivalencia_fulles'], 2), 0, 1);
+        $this->Cell(0, 5, safeUtf8Decode($this->datos['agencia']), 0, 1);
+
+        $this->multiCellWithLabel(utf8_decode('NOMBRE DEL RESPONSABLE:'), $this->datos['conductor_nombre'], 60, 5);
 
         $this->SetFont('Helvetica', 'B', 10);
-        $this->Cell(60, 6, utf8_decode('NÚMERO DE PIEZAS:'), 0, 0);
+        $this->Cell(60, 5, utf8_decode('CÉDULA DE CIUDADANÍA:'), 0, 0);
         $this->SetFont('Helvetica', '', 10);
-        $this->Cell(0, 6, number_format($this->datos['total_piezas'], 2), 0, 1);
+        $this->Cell(0, 5, safeUtf8Decode($this->datos['conductor_cedula']), 0, 1);
 
         $this->SetFont('Helvetica', 'B', 10);
-        $this->Cell(60, 6, utf8_decode('TALLOS:'), 0, 0);
+        $this->Cell(60, 5, utf8_decode('TELÉFONO:'), 0, 0);
         $this->SetFont('Helvetica', '', 10);
-        $this->Cell(0, 6, $this->datos['total_tallos'], 0, 1);
+        $this->Cell(0, 5, $this->datos['telefono_empresa'], 0, 1);
 
         $this->SetFont('Helvetica', 'B', 10);
-        $this->Cell(60, 6, utf8_decode('AGENCIA:'), 0, 0);
+        $this->Cell(60, 5, utf8_decode('PLACAS:'), 0, 0);
         $this->SetFont('Helvetica', '', 10);
-        $this->Cell(0, 6, utf8_decode($this->datos['agencia']), 0, 1);
+        $this->Cell(0, 5, $this->datos['placa'], 0, 1);
 
         $this->SetFont('Helvetica', 'B', 10);
-        $this->Cell(60, 6, utf8_decode('NOMBRE DEL RESPONSABLE:'), 0, 0);
+        $this->Cell(60, 5, utf8_decode('PLANILLA DE CARGA:'), 0, 0);
         $this->SetFont('Helvetica', '', 10);
-        $this->Cell(0, 6, utf8_decode($this->datos['conductor_nombre']), 0, 1);
+        $this->Cell(0, 5, $this->datos['numero_planilla'], 0, 1);
 
         $this->SetFont('Helvetica', 'B', 10);
-        $this->Cell(60, 6, utf8_decode('CÉDULA DE CIUDADANÍA:'), 0, 0);
+        $this->Cell(60, 5, utf8_decode('FACTURA No.:'), 0, 0);
         $this->SetFont('Helvetica', '', 10);
-        $this->Cell(0, 6, $this->datos['conductor_cedula'], 0, 1);
+        $this->Cell(0, 5, $this->datos['numero_factura'], 0, 1);
 
-        $this->SetFont('Helvetica', 'B', 10);
-        $this->Cell(60, 6, utf8_decode('TELÉFONO:'), 0, 0);
-        $this->SetFont('Helvetica', '', 10);
-        $this->Cell(0, 6, $this->datos['telefono_empresa'], 0, 1);
-
-        $this->SetFont('Helvetica', 'B', 10);
-        $this->Cell(60, 6, utf8_decode('PLACAS:'), 0, 0);
-        $this->SetFont('Helvetica', '', 10);
-        $this->Cell(0, 6, $this->datos['placa'], 0, 1);
-
-        $this->SetFont('Helvetica', 'B', 10);
-        $this->Cell(60, 6, utf8_decode('PLANILLA DE CARGA:'), 0, 0);
-        $this->SetFont('Helvetica', '', 10);
-        $this->Cell(0, 6, $this->datos['numero_planilla'], 0, 1);
 
         $this->Ln(0);
 
@@ -519,26 +694,10 @@ class PDF_Planilla extends FPDF
         $this->MultiCell(0, 5, $declaracion);
         $this->SetFont('Helvetica', 'B', 8);
         $this->Cell(60, 4, utf8_decode('Atentamente:'), 0, 1, 'L');
-        $this->Ln(13);
+        $this->Ln(7);
 
-        // Firmas 
-        $this->SetFont('Helvetica', '', 8);
-        $this->Cell(55, 5, utf8_decode($this->datos['representante_legal']), 0, 0, 'C');
-        $this->Cell(55, 5, utf8_decode($this->datos['conductor_nombre']), 0, 0, 'C');
-        $this->Cell(50, 5, utf8_decode($this->datos['ayudante_nombre'] ?: 'N/A'), 0, 0, 'C');
-        $this->Cell(40, 5, utf8_decode($this->datos['agencia']), 0, 1, 'C');
-        $this->Ln(0);
-
-        $this->SetFont('Helvetica', '', 8);
-        $this->Cell(55, 5, $this->datos['cc_completo'], 0, 0, 'C');
-        $this->Cell(55, 5, $this->datos['conductor_cedula'], 0, 0, 'C');
-        $this->Cell(50, 5, $this->datos['ayudante_cedula'], 0, 1, 'C');
-
-        $this->SetFont('Helvetica', 'B', 10);
-        $this->Cell(55, 5, utf8_decode('REPRESENTANTE LEGAL'), 0, 0, 'C');
-        $this->Cell(55, 5, utf8_decode('CONDUCTOR'), 0, 0, 'C');
-        $this->Cell(50, 5, utf8_decode('AYUDANTE'), 0, 0, 'C');
-        $this->Cell(40, 5, utf8_decode('AGENCIA'), 0, 1, 'C');
+        // Firmas con bloques separados
+        $this->dibujarBloquesFirmas();
     }
 
     function generarPlanillaDespacho()
@@ -547,7 +706,7 @@ class PDF_Planilla extends FPDF
 
         // Título
         // Logo
-        $this->Image(EMPRESA_LOGO_PATH, 150, 10, 60);
+        $this->Image($this->datos['logo'] ?? EMPRESA_LOGO_PATH, 150, 10, 60);
 
         $this->Ln(45);
 
@@ -561,10 +720,10 @@ class PDF_Planilla extends FPDF
         $this->Cell(0, 7, $this->datos['fecha_entrega'], 0, 1);
 
         $this->Cell(100, 7, utf8_decode('AEROLÍNEA:'), 0, 0);
-        $this->Cell(0, 7, utf8_decode($this->datos['aerolinea']), 0, 1);
+        $this->Cell(0, 7, safeUtf8Decode($this->datos['aerolinea']), 0, 1);
 
         $this->Cell(100, 7, utf8_decode('AGENCIA:'), 0, 0);
-        $this->Cell(0, 7, utf8_decode($this->datos['agencia']), 0, 1);
+        $this->Cell(0, 7, safeUtf8Decode($this->datos['agencia']), 0, 1);
 
         $this->Cell(100, 7, utf8_decode('GUÍA AÉREA MASTER:'), 0, 0);
         $this->Cell(0, 7, $this->datos['awb'], 0, 1);
@@ -576,10 +735,10 @@ class PDF_Planilla extends FPDF
         $this->Cell(0, 7, $this->datos['awb_nieta'] ?: 'N/A', 0, 1);
 
         $this->Cell(100, 7, utf8_decode('EXPORTADOR:'), 0, 0);
-        $this->Cell(0, 7, utf8_decode($this->datos['empresa_nombre']), 0, 1);
+        $this->Cell(0, 7, safeUtf8Decode($this->datos['empresa_nombre']), 0, 1);
 
         $this->Cell(100, 7, utf8_decode('IMPORTADOR:'), 0, 0);
-        $this->Cell(0, 7, utf8_decode($this->datos['cliente_nombre']), 0, 1);
+        $this->Cell(0, 7, safeUtf8Decode($this->datos['cliente_nombre']), 0, 1);
 
         $this->Cell(100, 7, utf8_decode('NÚMERO DE FULLES:'), 0, 0);
         $this->Cell(0, 7, number_format($this->datos['equivalencia_fulles'], 2), 0, 1);
@@ -593,50 +752,33 @@ class PDF_Planilla extends FPDF
         $this->Cell(100, 7, utf8_decode('PLACAS:'), 0, 0);
         $this->Cell(0, 7, $this->datos['placa'], 0, 1);
 
-        $this->Cell(100, 7, utf8_decode('NOMBRE CONDUCTOR:'), 0, 0);
-        $this->Cell(0, 7, utf8_decode($this->datos['conductor_nombre']), 0, 1);
+        $this->multiCellWithLabel(utf8_decode('NOMBRE CONDUCTOR:'), $this->datos['conductor_nombre'], 100, 7);
 
-        $this->Cell(100, 7, utf8_decode('CÉDULA:'), 0, 0);
-        $this->Cell(0, 7, $this->datos['conductor_cedula'], 0, 1);
+        $this->multiCellWithLabel(utf8_decode('CÉDULA:'), safeUtf8Decode($this->datos['conductor_cedula']), 100, 7);
 
         $this->Cell(100, 7, utf8_decode('TELÉFONO:'), 0, 0);
         $this->Cell(0, 7, $this->datos['telefono_empresa'], 0, 1);
 
-        $this->Cell(100, 7, utf8_decode('DESTINO:'), 0, 0);
-        $this->Cell(0, 7, utf8_decode($this->datos['destino_completo']), 0, 1);
+        $this->multiCellWithLabel(utf8_decode('DESTINO:'), $this->datos['destino_completo'], 100, 7);
 
-        $this->Cell(100, 7, utf8_decode('DESTINO FINAL:'), 0, 0);
-        $this->Cell(0, 7, utf8_decode($this->datos['destino_completo']), 0, 1);
+        $this->multiCellWithLabel(utf8_decode('DESTINO FINAL:'), $this->datos['destino_final_pdf'], 100, 7);
 
-        $this->Ln(25);
+        $this->Ln(10);
         $this->SetFont('Helvetica', 'B', 8);
         $this->Cell(60, 4, utf8_decode('Atentamente:'), 0, 1, 'L');
-        $this->Ln(25);
+        $this->Ln(8);
 
-        // Firmas 
-        $this->SetFont('Helvetica', '', 8);
-        $this->Cell(55, 5, utf8_decode($this->datos['representante_legal']), 0, 0, 'C');
-        $this->Cell(55, 5, utf8_decode($this->datos['conductor_nombre']), 0, 0, 'C');
-        $this->Cell(50, 5, utf8_decode($this->datos['ayudante_nombre'] ?: 'N/A'), 0, 0, 'C');
-        $this->Cell(40, 5, utf8_decode($this->datos['agencia']), 0, 1, 'C');
-        $this->Ln(0);
-
-        $this->SetFont('Helvetica', '', 8);
-        $this->Cell(55, 5, $this->datos['cc_completo'], 0, 0, 'C');
-        $this->Cell(55, 5, $this->datos['conductor_cedula'], 0, 0, 'C');
-        $this->Cell(50, 5, $this->datos['ayudante_cedula'], 0, 1, 'C');
-
-        $this->SetFont('Helvetica', 'B', 10);
-        $this->Cell(55, 5, utf8_decode('REPRESENTANTE LEGAL'), 0, 0, 'C');
-        $this->Cell(55, 5, utf8_decode('CONDUCTOR'), 0, 0, 'C');
-        $this->Cell(50, 5, utf8_decode('AYUDANTE'), 0, 0, 'C');
-        $this->Cell(40, 5, utf8_decode('AGENCIA'), 0, 1, 'C');
+        // Firmas con bloques separados
+        $this->dibujarBloquesFirmas();
     }
 }
 
 // ============================================
 // 4. PREPARAR DATOS PARA EL PDF
 // ============================================
+
+// DestinoFinal: usar valor guardado, sino usar destino_completo calculado
+$destino_final_para_pdf = !empty($destino_final) ? $destino_final : $destino_completo;
 
 $datosPDF = [
     'numero_planilla' => $numero_planilla,
@@ -649,6 +791,8 @@ $datosPDF = [
     'cc_completo' => $cc_completo,
     'telefono_empresa' => $telefono_empresa,
     'direccion_empresa' => $direccion_empresa,
+    'ciudad_empresa' => $ciudad_empresa,
+    'logo' => $logo_planilla,
     'cliente_nombre' => $cliente_nombre,
     'direccion_cliente' => $direccion_cliente,
     'po_cliente' => $po_cliente,
@@ -659,6 +803,7 @@ $datosPDF = [
     'agencia' => $agencia,
     'destino_pais' => $destino_pais,
     'destino_completo' => $destino_completo,
+    'destino_final_pdf' => $destino_final_para_pdf,
     'total_piezas' => $total_piezas,
     'equivalencia_fulles' => $equivalencia_fulles,
     'total_tallos' => $total_tallos,

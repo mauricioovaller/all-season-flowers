@@ -16,10 +16,10 @@ export default function ModalGenerarOrdenCompra({
 
   if (!isOpen) return null;
 
-  const handleGenerarPDF = async () => {
+  const handleGenerarPDF = async (conPrecio = true) => {
     try {
       setCargando(true);
-      
+
       // Mostrar mensaje de carga
       Swal.fire({
         title: 'Generando Orden de Compra...',
@@ -31,10 +31,10 @@ export default function ModalGenerarOrdenCompra({
       });
 
       console.log("📋 Generando PDF para compra:", compraId);
-      
+
       // Llamar al servicio
-      const pdfBlob = await generarPDFOrdenCompra(compraId);
-      
+      const pdfBlob = await generarPDFOrdenCompra(compraId, conPrecio);
+
       console.log("✅ PDF recibido como blob");
 
       // Crear URL para el visor
@@ -43,18 +43,18 @@ export default function ModalGenerarOrdenCompra({
 
       // Cerrar loading
       Swal.close();
-      
+
       // Guardar URL y mostrar visor
       setPdfUrl(url);
       setMostrarPDF(true);
-      
+
       console.log("👁️ Mostrando visor de PDF");
 
     } catch (error) {
       console.error("❌ Error generando PDF:", error);
-      
+
       Swal.close();
-      
+
       Swal.fire({
         icon: 'error',
         title: 'Error al generar PDF',
@@ -120,12 +120,12 @@ export default function ModalGenerarOrdenCompra({
               <p className="text-gray-600 mb-4">
                 Generar orden de compra para:
               </p>
-              
+
               <div className="p-3 bg-purple-50 rounded-lg border border-purple-200 text-center mb-4">
                 <p className="font-bold text-lg text-purple-600">{compraNumero}</p>
                 <p className="text-sm text-gray-500 mt-1">ID de compra: {compraId}</p>
               </div>
-              
+
               <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
                 <p className="text-sm text-blue-700 font-medium mb-1">
                   ¿Qué pasará al generar la orden?
@@ -148,27 +148,38 @@ export default function ModalGenerarOrdenCompra({
                 Cancelar
               </button>
               <button
-                onClick={handleGenerarPDF}
+                onClick={() => handleGenerarPDF(false)}
                 disabled={cargando}
-                className={`px-4 py-2 rounded-lg flex items-center gap-2 ${
-                  cargando
+                className={`px-4 py-2 rounded-lg flex items-center gap-2 ${cargando
                     ? 'bg-gray-400 text-gray-300 cursor-not-allowed'
-                    : 'bg-purple-600 text-white hover:bg-purple-700'
-                }`}
+                    : 'bg-teal-600 text-white hover:bg-teal-700'
+                  }`}
               >
                 {cargando ? (
-                  <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                    <span>Generando...</span>
-                  </>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
                 ) : (
-                  <>
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    <span>Generar PDF</span>
-                  </>
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-3-3v6m6 2H6a2 2 0 01-2-2V6a2 2 0 012-2h7l5 5v9a2 2 0 01-2 2z" />
+                  </svg>
                 )}
+                <span>{cargando ? 'Generando...' : 'Sin Precio'}</span>
+              </button>
+              <button
+                onClick={() => handleGenerarPDF(true)}
+                disabled={cargando}
+                className={`px-4 py-2 rounded-lg flex items-center gap-2 ${cargando
+                    ? 'bg-gray-400 text-gray-300 cursor-not-allowed'
+                    : 'bg-purple-600 text-white hover:bg-purple-700'
+                  }`}
+              >
+                {cargando ? (
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                ) : (
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                )}
+                <span>{cargando ? 'Generando...' : 'Con Precio'}</span>
               </button>
             </div>
           </div>
@@ -177,8 +188,8 @@ export default function ModalGenerarOrdenCompra({
 
       {/* Modal del PDF (se abre cuando se genera) */}
       {mostrarPDF && pdfUrl && (
-        <ModalVisorPreliminar 
-          url={pdfUrl} 
+        <ModalVisorPreliminar
+          url={pdfUrl}
           onClose={handleCerrarPDF}
         />
       )}

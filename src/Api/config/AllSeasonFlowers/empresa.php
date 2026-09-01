@@ -15,6 +15,7 @@ define('EMPRESA_INICIALES',         'AS');                      // Iniciales par
 define('EMPRESA_NIT',               '901.984.016-8');
 define('EMPRESA_REPRESENTANTE',     'ERIKA JULEY GONZALEZ CHINGATE');
 define('EMPRESA_CC_REPRESENTANTE',  '1.073.525.441');
+define('EMPRESA_PREFIJO_INVOICE',  'ASF');
 
 // ── ICA / Fitosanitario ───────────────────────────────────────────────────────
 define('EMPRESA_REGISTRO_ICA',      'REGISTRO ICA EXP250201');

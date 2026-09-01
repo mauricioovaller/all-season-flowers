@@ -53,6 +53,22 @@ try {
     // Iniciar transacción
     $enlace->begin_transaction();
     
+    // 0. Guard: no generar orden de compra para compras anuladas
+    $sqlAnulado = "SELECT Anulado FROM SAS_EncabCompra WHERE IdEncabCompra = ?";
+    $stmtAnulado = $enlace->prepare($sqlAnulado);
+    if (!$stmtAnulado) {
+        throw new Exception("Error preparando consulta de anulación: " . $enlace->error);
+    }
+    $stmtAnulado->bind_param("i", $idCompra);
+    $stmtAnulado->execute();
+    $stmtAnulado->bind_result($anuladoCompra);
+    $stmtAnulado->fetch();
+    $stmtAnulado->close();
+
+    if ($anuladoCompra == 1) {
+        throw new Exception("No se puede generar la orden: la compra está anulada");
+    }
+
     // Primero, verificar si existe campo NoOrdenCompra
     $checkField = "SHOW COLUMNS FROM SAS_EncabCompra LIKE 'NoOrdenCompra'";
     $resultCheck = $enlace->query($checkField);

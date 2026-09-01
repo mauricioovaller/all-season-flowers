@@ -4,8 +4,8 @@ import { CLIENTE } from '../../config/cliente.js';
 import {
   Users, Building, UserCheck, UserCog, Flower2, Sprout, Star, Package,
   Truck, UsersRound, Plane, BarChart3, ShoppingCart, CreditCard,
-  FileText, Download,   LayoutDashboard, ChevronLeft, ChevronRight, Home, Undo2,
-  Wallet, HandCoins, Menu, X, Trash2, ClipboardList
+  FileText, Download, LayoutDashboard, ChevronLeft, ChevronRight, Home, Undo2,
+  Wallet, HandCoins, Menu, X, Trash2, ClipboardList, RefreshCw
 } from 'lucide-react';
 
 const Sidebar = ({ onModuleChange, currentModule, rutasPermitidas, cargandoPermisos }) => {
@@ -27,7 +27,8 @@ const Sidebar = ({ onModuleChange, currentModule, rutasPermitidas, cargandoPermi
       id: 'tablas-maestras',
       label: 'Tablas Maestras',
       icon: <FileText className="w-5 h-5" />,
-      type: 'header'
+      type: 'header',
+      category: 'maestras'
     },
     { id: 'clientes', label: 'Clientes', icon: <Users className="w-5 h-5" />, category: 'maestras', priority: 1 },
     { id: 'proveedores', label: 'Proveedores', icon: <Building className="w-5 h-5" />, category: 'maestras', priority: 1 },
@@ -47,7 +48,8 @@ const Sidebar = ({ onModuleChange, currentModule, rutasPermitidas, cargandoPermi
       id: 'modulos-operativos',
       label: 'Módulos Operativos',
       icon: <BarChart3 className="w-5 h-5" />,
-      type: 'header'
+      type: 'header',
+      category: 'operativos'
     },
     { id: 'compras', label: 'Compras', icon: <ShoppingCart className="w-5 h-5" />, category: 'operativos', priority: 2 },
     { id: 'pedidos', label: 'Pedidos', icon: <CreditCard className="w-5 h-5" />, category: 'operativos', priority: 2 },
@@ -62,23 +64,54 @@ const Sidebar = ({ onModuleChange, currentModule, rutasPermitidas, cargandoPermi
       id: 'informes',
       label: 'Informes',
       icon: <Download className="w-5 h-5" />,
-      type: 'header'
+      type: 'header',
+      category: 'informes'
     },
     { id: 'estado-cuenta-proveedores', label: 'Cuenta Prov.', icon: <FileText className="w-5 h-5" />, category: 'informes', priority: 3 },
     { id: 'estado-cuenta-clientes', label: 'Cuenta Clientes', icon: <FileText className="w-5 h-5" />, category: 'informes', priority: 3 },
     { id: 'consolidados-ventas', label: 'Cons. Ventas', icon: <BarChart3 className="w-5 h-5" />, category: 'informes', priority: 3 },
     { id: 'consolidados-compras', label: 'Cons. Compras', icon: <BarChart3 className="w-5 h-5" />, category: 'informes', priority: 3 },
+    { id: 'consolidados-devoluciones-clientes', label: 'Cons. Dev. Clientes', icon: <BarChart3 className="w-5 h-5" />, category: 'informes', priority: 3 },
+    { id: 'consolidados-devoluciones-proveedores', label: 'Cons. Dev. Proveedores', icon: <BarChart3 className="w-5 h-5" />, category: 'informes', priority: 3 },
+    { id: 'consolidados-ingresos-recibidos', label: 'Cons. Ingresos Recibidos', icon: <Wallet className="w-5 h-5" />, category: 'informes', priority: 3 },
     { id: 'exportacion-contable', label: 'Exportación', icon: <Download className="w-5 h-5" />, category: 'informes', priority: 3 },
-    {id: 'tablero-control', label: 'Tablero Control', icon: <LayoutDashboard className="w-5 h-5" />, category: 'informes', priority: 3 },
+    { id: 'tablero-control', label: 'Tablero Control', icon: <LayoutDashboard className="w-5 h-5" />, category: 'informes', priority: 3 },
     { id: 'inventario', label: 'Inventarios', icon: <ClipboardList className="w-5 h-5" />, category: 'informes', priority: 3 },
+    { id: 'planilla-despacho', label: 'Planilla Despacho', icon: <Plane className="w-5 h-5" />, category: 'informes', priority: 3 },
+    { id: 'solicitud-muiscas', label: 'Solicitud Muiscas', icon: <Plane className="w-5 h-5" />, category: 'informes', priority: 3 },
+    { id: 'gestion-legacy', label: 'Gestión Legacy', icon: <RefreshCw className="w-5 h-5" />, category: 'informes', priority: 3 },
+
+    // VENTAS COMISIÓN
+    {
+      id: 'ventas-comision',
+      label: 'Ventas Comisión',
+      icon: <CreditCard className="w-5 h-5" />,
+      type: 'header',
+      category: 'ventasComision'
+    },
+    { id: 'pedidos-comision', label: 'Pedidos', icon: <ShoppingCart className="w-5 h-5" />, category: 'ventasComision', priority: 2 },
+    { id: 'devoluciones-comision', label: 'Devoluciones', icon: <Undo2 className="w-5 h-5" />, category: 'ventasComision', priority: 2 },
+    { id: 'cuenta-cobro', label: 'Cuenta de Cobro', icon: <FileText className="w-5 h-5" />, category: 'ventasComision', priority: 2 },
   ];
 
   // Filtrar ítems del menú según permisos del usuario
   const menuItemsPermitidos = React.useMemo(() => {
     if (cargandoPermisos || !rutasPermitidas) return [];
 
+    // Identificar qué categorías tienen al menos un ítem con permiso
+    const categoriasConPermiso = new Set();
+    menuItems.forEach((item) => {
+      if (item.type === 'header') return;
+      if (item.id === 'dashboard' || rutasPermitidas.includes(`/${item.id}`)) {
+        categoriasConPermiso.add(item.category);
+      }
+    });
+
     return menuItems.filter((item) => {
-      if (item.type === 'header') return true;
+      if (item.type === 'header') {
+        // Solo mostrar header si su categoría tiene al menos un ítem visible
+        return categoriasConPermiso.has(item.category);
+      }
       if (item.id === 'dashboard') return true;
       return rutasPermitidas.includes(`/${item.id}`);
     });
@@ -91,15 +124,23 @@ const Sidebar = ({ onModuleChange, currentModule, rutasPermitidas, cargandoPermi
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  const colorPorCategoria = {
+    maestras: { borde: 'border-emerald-400', texto: 'text-emerald-400', bg: 'bg-emerald-500/10' },
+    operativos: { borde: 'border-blue-400', texto: 'text-blue-400', bg: 'bg-blue-500/10' },
+    informes: { borde: 'border-amber-400', texto: 'text-amber-400', bg: 'bg-amber-500/10' },
+    ventasComision: { borde: 'border-violet-400', texto: 'text-violet-400', bg: 'bg-violet-500/10' },
+  };
+
   const renderMenuItems = (items) => {
     return items.map((item) => {
       if (item.type === 'header') {
+        const colores = colorPorCategoria[item.category] || { borde: 'border-gray-500', texto: 'text-gray-400', bg: 'bg-gray-500/10' };
         return (
-          <li key={item.id} className={isCollapsed ? 'hidden' : 'pt-2'}>
-            <div className="mx-1 mb-1">
-              <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-700/50 border-l-4 border-green-400">
-                <span className="text-green-400">{item.icon}</span>
-                <span className="text-xs font-bold text-gray-300 uppercase tracking-wider">{item.label}</span>
+          <li key={item.id} className={isCollapsed ? 'hidden' : 'pt-5'}>
+            <div className="mx-1 mb-1.5">
+              <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg ${colores.bg} ${colores.borde} border-l-4`}>
+                <span className={colores.texto}>{item.icon}</span>
+                <span className={`text-xs font-bold uppercase tracking-wider ${colores.texto}`}>{item.label}</span>
               </div>
             </div>
           </li>
@@ -114,8 +155,8 @@ const Sidebar = ({ onModuleChange, currentModule, rutasPermitidas, cargandoPermi
               w-full text-left p-3 rounded-xl transition-all duration-200 group
               flex items-center space-x-3
               ${isCollapsed ? 'justify-center' : ''}
-              ${currentModule === item.id 
-                ? 'bg-gradient-to-r from-green-600 to-emerald-600 text-white shadow-md shadow-green-900/40' 
+              ${currentModule === item.id
+                ? 'bg-gradient-to-r from-green-600 to-emerald-600 text-white shadow-md shadow-green-900/40'
                 : 'text-gray-300 hover:bg-slate-700 hover:text-white'
               }
             `}
@@ -142,10 +183,11 @@ const Sidebar = ({ onModuleChange, currentModule, rutasPermitidas, cargandoPermi
   // Filtros por categoría para menú móvil
   const itemsParaMobile = cargandoPermisos || !rutasPermitidas ? menuItems : menuItemsPermitidos;
   const dashboardMobileItems = itemsParaMobile.filter(item => item.category === 'dashboard');
-  const maestrasMobileItems  = itemsParaMobile.filter(item => item.category === 'maestras');
+  const maestrasMobileItems = itemsParaMobile.filter(item => item.category === 'maestras');
   const operativosMobileItems = itemsParaMobile.filter(item => item.category === 'operativos');
-  const informesMobileItems  = itemsParaMobile.filter(item => item.category === 'informes');
-  const currentModuleLabel   = menuItems.find(item => item.id === currentModule)?.label || 'Inicio';
+  const informesMobileItems = itemsParaMobile.filter(item => item.category === 'informes');
+  const ventasComisionMobileItems = itemsParaMobile.filter(item => item.category === 'ventasComision');
+  const currentModuleLabel = menuItems.find(item => item.id === currentModule)?.label || 'Inicio';
 
   return (
     <>
@@ -251,11 +293,10 @@ const Sidebar = ({ onModuleChange, currentModule, rutasPermitidas, cargandoPermi
                   <button
                     key={item.id}
                     onClick={() => { handleItemClick(item.id); setShowAllMobileItems(false); }}
-                    className={`flex flex-col items-center p-3 rounded-xl transition-all ${
-                      currentModule === item.id
-                        ? 'bg-gradient-to-b from-green-600 to-emerald-700 text-white shadow-md shadow-green-900/40'
-                        : 'bg-slate-800 text-gray-300 hover:bg-slate-700 hover:text-white'
-                    }`}
+                    className={`flex flex-col items-center p-3 rounded-xl transition-all ${currentModule === item.id
+                      ? 'bg-gradient-to-b from-green-600 to-emerald-700 text-white shadow-md shadow-green-900/40'
+                      : 'bg-slate-800 text-gray-300 hover:bg-slate-700 hover:text-white'
+                      }`}
                   >
                     <span className="mb-1.5">{item.icon}</span>
                     <span className="text-[11px] text-center leading-tight font-medium">{item.label}</span>
@@ -276,11 +317,10 @@ const Sidebar = ({ onModuleChange, currentModule, rutasPermitidas, cargandoPermi
                   <button
                     key={item.id}
                     onClick={() => { handleItemClick(item.id); setShowAllMobileItems(false); }}
-                    className={`flex flex-col items-center p-3 rounded-xl transition-all ${
-                      currentModule === item.id
-                        ? 'bg-gradient-to-b from-green-600 to-emerald-700 text-white shadow-md shadow-green-900/40'
-                        : 'bg-slate-800 text-gray-300 hover:bg-slate-700 hover:text-white'
-                    }`}
+                    className={`flex flex-col items-center p-3 rounded-xl transition-all ${currentModule === item.id
+                      ? 'bg-gradient-to-b from-green-600 to-emerald-700 text-white shadow-md shadow-green-900/40'
+                      : 'bg-slate-800 text-gray-300 hover:bg-slate-700 hover:text-white'
+                      }`}
                   >
                     <span className="mb-1.5">{item.icon}</span>
                     <span className="text-[11px] text-center leading-tight font-medium">{item.label}</span>
@@ -301,11 +341,10 @@ const Sidebar = ({ onModuleChange, currentModule, rutasPermitidas, cargandoPermi
                   <button
                     key={item.id}
                     onClick={() => { handleItemClick(item.id); setShowAllMobileItems(false); }}
-                    className={`flex flex-col items-center p-3 rounded-xl transition-all ${
-                      currentModule === item.id
-                        ? 'bg-gradient-to-b from-green-600 to-emerald-700 text-white shadow-md shadow-green-900/40'
-                        : 'bg-slate-800 text-gray-300 hover:bg-slate-700 hover:text-white'
-                    }`}
+                    className={`flex flex-col items-center p-3 rounded-xl transition-all ${currentModule === item.id
+                      ? 'bg-gradient-to-b from-green-600 to-emerald-700 text-white shadow-md shadow-green-900/40'
+                      : 'bg-slate-800 text-gray-300 hover:bg-slate-700 hover:text-white'
+                      }`}
                   >
                     <span className="mb-1.5">{item.icon}</span>
                     <span className="text-[11px] text-center leading-tight font-medium">{item.label}</span>
@@ -326,11 +365,10 @@ const Sidebar = ({ onModuleChange, currentModule, rutasPermitidas, cargandoPermi
                   <button
                     key={item.id}
                     onClick={() => { handleItemClick(item.id); setShowAllMobileItems(false); }}
-                    className={`flex flex-col items-center p-3 rounded-xl transition-all ${
-                      currentModule === item.id
-                        ? 'bg-gradient-to-b from-green-600 to-emerald-700 text-white shadow-md shadow-green-900/40'
-                        : 'bg-slate-800 text-gray-300 hover:bg-slate-700 hover:text-white'
-                    }`}
+                    className={`flex flex-col items-center p-3 rounded-xl transition-all ${currentModule === item.id
+                      ? 'bg-gradient-to-b from-green-600 to-emerald-700 text-white shadow-md shadow-green-900/40'
+                      : 'bg-slate-800 text-gray-300 hover:bg-slate-700 hover:text-white'
+                      }`}
                   >
                     <span className="mb-1.5">{item.icon}</span>
                     <span className="text-[11px] text-center leading-tight font-medium">{item.label}</span>
@@ -338,6 +376,32 @@ const Sidebar = ({ onModuleChange, currentModule, rutasPermitidas, cargandoPermi
                 ))}
               </div>
             </div>
+
+            {/* Ventas Comisión */}
+            {ventasComisionMobileItems.length > 0 && (
+              <div>
+                <div className="flex items-center gap-2 mb-3">
+                  <CreditCard className="w-4 h-4 text-violet-400" />
+                  <span className="text-xs font-bold text-violet-400 uppercase tracking-widest">Ventas Comisión</span>
+                  <div className="flex-1 h-px bg-slate-700" />
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  {ventasComisionMobileItems.map((item) => (
+                    <button
+                      key={item.id}
+                      onClick={() => { handleItemClick(item.id); setShowAllMobileItems(false); }}
+                      className={`flex flex-col items-center p-3 rounded-xl transition-all ${currentModule === item.id
+                        ? 'bg-gradient-to-b from-green-600 to-emerald-700 text-white shadow-md shadow-green-900/40'
+                        : 'bg-slate-800 text-gray-300 hover:bg-slate-700 hover:text-white'
+                        }`}
+                    >
+                      <span className="mb-1.5">{item.icon}</span>
+                      <span className="text-[11px] text-center leading-tight font-medium">{item.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
 
           </div>
         )}

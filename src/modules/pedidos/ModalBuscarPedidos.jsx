@@ -76,7 +76,13 @@ export default function ModalBuscarPedidos({ isOpen, onClose, onSeleccionarPedid
   };
 
   const handleSeleccionar = (pedido) => {
-    onSeleccionarPedido(pedido);
+    onSeleccionarPedido({ ...pedido, duplicar: false });
+    onClose();
+  };
+
+  const handleDuplicar = (pedido, e) => {
+    e.stopPropagation();
+    onSeleccionarPedido({ ...pedido, duplicar: true });
     onClose();
   };
 
@@ -226,7 +232,7 @@ export default function ModalBuscarPedidos({ isOpen, onClose, onSeleccionarPedid
               {pedidos.map((pedido) => (
                 <div
                   key={pedido.idPedido}
-                  className="border rounded-lg p-4 hover:bg-gray-50 transition cursor-pointer"
+                  className={`border rounded-lg p-4 hover:bg-gray-50 transition cursor-pointer ${pedido.anulado ? 'opacity-60' : ''}`}
                   onClick={() => handleSeleccionar(pedido)}
                 >
                   <div className="flex justify-between items-start">
@@ -242,6 +248,11 @@ export default function ModalBuscarPedidos({ isOpen, onClose, onSeleccionarPedid
                           }`}>
                           {pedido.estado || 'Pendiente'}
                         </span>
+                        {pedido.anulado && (
+                          <span className="text-xs px-2 py-1 rounded-full bg-red-600 text-white font-semibold">
+                            ANULADO
+                          </span>
+                        )}
                       </div>
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                         <div>
@@ -280,6 +291,13 @@ export default function ModalBuscarPedidos({ isOpen, onClose, onSeleccionarPedid
                         }}
                       >
                         Seleccionar
+                      </button>
+                      <button
+                        className="mt-2 ml-2 bg-amber-600 text-white px-3 py-1 rounded text-sm hover:bg-amber-700 transition"
+                        onClick={(e) => handleDuplicar(pedido, e)}
+                        title="Duplicar pedido como nuevo"
+                      >
+                        Duplicar
                       </button>
                     </div>
                   </div>

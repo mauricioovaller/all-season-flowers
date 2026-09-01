@@ -77,6 +77,7 @@ La columna `Ruta` en la tabla `Permisos` debe coincidir con `/${item.id}` del me
 | | `estado-cuenta-clientes` | `/estado-cuenta-clientes` |
 | | `consolidados-ventas` | `/consolidados-ventas` |
 | | `consolidados-compras` | `/consolidados-compras` |
+| | `consolidados-ingresos-recibidos` | `/consolidados-ingresos-recibidos` |
 | | `exportacion-contable` | `/exportacion-contable` |
 | | `tablero-control` | `/tablero-control` |
 | | `inventario` | `/inventario` |
@@ -104,6 +105,7 @@ INSERT INTO Permisos (IdUsuario, NombreOpcion, Ruta) VALUES
 (1, 'Bajas',              '/bajas'),
 (1, 'Cta. Proveedores',   '/estado-cuenta-proveedores'),
 (1, 'Cta. Clientes',      '/estado-cuenta-clientes'),
+(1, 'Cons. Ingresos Recibidos', '/consolidados-ingresos-recibidos'),
 (1, 'Tablero Control',    '/tablero-control'),
 (1, 'Inventarios',        '/inventario');
 

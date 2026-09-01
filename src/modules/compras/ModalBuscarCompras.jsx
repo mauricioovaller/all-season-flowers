@@ -76,7 +76,13 @@ export default function ModalBuscarCompras({ isOpen, onClose, onSeleccionarCompr
   };
 
   const handleSeleccionar = (compra) => {
-    onSeleccionarCompra(compra);
+    onSeleccionarCompra({ ...compra, duplicar: false });
+    onClose();
+  };
+
+  const handleDuplicar = (compra, e) => {
+    e.stopPropagation();
+    onSeleccionarCompra({ ...compra, duplicar: true });
     onClose();
   };
 
@@ -293,6 +299,13 @@ export default function ModalBuscarCompras({ isOpen, onClose, onSeleccionarCompr
                         }}
                       >
                         Seleccionar
+                      </button>
+                      <button
+                        className="mt-2 ml-2 bg-amber-600 text-white px-3 py-1 rounded text-sm hover:bg-amber-700 transition"
+                        onClick={(e) => handleDuplicar(compra, e)}
+                        title="Duplicar compra como nueva"
+                      >
+                        Duplicar
                       </button>
                     </div>
                   </div>

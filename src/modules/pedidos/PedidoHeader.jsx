@@ -8,6 +8,7 @@ export default function PedidoHeader({
   monedas = [],
   aerolineas = [],
   agencias = [],
+  razonesSociales = [],
   inputRefs = {},
 }) {
 
@@ -20,6 +21,8 @@ export default function PedidoHeader({
 
   const [showLogistica, setShowLogistica] = useState(false);
   const [showTotales, setShowTotales] = useState(true);
+  const esUSD = header.monedaNombre && /d[oó]lar/i.test(header.monedaNombre);
+  const dec = esUSD ? 3 : 2;
 
   return (
     <section className="bg-white rounded-lg md:rounded-xl shadow-sm md:shadow-md p-3 md:p-4">
@@ -95,6 +98,31 @@ export default function PedidoHeader({
           </div>
         </div>
       </div>
+
+      {/* RAZÓN SOCIAL / EMPRESA EMISORA — SOLO cuando la funcionalidad existe (AllSeason).
+          Para otros clientes (lista vacía) el campo se oculta por completo. */}
+      {razonesSociales.length > 0 && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mb-3">
+          <div className="space-y-1">
+            <label className="block text-xs font-medium text-gray-700">Empresa Emisora *</label>
+            <select
+              value={header.idRazonSocial || ""}
+              onChange={(e) => onChange("idRazonSocial", e.target.value)}
+              className="border rounded p-1.5 w-full focus:ring-1 focus:ring-blue-500 focus:border-blue-500 text-xs"
+            >
+              <option value="">-- Seleccione --</option>
+              {razonesSociales.map((rs) => (
+                <option key={rs.id} value={rs.id}>
+                  {rs.nombre}
+                </option>
+              ))}
+            </select>
+            <div className="text-[10px] text-gray-400">
+              Determina la razón social y el logo de los documentos del pedido
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* SEGUNDA FILA - Fechas y moneda */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-3">
@@ -321,19 +349,19 @@ export default function PedidoHeader({
             <div className="text-center">
               <div className="text-xs text-gray-600">Valor</div>
               <div className="text-sm font-bold text-green-600">
-                ${header.valorVenta ? Number(header.valorVenta).toLocaleString() : "0"}
+                ${header.valorVenta ? Number(header.valorVenta).toLocaleString('es-CO', { minimumFractionDigits: dec, maximumFractionDigits: dec }) : "0"}
               </div>
             </div>
             <div className="text-center">
               <div className="text-xs text-gray-600">IVA (19%)</div>
               <div className="text-sm font-bold">
-                ${header.iva ? Number(header.iva).toLocaleString() : "0"}
+                ${header.iva ? Number(header.iva).toLocaleString('es-CO', { minimumFractionDigits: dec, maximumFractionDigits: dec }) : "0"}
               </div>
             </div>
             <div className="text-center">
               <div className="text-xs text-gray-600">Total</div>
               <div className="text-sm font-bold text-green-600">
-                ${header.totalVenta ? Number(header.totalVenta).toLocaleString() : "0"}
+                ${header.totalVenta ? Number(header.totalVenta).toLocaleString('es-CO', { minimumFractionDigits: dec, maximumFractionDigits: dec }) : "0"}
               </div>
             </div>
           </div>

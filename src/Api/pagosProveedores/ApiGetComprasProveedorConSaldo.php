@@ -30,60 +30,94 @@ $idPagoExcluir = isset($data['idPagoExcluir']) ? intval($data['idPagoExcluir']) 
 $condExcluir = $idPagoExcluir > 0 ? "AND dpp_paid.IdEncabPagoProveedor != $idPagoExcluir" : "";
 
 try {
-    // Consulta para obtener compras con saldo pendiente
+    $condExcluirLegacy = $idPagoExcluir > 0
+        ? "AND dpp_paid.IdEncabPagoProveedor != $idPagoExcluir"
+        : "";
+    $condExcluirSaldo = $idPagoExcluir > 0
+        ? "AND dpp_saldo.IdEncabPagoProveedor != $idPagoExcluir"
+        : "";
+
+    // Consulta para obtener compras con saldo pendiente (actuales + legacy)
     $query = "
-        SELECT 
-            ec.IdEncabCompra as idCompra,
-            CONCAT('COMP-', LPAD(ec.IdEncabCompra, 6, '0')) as numeroCompraFormateado,
-            ec.FechaEntrega as fechaCompra,
-            p.Proveedor as proveedor,
-            ec.IdMoneda as idMoneda,
-            m.Moneda as moneda,
-            ec.TRM as trm,
-            
-            -- Valor total de la compra
-            COALESCE((SELECT SUM(dc.Tallos_Ramo * dc.Ramos_Caja * dc.Precio_Compra) 
-                      FROM SAS_DetProductoCompra dc 
-                      WHERE dc.IdEncabCompra = ec.IdEncabCompra
-                      AND dc.Anulado = 0), 0) as valorCompra,
-            
-            -- Valor total de devoluciones
-            COALESCE((SELECT SUM(dc2.TallosDevolucion * dc2.Precio_Compra) 
-                      FROM SAS_DetProductoCompra dc2 
-                      WHERE dc2.IdEncabCompra = ec.IdEncabCompra 
-                      AND dc2.TallosDevolucion > 0
-                      AND dc2.Anulado = 0), 0) as valorDevolucion,
-            
-            -- Pagos realizados por esta compra
-            COALESCE((SELECT SUM(dpp_paid.ValorPago)
-                      FROM SAS_DetPagoProveedor dpp_paid
-                      WHERE dpp_paid.IdEncabCompra = ec.IdEncabCompra
-                      AND dpp_paid.Anulado = 0
-                      $condExcluir), 0) as valorPagado,
-            
-            -- Saldo pendiente = Valor Compra - Devoluciones - Pagos
-            (COALESCE((SELECT SUM(dc3.Tallos_Ramo * dc3.Ramos_Caja * dc3.Precio_Compra) 
-                       FROM SAS_DetProductoCompra dc3 
-                       WHERE dc3.IdEncabCompra = ec.IdEncabCompra
-                       AND dc3.Anulado = 0), 0)
-             - COALESCE((SELECT SUM(dc4.TallosDevolucion * dc4.Precio_Compra) 
-                         FROM SAS_DetProductoCompra dc4 
-                         WHERE dc4.IdEncabCompra = ec.IdEncabCompra 
-                         AND dc4.TallosDevolucion > 0
-                         AND dc4.Anulado = 0), 0)
-             - COALESCE((SELECT SUM(dpp_saldo.ValorPago)
-                         FROM SAS_DetPagoProveedor dpp_saldo
-                         WHERE dpp_saldo.IdEncabCompra = ec.IdEncabCompra
-                         AND dpp_saldo.Anulado = 0
-                         $condExcluir), 0)) as saldoPendiente
-            
-        FROM SAS_EncabCompra ec
-        INNER JOIN GEN_Proveedores p ON ec.IdProveedor = p.IdProveedor
-        LEFT JOIN GEN_Monedas m ON ec.IdMoneda = m.IdMoneda
-        WHERE ec.IdProveedor = ?
-        AND ec.Anulado = 0
-        HAVING saldoPendiente > 0
-        ORDER BY ec.FechaEntrega DESC
+        (
+            SELECT 
+                ec.IdEncabCompra as idCompra,
+                CONCAT('COMP-', LPAD(ec.IdEncabCompra, 6, '0')) as numeroCompraFormateado,
+                ec.FechaEntrega as fechaCompra,
+                p.Proveedor as proveedor,
+                ec.IdMoneda as idMoneda,
+                m.Moneda as moneda,
+                ec.TRM as trm,
+                
+                -- Valor total de la compra
+                COALESCE((SELECT SUM(dc.Tallos_Ramo * dc.Ramos_Caja * dc.Precio_Compra) 
+                          FROM SAS_DetProductoCompra dc 
+                          WHERE dc.IdEncabCompra = ec.IdEncabCompra
+                          AND dc.Anulado = 0), 0) as valorCompra,
+                
+                -- Valor total de devoluciones
+                COALESCE((SELECT SUM(dc2.TallosDevolucion * dc2.Precio_Compra) 
+                          FROM SAS_DetProductoCompra dc2 
+                          WHERE dc2.IdEncabCompra = ec.IdEncabCompra 
+                          AND dc2.TallosDevolucion > 0
+                          AND dc2.Anulado = 0), 0) as valorDevolucion,
+                
+                -- Pagos realizados por esta compra
+                COALESCE((SELECT SUM(dpp_paid.ValorPago)
+                          FROM SAS_DetPagoProveedor dpp_paid
+                          WHERE dpp_paid.IdEncabCompra = ec.IdEncabCompra
+                          AND dpp_paid.Anulado = 0
+                          $condExcluir), 0) as valorPagado,
+                
+                -- Saldo pendiente
+                (COALESCE((SELECT SUM(dc3.Tallos_Ramo * dc3.Ramos_Caja * dc3.Precio_Compra) 
+                           FROM SAS_DetProductoCompra dc3 
+                           WHERE dc3.IdEncabCompra = ec.IdEncabCompra
+                           AND dc3.Anulado = 0), 0)
+                 - COALESCE((SELECT SUM(dc4.TallosDevolucion * dc4.Precio_Compra) 
+                             FROM SAS_DetProductoCompra dc4 
+                             WHERE dc4.IdEncabCompra = ec.IdEncabCompra 
+                             AND dc4.TallosDevolucion > 0
+                             AND dc4.Anulado = 0), 0)
+                 - COALESCE((SELECT SUM(dpp_saldo.ValorPago)
+                             FROM SAS_DetPagoProveedor dpp_saldo
+                             WHERE dpp_saldo.IdEncabCompra = ec.IdEncabCompra
+                             AND dpp_saldo.Anulado = 0
+                             $condExcluir), 0)) as saldoPendiente,
+                
+                0 as esLegacy
+                
+            FROM SAS_EncabCompra ec
+            INNER JOIN GEN_Proveedores p ON ec.IdProveedor = p.IdProveedor
+            LEFT JOIN GEN_Monedas m ON ec.IdMoneda = m.IdMoneda
+            WHERE ec.IdProveedor = ?
+            AND ec.Anulado = 0
+            HAVING saldoPendiente > 0
+        )
+        UNION ALL
+        (
+            SELECT
+                leg.IdLegacyMovimiento as idCompra,
+                CONCAT('LEG-', leg.NumeroDocumento) as numeroCompraFormateado,
+                leg.Fecha as fechaCompra,
+                p.Proveedor as proveedor,
+                COALESCE(leg.IdMoneda, 1) as idMoneda,
+                COALESCE(m.Moneda, 'Sin moneda') as moneda,
+                COALESCE(leg.TRM, 1) as trm,
+                leg.Valor as valorCompra,
+                leg.Credito as valorDevolucion,
+                leg.Pago as valorPagado,
+                (leg.Valor - leg.Credito - leg.Pago) as saldoPendiente,
+                1 as esLegacy
+            FROM SAS_LegacyMovimientos leg
+            INNER JOIN GEN_Proveedores p ON leg.IdEntidad = p.IdProveedor
+            LEFT JOIN GEN_Monedas m ON leg.IdMoneda = m.IdMoneda
+            WHERE leg.Tipo = 'P'
+              AND leg.IdEntidad = ?
+              AND leg.Anulado = 0
+            HAVING saldoPendiente > 0
+        )
+        ORDER BY fechaCompra DESC
     ";
 
     $stmt = $enlace->prepare($query);
@@ -91,7 +125,7 @@ try {
         throw new Exception("Error preparando consulta: " . $enlace->error);
     }
 
-    $stmt->bind_param("i", $idProveedor);
+    $stmt->bind_param("ii", $idProveedor, $idProveedor);
     $stmt->execute();
 
     // Vincular resultados
@@ -106,7 +140,8 @@ try {
         $valorCompra,
         $valorDevolucion,
         $valorPagado,
-        $saldoPendiente
+        $saldoPendiente,
+        $esLegacy
     );
 
     $compras = [];
@@ -127,7 +162,8 @@ try {
                 'valorCompra' => floatval($valorCompra),
                 'valorDevolucion' => floatval($valorDevolucion),
                 'valorPagado' => floatval($valorPagado),
-                'saldoPendiente' => $saldo
+                'saldoPendiente' => $saldo,
+                'esLegacy' => (bool)$esLegacy
             ];
         }
     }

@@ -10,8 +10,13 @@ import { fileURLToPath } from "url";
 import { dirname, join } from "path";
 
 // Cargar .env desde la misma carpeta que index.js
+// Soporta --env-file=xxx para usar diferentes configuraciones
 const __dirname = dirname(fileURLToPath(import.meta.url));
-config({ path: join(__dirname, ".env") });
+const envFileArg = process.argv.find(arg => arg.startsWith('--env-file='));
+const envPath = envFileArg
+  ? join(__dirname, envFileArg.split('=')[1])
+  : join(__dirname, ".env");
+config({ path: envPath });
 
 // 1. Configuración de la conexión — credenciales desde .env
 const dbConfig = {

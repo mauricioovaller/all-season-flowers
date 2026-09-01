@@ -588,6 +588,7 @@ export default function Devoluciones() {
             detalle={detalle}
             onChangeItem={handleDetalleChange}
             soloLectura={false}
+            monedaNombre={header.moneda}
           />
         )
       )}

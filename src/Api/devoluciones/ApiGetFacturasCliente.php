@@ -46,6 +46,7 @@ try {
             WHERE ep.IdCliente = ?
             AND ep.Factura IS NOT NULL          -- Solo registros que tienen número de factura
             AND ep.Factura > 0                   -- Número de factura válido
+            AND ep.Anulado = 0                   -- Excluir pedidos anulados
             ORDER BY ep.FechaSolicitud DESC, ep.IdEncabPedido DESC";
 
     $stmt = $enlace->prepare($sql);

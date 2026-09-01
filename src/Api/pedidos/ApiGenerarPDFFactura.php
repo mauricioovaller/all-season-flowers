@@ -3,6 +3,21 @@
 require_once __DIR__ . '/../config/empresa.php';
 require_once FPDF_PATH;
 require_once CONEXION_BD_PATH;
+// Helper multi-cliente de razones sociales ("Empresa Emisora").
+// Si la carpeta helpers/ no está desplegada en el servidor de un cliente,
+// no debe romper el endpoint: se definen fallbacks seguros que desactivan
+// la funcionalidad y todo cae a las constantes de empresa.php (original).
+if (file_exists(__DIR__ . '/helpers/razon_social.php')) {
+    require_once __DIR__ . '/helpers/razon_social.php';
+}
+if (!function_exists('razon_social_columna_existe')) {
+    function razon_social_tabla_existe($enlace): bool { return false; }
+    function razon_social_columna_existe($enlace): bool { return false; }
+    function razon_social_disponible($enlace): bool { return false; }
+    function razon_social_obtener($enlace, $idRazonSocial): ?array { return null; }
+    function razon_social_de_pedido($enlace, $idEncabPedido): ?array { return null; }
+    function razon_social_logo_absoluto($razonSocial): ?string { return null; }
+}
 $enlace->set_charset("utf8mb4");
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
@@ -25,7 +40,7 @@ $factura = intval($input['numeroFactura']);
 // 🔴 CONSULTA 1: ENCABEZADO DE FACTURA
 $sqlEncabezado = "SELECT
                     enc.IdEncabPedido,
-                    CONCAT('ASF-', LPAD(enc.Factura, 6, '0')) AS numero_factura,
+                    CONCAT('" . EMPRESA_PREFIJO_INVOICE . "-', LPAD(enc.Factura, 6, '0')) AS numero_factura,
                     DATE_FORMAT(enc.FechaEntrega, '%d-%b-%y') AS fecha_factura,
                     '" . EMPRESA_NOMBRE . "' AS empresa_nombre,
                     '" . EMPRESA_NIT . "' AS nit,
@@ -82,6 +97,27 @@ if (!$stmtEncabezado->fetch()) {
     die(json_encode(["error" => "Factura no encontrada."]));
 }
 $stmtEncabezado->close();
+
+// ── RAZÓN SOCIAL / "Empresa Emisora" (multi-cliente) ─────────────────────
+// Si el pedido tiene una razón social guardada y existe la tabla, se usan sus
+// datos y logo; si no, se mantienen las constantes de empresa.php.
+$pais_empresa = 'Colombia'; // País del exportador (default histórico)
+$razonSocial = razon_social_de_pedido($enlace, $idEncabPedido);
+if ($razonSocial) {
+    $empresa_nombre    = !empty($razonSocial['Nombre']) ? $razonSocial['Nombre'] : $empresa_nombre;
+    $nit               = !empty($razonSocial['NIT']) ? $razonSocial['NIT'] : $nit;
+    $direccion_empresa = !empty($razonSocial['Direccion']) ? $razonSocial['Direccion'] : $direccion_empresa;
+    $telefono_empresa  = !empty($razonSocial['Telefono']) ? $razonSocial['Telefono'] : $telefono_empresa;
+    $ciudad_empresa    = !empty($razonSocial['Ciudad']) ? $razonSocial['Ciudad'] : $ciudad_empresa;
+    $email_empresa     = !empty($razonSocial['Email']) ? $razonSocial['Email'] : $email_empresa;
+    $pais_empresa      = !empty($razonSocial['Pais']) ? $razonSocial['Pais'] : $pais_empresa;
+}
+$logo_factura = razon_social_logo_absoluto($razonSocial) ?: EMPRESA_LOGO_PATH;
+
+// Prefijo de factura según la razón social (ej: ASF para All Season, FFL para Fresh Floral)
+$prefijoInvoice = !empty($razonSocial['PrefijoInvoice']) ? $razonSocial['PrefijoInvoice'] : EMPRESA_PREFIJO_INVOICE;
+$facturaNumero = (int) preg_replace('/\D+/', '', (string)$numero_factura);
+$numero_factura = $prefijoInvoice . '-' . str_pad($facturaNumero, 6, '0', STR_PAD_LEFT);
 
 // 🔴 CONSULTA 2: DETALLE DE FACTURA
 $sqlDetalle = "SELECT
@@ -225,6 +261,7 @@ class PDF extends FPDF
         global $fecha_factura, $numero_factura, $destino_pais, $po_cliente, $awb, $awb_hija, $awb_nieta;
         global $cliente_nombre, $direccion_linea1, $direccion_linea2, $telefono_cliente, $ciudad_cliente;
         global $aerolinea, $agencia;
+        global $empresa_nombre, $nit, $direccion_empresa, $telefono_empresa, $ciudad_empresa, $email_empresa, $pais_empresa, $logo_factura;
 
         // Información de la empresa
         $this->SetFont('Helvetica', 'B', 12);
@@ -234,50 +271,50 @@ class PDF extends FPDF
         $this->Ln(1);
 
         // Logo
-        $this->Image(EMPRESA_LOGO_PATH, 15, 15, 45);
+        $this->Image($logo_factura, 15, 15, 45);
 
         // Información de la empresa (derecha)
         $this->SetFont('Helvetica', 'B', 8);
         $this->Cell(100, 3.5, '', 0, 0, 'L');
         $this->Cell(30, 3.5, 'Export:', 0, 0, 'L');
         $this->SetFont('Helvetica', '', 8);
-        $this->Cell(25, 3.5, utf8_decode(EMPRESA_NOMBRE), 0, 1, 'L');
+        $this->Cell(25, 3.5, utf8_decode($empresa_nombre), 0, 1, 'L');
 
         $this->SetFont('Helvetica', 'B', 8);
         $this->Cell(100, 3.5, '', 0, 0, 'L');
         $this->Cell(30, 3.5, 'Nit:', 0, 0, 'L');
         $this->SetFont('Helvetica', '', 8);
-        $this->Cell(25, 3.5, EMPRESA_NIT, 0, 1, 'L');
+        $this->Cell(25, 3.5, $nit, 0, 1, 'L');
 
         $this->SetFont('Helvetica', 'B', 8);
         $this->Cell(100, 3.5, '', 0, 0, 'L');
         $this->Cell(30, 3.5, 'Address:', 0, 0, 'L');
         $this->SetFont('Helvetica', '', 8);
-        $this->Cell(25, 3.5, utf8_decode(EMPRESA_DIRECCION), 0, 1, 'L');
+        $this->Cell(25, 3.5, utf8_decode($direccion_empresa), 0, 1, 'L');
 
         $this->SetFont('Helvetica', 'B', 8);
         $this->Cell(100, 3.5, '', 0, 0, 'L');
         $this->Cell(30, 3.5, 'Phone Number:', 0, 0, 'L');
         $this->SetFont('Helvetica', '', 8);
-        $this->Cell(25, 3.5, utf8_decode(EMPRESA_TELEFONO), 0, 1, 'L');
+        $this->Cell(25, 3.5, utf8_decode($telefono_empresa), 0, 1, 'L');
 
         $this->SetFont('Helvetica', 'B', 8);
         $this->Cell(100, 3.5, '', 0, 0, 'L');
         $this->Cell(30, 3.5, 'City:', 0, 0, 'L');
         $this->SetFont('Helvetica', '', 9);
-        $this->Cell(25, 3.5, utf8_decode(EMPRESA_CIUDAD), 0, 1, 'L');
+        $this->Cell(25, 3.5, utf8_decode($ciudad_empresa), 0, 1, 'L');
 
         $this->SetFont('Helvetica', 'B', 8);
         $this->Cell(100, 3.5, '', 0, 0, 'L');
         $this->Cell(30, 3.5, 'Country:', 0, 0, 'L');
         $this->SetFont('Helvetica', '', 9);
-        $this->Cell(25, 3.5, 'Colombia', 0, 1, 'L');
+        $this->Cell(25, 3.5, utf8_decode($pais_empresa), 0, 1, 'L');
 
         $this->SetFont('Helvetica', 'B', 8);
         $this->Cell(100, 3.5, '', 0, 0, 'L');
         $this->Cell(30, 3.5, 'Email:', 0, 0, 'L');
         $this->SetFont('Helvetica', '', 8);
-        $this->Cell(25, 3.5, utf8_decode(EMPRESA_EMAIL), 0, 1, 'L');
+        $this->Cell(25, 3.5, utf8_decode($email_empresa), 0, 1, 'L');
 
         $this->Ln(2);
 
@@ -294,7 +331,7 @@ class PDF extends FPDF
         $this->SetFont('Helvetica', 'B', 8);
         $this->Cell(30, 3.5, 'Client:', 0, 0, 'L');
         $this->SetFont('Helvetica', '', 8);
-        $this->Cell(90, 3.5, $cliente_nombre, 0, 0, 'L');
+        $this->Cell(90, 3.5, utf8_decode((string)$cliente_nombre), 0, 0, 'L');
         $this->SetFont('Helvetica', 'B', 8);
         $this->Cell(30, 3.5, 'SECOND AWB:', 0, 0, 'L');
         $this->SetFont('Helvetica', '', 8);
@@ -303,7 +340,7 @@ class PDF extends FPDF
         $this->SetFont('Helvetica', 'B', 8);
         $this->Cell(30, 3.5, 'Address:', 0, 0, 'L');
         $this->SetFont('Helvetica', '', 8);
-        $this->Cell(90, 3.5, $direccion_linea1, 0, 0, 'L');
+        $this->Cell(90, 3.5, utf8_decode((string)$direccion_linea1), 0, 0, 'L');
         $this->SetFont('Helvetica', 'B', 8);
         $this->Cell(30, 3.5, 'THIRD AWB:', 0, 0, 'L');
         $this->SetFont('Helvetica', '', 8);
@@ -313,7 +350,7 @@ class PDF extends FPDF
         if (!empty($direccion_linea2)) {
             $this->Cell(30, 3.5, '', 0, 0, 'L');
             $this->SetFont('Helvetica', '', 8);
-            $this->Cell(90, 3.5, $direccion_linea2, 0, 0, 'L');
+            $this->Cell(90, 3.5, utf8_decode((string)$direccion_linea2), 0, 0, 'L');
             $this->Cell(120, 3.5, '', 0, 1, 'L');
             $this->Ln(-1);
         }
@@ -325,21 +362,21 @@ class PDF extends FPDF
         $this->SetFont('Helvetica', 'B', 8);
         $this->Cell(30, 3.5, 'AIRLINE:', 0, 0, 'L');
         $this->SetFont('Helvetica', '', 8);
-        $this->Cell(90, 3.5, $aerolinea, 0, 1, 'L');
+        $this->Cell(90, 3.5, utf8_decode((string)$aerolinea), 0, 1, 'L');
 
         $this->SetFont('Helvetica', 'B', 8);
         $this->Cell(30, 3.5, 'City:', 0, 0, 'L');
         $this->SetFont('Helvetica', '', 8);
-        $this->Cell(90, 3.5, $ciudad_cliente, 0, 0, 'L');
+        $this->Cell(90, 3.5, utf8_decode((string)$ciudad_cliente), 0, 0, 'L');
         $this->SetFont('Helvetica', 'B', 8);
         $this->Cell(30, 3.5, 'FORWARDER:', 0, 0, 'L');
         $this->SetFont('Helvetica', '', 8);
-        $this->Cell(90, 3.5, $agencia, 0, 1, 'L');
+        $this->Cell(90, 3.5, utf8_decode((string)$agencia), 0, 1, 'L');
 
         $this->SetFont('Helvetica', 'B', 8);
         $this->Cell(30, 3.5, 'P.O.:', 0, 0, 'L');
         $this->SetFont('Helvetica', '', 8);
-        $this->Cell(90, 3.5, $po_cliente, 0, 1, 'L');
+        $this->Cell(90, 3.5, utf8_decode((string)$po_cliente), 0, 1, 'L');
 
         $this->Ln(1);
     }

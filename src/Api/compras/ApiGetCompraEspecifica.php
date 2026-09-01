@@ -42,8 +42,10 @@ try {
         ec.PO_Proveedor,
         ec.Observaciones,
         ec.Anulado,
-        ec.IVA    
+        ec.IVA,
+        COALESCE(m.Moneda, '') AS monedaNombre
     FROM SAS_EncabCompra ec
+    LEFT JOIN GEN_Monedas m ON ec.IdMoneda = m.IdMoneda
     WHERE ec.IdEncabCompra = ?";
     
     $stmtEnc = $enlace->prepare($sqlEnc);
@@ -65,7 +67,7 @@ try {
     // Obtener el encabezado
     $stmtEnc->bind_result(
         $idEncabCompra, $tipoCompra, $idProveedor, $idComprador, $fechaSolicitud, $fechaEntrega,
-        $idMoneda, $trm, $poProveedor, $observaciones, $anulado, $iva
+        $idMoneda, $trm, $poProveedor, $observaciones, $anulado, $iva, $monedaNombre
     );
     
     $stmtEnc->fetch();
@@ -208,6 +210,7 @@ try {
                             "precioCompra" => $precioCompra,  // Nota: precioCompra en lugar de precioVenta
                             "descripcion" => $descripcion,
                             "esBouquet" => $esBouquet,
+                            "cantidadBouquets" => $esBouquet ? $ramosCaja : 1,
                             "receta" => $receta  // Puede ser array vacío
                         ];
                     }
@@ -243,6 +246,7 @@ try {
                 "FechaSolicitud" => $fechaSolicitud,
                 "FechaEntrega" => $fechaEntrega,
                 "IdMoneda" => $idMoneda,
+                "MonedaNombre" => $monedaNombre,
                 "TRM" => $trm,
                 "PO_Proveedor" => $poProveedor,
                 "Observaciones" => $observaciones,

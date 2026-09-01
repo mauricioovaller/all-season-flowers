@@ -5,6 +5,7 @@ import Swal from 'sweetalert2';
 
 // Servicios para validaciones
 import { validarNITExistente, validarNombreProveedorExistente, getUltimoCodigoProveedor, generarCodigoProveedor } from '../../services/proveedores/proveedoresService';
+import { getPaises } from '../../services/paisesService';
 
 const ProveedoresForm = ({ proveedor, onSave, onCancel }) => {
     // Estado del formulario basado en la tabla GEN_Proveedores
@@ -17,7 +18,7 @@ const ProveedoresForm = ({ proveedor, onSave, onCancel }) => {
         Direccion: '',
         Ciudad: '',
         Estado: 'Activo',
-        Pais: 'Colombia',
+        PAIS: 'Colombia',
         Telefono: '',
         Correo: '',
         Email: '',
@@ -31,6 +32,15 @@ const ProveedoresForm = ({ proveedor, onSave, onCancel }) => {
     const [nitValido, setNitValido] = useState(true);
     const [validandoNombre, setValidandoNombre] = useState(false);
     const [nombreValido, setNombreValido] = useState(true);
+    const [paises, setPaises] = useState(['Colombia', 'Estados Unidos', 'México', 'España', 'Argentina', 'Chile', 'Perú', 'Ecuador', 'Venezuela', 'Panamá', 'Costa Rica']);
+
+    useEffect(() => {
+        getPaises().then(lista => {
+            if (lista.length > 0) {
+                setPaises(lista.map(p => p.Pais));
+            }
+        });
+    }, []);
 
     // Resetear formulario cuando proveedor cambie a null (nuevo proveedor)
     useEffect(() => {
@@ -44,7 +54,7 @@ const ProveedoresForm = ({ proveedor, onSave, onCancel }) => {
                 Direccion: '',
                 Ciudad: '',
                 Estado: 'Activo',
-                Pais: 'Colombia',
+                PAIS: 'Colombia',
                 Telefono: '',
                 Correo: '',
                 Email: '',
@@ -293,12 +303,6 @@ const ProveedoresForm = ({ proveedor, onSave, onCancel }) => {
         }
     };
 
-    // Campos de países comunes
-    const paises = [
-        'Colombia', 'Estados Unidos', 'México', 'España', 'Argentina',
-        'Chile', 'Perú', 'Ecuador', 'Venezuela', 'Panamá', 'Costa Rica'
-    ];
-
     // Campos de ciudades comunes en Colombia
     const ciudadesColombia = [
         'Bogotá D.C.', 'Medellín', 'Cali', 'Barranquilla', 'Cartagena',
@@ -473,8 +477,8 @@ const ProveedoresForm = ({ proveedor, onSave, onCancel }) => {
                                 País
                             </label>
                             <select
-                                name="Pais"
-                                value={formData.Pais}
+                                name="PAIS"
+                                value={formData.PAIS}
                                 onChange={handleChange}
                                 className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary appearance-none bg-white"
                             >

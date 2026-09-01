@@ -35,7 +35,7 @@ npm run test:watch    # Watch mode — re-runs on file save (use while developin
 npm run test:ui       # Visual browser UI for test results
 ```
 
-**Current coverage:** 290 tests across 26 test files — all passing.
+**Current coverage:** 383 tests across 31 test files — all passing.
 
 **Test files location:** `src/test/<module>/`
 
@@ -55,9 +55,14 @@ npm run test:ui       # Visual browser UI for test results
 | pedidos             | `src/test/pedidos/servicio.test.js`                                       |
 | devoluciones        | `src/test/devoluciones/servicio.test.js`                                  |
 | dashboard           | `src/test/dashboard/servicio.test.js`                                     |
+| reportes            | `src/test/reportes/servicio.test.js` (consolidados ventas/compras, consolidados devoluciones clientes/proveedores, estado cuenta, planilla, muiscas) |
+| reportes            | `src/test/reportes/ingresosRecibidos.test.js` (consolidado de ingresos recibidos) |
 | bajas               | `src/test/bajas/servicio.test.js`                                         |
 | inventarios         | `src/test/inventarios/servicio.test.js`                                   |
 | permisos            | `src/test/permisos/servicio.test.js`                                      |
+| ventasComision      | `src/test/ventasComision/pedidosComision.test.js`, `devolucionesComision.test.js`, `cuentaCobro.test.js` |
+
+> **Nota:** El total actual de tests es 383 (31 archivos). Ver `/memories/repo/ayudantes-cedula-fix.md` para documentación de cambios en Ayudantes NoCedula. Ver [`docs/VENTAS_COMISION.md`](docs/VENTAS_COMISION.md) para documentación del módulo Ventas Comisión.
 
 **Vitest configuration** (`vite.config.js`):
 
@@ -261,6 +266,16 @@ Example JSDoc:
  */
 ```
 
+### Codificación de texto (tildes, ñ y caracteres especiales) — REGLA DE ORO
+
+Todo campo de texto que se muestre o imprima debe manejar correctamente tildes, `ñ` y caracteres especiales:
+
+- **PHP con FPDF:** las fuentes internas de FPDF (Helvetica, Times, Courier) son **Latin-1**, NO UTF-8. Todo texto con tildes/ñ que se pase a `Cell`/`MultiCell` debe convertirse con `utf8_decode((string)$valor)` (el cast evita deprecación con `null`). Nunca imprimir texto UTF-8 crudo en un PDF.
+- **Conexión a BD:** siempre `$enlace->set_charset('utf8mb4')` después de conectar (los datos se almacenan en UTF-8).
+- **APIs JSON:** responder con `json_encode($payload, JSON_UNESCAPED_UNICODE)` para no escapar tildes/ñ.
+- **Frontend (React):** la app y la BD ya usan UTF-8; **no** convertir texto en el frontend (el navegador renderiza UTF-8 nativamente).
+- **Verificación:** al tocar un PDF, revisar campos con tildes/ñ (nombres de cliente, aerolínea, agencia, ciudad, dirección, razón social, etc.) y confirmar que se ven correctos. Si un campo muestra caracteres raros, falta el `utf8_decode`.
+
 ### ESLint Rules
 
 The project uses ESLint with these key rules:
@@ -306,7 +321,67 @@ The project uses ESLint with these key rules:
 - **Compras**: Purchases management module
 - **Bajas**: Write-offs management module (daño, pérdida, obsequio). Header/detail structure: `SAS_EncabBaja` + `SAS_DetBaja`. Flexible levels: permite registrar solo producto, producto+variedad, o producto+variedad+grado.
 - **Inventarios**: Inventory report with 3 levels of aggregation (Producto, Producto+Variedad, Producto+Variedad+Grado). Calculates entries from Compras + Devoluciones Ventas (Colombia only) and exits from Pedidos + Devoluciones Compras + Bajas.
+- **Ventas Comisión**: Módulo independiente de pedidos, devoluciones y cuenta de cobro para actividad comercial complementaria. Solo visible mediante permisos. Ver [`docs/VENTAS_COMISION.md`](docs/VENTAS_COMISION.md).
 - Each module has its own services and API endpoints
+
+### Ayudantes (Drivers/Assistants Module)
+
+**Campo NoCedula - Múltiples IDs:**
+El campo `NoCedula` en la tabla `GEN_Ayudantes` permite registrar múltiples números de identificación separados por "/" o "-" para identificar a conductores, ayudantes u otros asistentes con múltiples documentos válidos.
+
+**Características implementadas (junio 2026):**
+
+- ✅ Acepta formato: números, "/", "-", y espacios (ej: `123456/789012` o `123-456-789`)
+- ✅ Máximo 150 caracteres (actualizado de 100 a 150)
+- ✅ Se almacena como string en la BD (no se convierte a número)
+- ✅ Validación en frontend y backend permite separadores
+- ✅ Test validación: `src/test/ayudantes/servicio.test.js` línea 78-89
+
+**Base de datos:**
+
+```sql
+-- Verificar que NoCedula sea VARCHAR (no INT)
+ALTER TABLE GEN_Ayudantes MODIFY COLUMN NoCedula VARCHAR(150) NULL;
+```
+
+**Archivos del módulo:**
+| Archivo | Rol |
+|---------|-----|
+| `src/pages/Ayudantes/AyudantesForm.jsx` | Validación regex `/^[0-9\/\-\s]+$/`, maxLength 150 |
+| `src/Api/ayudantes/ApiGuardarAyudante.php` | Línea 43-44: `real_escape_string()` preserva string completo |
+| `src/services/ayudantes/ayudantesService.js` | Línea 72-73: Se envía como string (sin parseInt) |
+
+> 📋 **Referencia:** Ver `/memories/repo/ayudantes-cedula-fix.md` para detalles técnicos de la implementación.
+
+### Razones Sociales ("Empresa Emisora") — Pedidos (solo AllSeason)
+
+En el módulo de **Pedidos**, el campo **"Empresa Emisora"** permite elegir entre varias razones sociales. La selección se guarda en `SAS_EncabPedido.IdRazonSocial` (histórico) y los documentos **Factura, Planilla, Etiqueta y Fitosanitario** se generan con el nombre, NIT, dirección, ciudad, país, teléfono, email, logo, registro ICA y representante/inspector de la razón social elegida.
+
+**Multi-cliente (regla de oro):** esta funcionalidad **solo aplica a AllSeason**. Los PHP son compartidos con Flagracol, por eso el código es **esquema-dirigido**: las funciones del helper detectan si la tabla `GEN_RazonesSociales` y la columna `SAS_EncabPedido.IdRazonSocial` existen en la base activa; si no existen (Flagracol), todo cae a las constantes de `empresa.php` (comportamiento original intacto). No se requiere ejecutar nada en Flagracol.
+
+**Base de datos (ejecutar solo en `datenban_AllSeasonFlowers`):** `scripts/SQL_RazonesSociales_AllSeason.sql`
+- Crea `GEN_RazonesSociales` (con logo, prefijo de factura, registro ICA y representante/inspector por razón social).
+- Inserta All Season Flowers (`PrefijoInvoice='ASF'`, `Pais='Colombia'`, PorDefecto=1) y Fresh Floral LLC (`PrefijoInvoice='FFL'`, `Pais='Estados Unidos'`, con placeholders `<<...>>` en el resto).
+- Agrega `IdRazonSocial INT(11) NULL DEFAULT NULL` a `SAS_EncabPedido` (idempotente; NULL = pedido antiguo → All Season).
+
+**Comportamiento de documentos:**
+- La **Factura** usa el `PrefijoInvoice` de la razón social (ASF- / FFL-) y el campo **Country** del exportador sale de `Pais` (no hardcodeado).
+- Si la razón social no existe o el pedido es antiguo, cae a `EMPRESA_PREFIJO_INVOICE` y `Colombia` (comportamiento original).
+
+**Archivos del módulo:**
+
+| Archivo | Rol |
+|---------|-----|
+| `scripts/SQL_RazonesSociales_AllSeason.sql` | DDL + seed (solo AllSeason) |
+| `src/Api/pedidos/helpers/razon_social.php` | Helper multi-cliente: `razon_social_disponible()`, `razon_social_obtener()`, `razon_social_de_pedido()`, `razon_social_logo_absoluto()` |
+| `src/Api/pedidos/ApiGetRazonesSociales.php` | Endpoint JSON que lista las razones sociales activas ([] si no hay tabla) |
+| `src/Api/pedidos/ApiGetDatosSelect.php` | Incluye `razonesSociales` en los selects (guard por tabla) |
+| `src/Api/pedidos/ApiGuardarPedidoCompleto.php` | Persiste `IdRazonSocial` con UPDATE adicional condicional (no altera SQL original) |
+| `src/Api/pedidos/ApiGetPedidoEspecifico.php` | Devuelve `IdRazonSocial` del pedido (columna condicional) |
+| `src/Api/pedidos/ApiGenerarPDFFactura.php`, `ApiGenerarPDFPlanilla.php`, `ApiGenerarPDFEtiqueta.php`, `ApiGenerarPDFFitosanitario.php` | Usan la razón social del pedido (datos + logo) con fallback a `empresa.php` |
+| `src/modules/pedidos/PedidoHeader.jsx` | Select "Empresa Emisora" |
+| `src/modules/pedidos/Pedidos.jsx` | Estado `idRazonSocial`, mapeo, default, guardado y carga |
+| `src/services/pedidos/pedidosService.js` | `getRazonesSociales()`, `razonSocialPorDefecto()` |
 
 > 📖 **Referencia completa:** [`docs/PERMISOS.md`](docs/PERMISOS.md) — contiene especificación de la tabla, ejemplos de INSERT, flujo de autenticación detallado y comportamiento ante errores.
 
@@ -328,11 +403,11 @@ CREATE TABLE Permisos (
 
 **Archivos del módulo:**
 
-| Archivo | Rol |
-|---|---|
-| `src/Api/permisos/ApiGetPermisos.php` | Endpoint PHP. Lee `$_SESSION['idUsuario']`, consulta `Permisos`, devuelve rutas permitidas. Si no hay sesión retorna 401. |
+| Archivo                                    | Rol                                                                                                                               |
+| ------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------- |
+| `src/Api/permisos/ApiGetPermisos.php`      | Endpoint PHP. Lee `$_SESSION['idUsuario']`, consulta `Permisos`, devuelve rutas permitidas. Si no hay sesión retorna 401.         |
 | `src/services/permisos/permisosService.js` | Función `getPermisos()` → fetch POST con `credentials: 'include'`. Devuelve `string[]` de rutas (ej: `['/clientes','/pedidos']`). |
-| `src/test/permisos/servicio.test.js` | 6 tests: éxito, error HTTP, error red, success=false, permisos no-array, verifica POST+credentials. |
+| `src/test/permisos/servicio.test.js`       | 6 tests: éxito, error HTTP, error red, success=false, permisos no-array, verifica POST+credentials.                               |
 
 **Flujo de funcionamiento:**
 
@@ -355,7 +430,7 @@ INSERT INTO Permisos (IdUsuario, NombreOpcion, Ruta) VALUES
 (1, 'Proveedores','/proveedores');
 ```
 
-Los `item.id` disponibles en el Sidebar son: `dashboard`, `clientes`, `proveedores`, `ejecutivos-venta`, `ejecutivos-compra`, `productos`, `variedades`, `grados`, `tipos-empaque`, `conductores`, `ayudantes`, `aerolineas`, `agencias`, `compras`, `pedidos`, `devolucion-venta`, `devolucion-compra`, `pago-cliente`, `pago-proveedor`, `bajas`, `estado-cuenta-proveedores`, `estado-cuenta-clientes`, `consolidados-ventas`, `consolidados-compras`, `exportacion-contable`, `tablero-control`, `inventario`.
+Los `item.id` disponibles en el Sidebar son: `dashboard`, `clientes`, `proveedores`, `ejecutivos-venta`, `ejecutivos-compra`, `productos`, `variedades`, `grados`, `tipos-empaque`, `conductores`, `ayudantes`, `aerolineas`, `agencias`, `compras`, `pedidos`, `devolucion-venta`, `devolucion-compra`, `pago-cliente`, `pago-proveedor`, `bajas`, `estado-cuenta-proveedores`, `estado-cuenta-clientes`, `consolidados-ventas`, `consolidados-compras`, `consolidados-devoluciones-clientes`, `consolidados-devoluciones-proveedores`, `consolidados-ingresos-recibidos`, `exportacion-contable`, `tablero-control`, `inventario`.
 
 ### Backend Integration
 
@@ -414,107 +489,110 @@ El proyecto está preparado para distribuirse a múltiples floristas.
 
 ### Documentación de referencia (léame primero)
 
-| Documento | Propósito |
-|---|---|
+| Documento                                   | Propósito                                                                                                                                                  |
+| ------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 📋 **`scripts/PLANTILLA_NUEVO_CLIENTE.md`** | **→ EMPEZAR AQUÍ ←** Formulario para recolectar datos + paso a paso para crear o modificar un cliente. Incluye tabla con datos de los clientes existentes. |
-| 📖 **`scripts/DEPLOY_MULTICLIENTE.md`** | Guía detallada de despliegue (soporte técnico, comandos, solución de problemas). |
-| 📄 **`AGENTS.md`** | (este archivo) Biblia del proyecto con toda la arquitectura. |
+| 📖 **`scripts/DEPLOY_MULTICLIENTE.md`**     | Guía detallada de despliegue (soporte técnico, comandos, solución de problemas).                                                                           |
+| 📄 **`AGENTS.md`**                          | (este archivo) Biblia del proyecto con toda la arquitectura.                                                                                               |
+| 🧩 **`docs/PARTICULARIDADES_POR_CLIENTE.md`** | Registro central de funcionalidades y ajustes específicos por cliente. **Obligatorio:** toda implementación que aplique a un solo cliente debe registrarse aquí (regla de oro). |
+
+**Regla de oro:** Toda funcionalidad específica de un cliente (no compartida) debe quedar documentada en `docs/PARTICULARIDADES_POR_CLIENTE.md`, con su script SQL (si aplica) y referencia a la sección de AGENTS.md. No cerrar una implementación por cliente sin actualizar este registro.
 
 **Regla de oro:** Si va a crear un nuevo cliente o modificar uno existente → abra `scripts/PLANTILLA_NUEVO_CLIENTE.md` y siga las instrucciones.
 
 ### Archivos clave de la arquitectura
 
-| Archivo | Rol |
-|---|---|
-| `src/config/api.js` | Lee `VITE_API_BASE` del `.env` para que el frontend sepa a qué servidor PHP llamar |
-| `src/config/cliente.js` | Lee `VITE_EMPRESA_*` del `.env` y exporta objeto `CLIENTE` con nombre, lema, iniciales, logo, título |
-| `vite.config.js` | Usa `VITE_BASE_PATH` del `.env` como `base` del build |
-| `src/main.jsx` | Lee `import.meta.env.VITE_BASE_PATH` para el `basename` del Router |
-| `src/Api/config/empresa.php` | Contiene **todos los datos del cliente** para los PHP: nombre, NIT, logo, rutas BD, FPDF |
-| `.env` / `.env-allseason` / `.env-flagracol` | Variables de entorno por cliente (ver sección "Archivos .env") |
-| `.gitignore` | Excluye `.env` y `.env-*` — NUNCA subir credenciales al repo |
+| Archivo                                      | Rol                                                                                                  |
+| -------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| `src/config/api.js`                          | Lee `VITE_API_BASE` del `.env` para que el frontend sepa a qué servidor PHP llamar                   |
+| `src/config/cliente.js`                      | Lee `VITE_EMPRESA_*` del `.env` y exporta objeto `CLIENTE` con nombre, lema, iniciales, logo, título |
+| `vite.config.js`                             | Usa `VITE_BASE_PATH` del `.env` como `base` del build                                                |
+| `src/main.jsx`                               | Lee `import.meta.env.VITE_BASE_PATH` para el `basename` del Router                                   |
+| `src/Api/config/empresa.php`                 | Contiene **todos los datos del cliente** para los PHP: nombre, NIT, logo, rutas BD, FPDF             |
+| `.env` / `.env-allseason` / `.env-flagracol` | Variables de entorno por cliente (ver sección "Archivos .env")                                       |
+| `.gitignore`                                 | Excluye `.env` y `.env-*` — NUNCA subir credenciales al repo                                         |
 
 ### Archivos .env
 
 Cada cliente tiene su propio `.env-*` con TODAS las variables necesarias:
 
-| Variable | Descripción |
-|---|---|
-| `VITE_BASE_PATH` | Ruta base de la SPA en el servidor (ej: `/DatenBankenApp/AllSeasonFlowers/`) |
-| `VITE_API_BASE` | URL base de las APIs PHP |
-| `VITE_EMPRESA_NOMBRE` | Nombre legal completo (ej: `ALL SEASON FLOWERS SAS`) |
-| `VITE_EMPRESA_NOMBRE_CORTO` | Nombre corto (ej: `ALL SEASON FLOWERS`) |
-| `VITE_EMPRESA_NOMBRE_LARGO` | Nombre con sufijo legal (ej: `ALL SEASON FLOWERS S.A.S`) |
-| `VITE_EMPRESA_TITLE` | Nombre para mostrar en pestaña, header y sidebar |
-| `VITE_EMPRESA_LEMA` | Eslogan o lema del cliente |
-| `VITE_EMPRESA_INICIALES` | Iniciales para el sidebar (ej: `AS`) |
-| `VITE_EMPRESA_LOGO` | Ruta pública del logo (ej: `/DatenBankenApp/AllSeasonFlowers/img/LogoAllSeason.jpg`) |
+| Variable                    | Descripción                                                                          |
+| --------------------------- | ------------------------------------------------------------------------------------ |
+| `VITE_BASE_PATH`            | Ruta base de la SPA en el servidor (ej: `/DatenBankenApp/AllSeasonFlowers/`)         |
+| `VITE_API_BASE`             | URL base de las APIs PHP                                                             |
+| `VITE_EMPRESA_NOMBRE`       | Nombre legal completo (ej: `ALL SEASON FLOWERS SAS`)                                 |
+| `VITE_EMPRESA_NOMBRE_CORTO` | Nombre corto (ej: `ALL SEASON FLOWERS`)                                              |
+| `VITE_EMPRESA_NOMBRE_LARGO` | Nombre con sufijo legal (ej: `ALL SEASON FLOWERS S.A.S`)                             |
+| `VITE_EMPRESA_TITLE`        | Nombre para mostrar en pestaña, header y sidebar                                     |
+| `VITE_EMPRESA_LEMA`         | Eslogan o lema del cliente                                                           |
+| `VITE_EMPRESA_INICIALES`    | Iniciales para el sidebar (ej: `AS`)                                                 |
+| `VITE_EMPRESA_LOGO`         | Ruta pública del logo (ej: `/DatenBankenApp/AllSeasonFlowers/img/LogoAllSeason.jpg`) |
 
 Archivos actuales:
 
-| Archivo | Contiene |
-|---|---|
-| `.env` | Activo (usado por `npm run dev`) |
+| Archivo          | Contiene                                    |
+| ---------------- | ------------------------------------------- |
+| `.env`           | Activo (usado por `npm run dev`)            |
 | `.env-allseason` | Variables completas para All Season Flowers |
-| `.env-flagracol` | Variables completas para FlagracolSAS |
-| `.env.example` | Plantilla sin datos reales para referencia |
+| `.env-flagracol` | Variables completas para FlagracolSAS       |
+| `.env.example`   | Plantilla sin datos reales para referencia  |
 
 > **Regla:** Todos los `.env-*` están en `.gitignore`. Cada desarrollador los crea localmente con las credenciales reales.
 
 ### Comandos de build por cliente
 
-| Comando | Tests | Destino |
-|---|---|---|
+| Comando                   | Tests              | Destino                              |
+| ------------------------- | ------------------ | ------------------------------------ |
 | `npm run build:allseason` | ✅ Corre 290 tests | Genera `dist/` para AllSeasonFlowers |
-| `npm run build:flagracol` | ✅ Corre 290 tests | Genera `dist/` para FlagracolSAS |
-| `npm run build` | ✅ Corre 290 tests | Usa el `.env` actual (genérico) |
-| `npm run build:no-test` | ❌ Solo compila | Útil para pruebas rápidas |
+| `npm run build:flagracol` | ✅ Corre 290 tests | Genera `dist/` para FlagracolSAS     |
+| `npm run build`           | ✅ Corre 290 tests | Usa el `.env` actual (genérico)      |
+| `npm run build:no-test`   | ❌ Solo compila    | Útil para pruebas rápidas            |
 
 > **Siempre correr `npm test` antes de cada build.** Si un test falla, algo se rompió.
 
 ### Componentes que ahora son dinámicos por cliente
 
-| Componente/Archivo | Qué muestra ahora dinámico |
-|---|---|
-| `index.html` | Título de pestaña (`%VITE_EMPRESA_TITLE%`) |
-| `src/main.jsx` | Basename del Router (`VITE_BASE_PATH`) |
-| `src/config/api.js` | URL base de APIs (`VITE_API_BASE`) |
-| `src/config/cliente.js` | Objeto `CLIENTE` con todos los datos de la empresa |
-| `Header.jsx` | Logo, nombre, lema, iniciales |
-| `Sidebar.jsx` | Iniciales, nombre, lema (expandido, colapsado y móvil) |
-| `Dashboard.jsx` | Nombre y lema |
-| 12 páginas (Clientes, Proveedores, Productos, etc.) | Descripciones con nombre del cliente |
-| 6 módulos (Pedidos, Compras, Devoluciones, Pagos) | Footers con nombre del cliente |
-| 5 modales (Factura, Fitosanitario, Etiqueta, Planilla) | URLs de API centralizadas |
+| Componente/Archivo                                     | Qué muestra ahora dinámico                             |
+| ------------------------------------------------------ | ------------------------------------------------------ |
+| `index.html`                                           | Título de pestaña (`%VITE_EMPRESA_TITLE%`)             |
+| `src/main.jsx`                                         | Basename del Router (`VITE_BASE_PATH`)                 |
+| `src/config/api.js`                                    | URL base de APIs (`VITE_API_BASE`)                     |
+| `src/config/cliente.js`                                | Objeto `CLIENTE` con todos los datos de la empresa     |
+| `Header.jsx`                                           | Logo, nombre, lema, iniciales                          |
+| `Sidebar.jsx`                                          | Iniciales, nombre, lema (expandido, colapsado y móvil) |
+| `Dashboard.jsx`                                        | Nombre y lema                                          |
+| 12 páginas (Clientes, Proveedores, Productos, etc.)    | Descripciones con nombre del cliente                   |
+| 6 módulos (Pedidos, Compras, Devoluciones, Pagos)      | Footers con nombre del cliente                         |
+| 5 modales (Factura, Fitosanitario, Etiqueta, Planilla) | URLs de API centralizadas                              |
 
 ### Textos en PHP (backend) que ahora son dinámicos
 
-| Archivo PHP | Qué usa |
-|---|---|
-| `config/AllSeasonFlowers/empresa.php` | Constantes `EMPRESA_NOMBRE_TITULO`, `EMPRESA_LEMA`, `EMPRESA_INICIALES` (agregadas) |
-| `ApiGenerarPDFOrdenCompra.php` | `EMPRESA_NOMBRE_CORTO` en términos y condiciones |
+| Archivo PHP                                                                                         | Qué usa                                                                             |
+| --------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| `config/AllSeasonFlowers/empresa.php`                                                               | Constantes `EMPRESA_NOMBRE_TITULO`, `EMPRESA_LEMA`, `EMPRESA_INICIALES` (agregadas) |
+| `ApiGenerarPDFOrdenCompra.php`                                                                      | `EMPRESA_NOMBRE_CORTO` en términos y condiciones                                    |
 | Los 9 PDFs ya usaban `EMPRESA_NOMBRE`, `EMPRESA_NIT`, `EMPRESA_LOGO_PATH`, etc. desde `empresa.php` |
 
 ### Clientes activos
 
-| Dato | All Season Flowers | Flagracol SAS |
-|---|---|---|
-| **Ruta servidor** | `/DatenBankenApp/AllSeasonFlowers/` | `/DatenBankenApp/FlagracolSAS/` |
-| **URL API** | `.../AllSeasonFlowers/Api` | `.../FlagracolSAS/Api` |
-| **Script build** | `npm run build:allseason` | `npm run build:flagracol` |
-| **Archivo .env** | `.env-allseason` | `.env-flagracol` |
+| Dato                    | All Season Flowers                    | Flagracol SAS                     |
+| ----------------------- | ------------------------------------- | --------------------------------- |
+| **Ruta servidor**       | `/DatenBankenApp/AllSeasonFlowers/`   | `/DatenBankenApp/FlagracolSAS/`   |
+| **URL API**             | `.../AllSeasonFlowers/Api`            | `.../FlagracolSAS/Api`            |
+| **Script build**        | `npm run build:allseason`             | `npm run build:flagracol`         |
+| **Archivo .env**        | `.env-allseason`                      | `.env-flagracol`                  |
 | **Archivo empresa.php** | `config/AllSeasonFlowers/empresa.php` | `config/FlagracolSAS/empresa.php` |
-| **Base de datos** | `datenban_AllSeasonFlowers` | `datenban_FlagracolSAS` |
-| **Nombre legal** | ALL SEASON FLOWERS SAS | FLAGRACOL SAS |
-| **Nombre corto** | ALL SEASON FLOWERS | FLAGRACOL |
-| **Título frontend** | All Season Flowers | Flagracol SAS |
-| **Lema** | Flowers & Ornamentals | Flores de Colombia |
-| **Iniciales** | AS | FS |
-| **Logo** | `img/LogoAllSeason.jpg` | `img/LogoFlagracol.jpg` |
-| **NIT** | 901.984.016-8 | 901.104.002-0 |
-| **Dirección** | Finca Villa Clemencia Vrd. Prado | CALLE 163 N 50-80 INT 10 OF 233 |
-| **Teléfono** | (+057) 3114677282 - 3023090940 | (+057) 316 507 95 27 |
-| **Email** | freshfloral.erikajuley@gmail.com | logística@flagracol.com.co |
+| **Base de datos**       | `datenban_AllSeasonFlowers`           | `datenban_FlagracolSAS`           |
+| **Nombre legal**        | ALL SEASON FLOWERS SAS                | FLAGRACOL SAS                     |
+| **Nombre corto**        | ALL SEASON FLOWERS                    | FLAGRACOL                         |
+| **Título frontend**     | All Season Flowers                    | Flagracol SAS                     |
+| **Lema**                | Flowers & Ornamentals                 | Flores de Colombia                |
+| **Iniciales**           | AS                                    | FS                                |
+| **Logo**                | `img/LogoAllSeason.jpg`               | `img/LogoFlagracol.jpg`           |
+| **NIT**                 | 901.984.016-8                         | 901.104.002-0                     |
+| **Dirección**           | Finca Villa Clemencia Vrd. Prado      | CALLE 163 N 50-80 INT 10 OF 233   |
+| **Teléfono**            | (+057) 3114677282 - 3023090940        | (+057) 316 507 95 27              |
+| **Email**               | freshfloral.erikajuley@gmail.com      | logística@flagracol.com.co        |
 
 ### Pendiente (fuera del alcance)
 

@@ -367,7 +367,9 @@ export default function PagosClientes() {
         valorTotal: valorTotal,
         facturas: facturasSeleccionadas.map(factura => ({
           invoice: factura.invoice || factura.numeroFactura, // Siempre el número comercial (ep.Factura)
-          valorPago: parseFloat(factura.valorPago) || 0
+          invoiceString: factura.numeroFactura?.toString() || factura.invoice?.toString(),
+          valorPago: parseFloat(factura.valorPago) || 0,
+          esLegacy: factura.esLegacy || false
         }))
       };
 

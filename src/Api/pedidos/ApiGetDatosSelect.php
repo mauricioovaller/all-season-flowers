@@ -9,6 +9,21 @@ error_reporting(E_ALL);
 // Conexión a la base de datos
 require_once __DIR__ . '/../config/empresa.php';
 require_once CONEXION_BD_PATH;
+// Helper multi-cliente de razones sociales ("Empresa Emisora").
+// Si la carpeta helpers/ no está desplegada en el servidor de un cliente,
+// no debe romper el endpoint: se definen fallbacks seguros que desactivan
+// la funcionalidad y todo cae a las constantes de empresa.php (original).
+if (file_exists(__DIR__ . '/helpers/razon_social.php')) {
+    require_once __DIR__ . '/helpers/razon_social.php';
+}
+if (!function_exists('razon_social_columna_existe')) {
+    function razon_social_tabla_existe($enlace): bool { return false; }
+    function razon_social_columna_existe($enlace): bool { return false; }
+    function razon_social_disponible($enlace): bool { return false; }
+    function razon_social_obtener($enlace, $idRazonSocial): ?array { return null; }
+    function razon_social_de_pedido($enlace, $idEncabPedido): ?array { return null; }
+    function razon_social_logo_absoluto($razonSocial): ?string { return null; }
+}
 $enlace->set_charset("utf8mb4"); // 👈 importante
 
 if (!$enlace) {
@@ -51,10 +66,16 @@ $productos = obtenerDatos($enlace, "SELECT IdProducto, NOMPRODUCTO FROM GEN_Prod
 $unidades = obtenerDatos($enlace, "SELECT IdUnidades, DescripUnidad FROM GEN_Unidades ORDER BY DescripUnidad");
 $tipoEmpaque = obtenerDatos($enlace, "SELECT IdTipoEmpaque, Descripcion, EquivFull FROM GEN_TipoEmpaque ORDER BY Descripcion");
 $predios = obtenerDatos($enlace, "SELECT IdPredio, NombrePredio FROM GEN_Predios ORDER BY NombrePredio");
-$conductores = obtenerDatos($enlace, "SELECT IdConductor, NombreConductor FROM GEN_Conductores ORDER BY NombreConductor");
+$conductores = obtenerDatos($enlace, "SELECT IdConductor, NombreConductor, Placas FROM GEN_Conductores ORDER BY NombreConductor");
 $ayudantes = obtenerDatos($enlace, "SELECT IdAyudante, NomAyudante FROM GEN_Ayudantes ORDER BY NomAyudante");
 $responsables = obtenerDatos($enlace, "SELECT IdResponsable, Nombre FROM GEN_Responsables ORDER BY Nombre");
 $mediosPago = obtenerDatos($enlace, "SELECT IdMedioPago, Medio FROM GEN_MedioPagos ORDER BY Medio");
+
+// Razones sociales ("Empresa Emisora") — solo si la tabla existe (multi-cliente)
+$razonesSociales = [];
+if (razon_social_tabla_existe($enlace)) {
+    $razonesSociales = obtenerDatos($enlace, "SELECT IdRazonSocial, Nombre, PorDefecto FROM GEN_RazonesSociales WHERE Activo = 1 ORDER BY PorDefecto DESC, Nombre");
+}
 
 echo json_encode([
     'ejecutivos' => $ejecutivos,
@@ -69,7 +90,8 @@ echo json_encode([
     'conductores' => $conductores,
     'ayudantes' => $ayudantes,
     'responsables' => $responsables,
-    'mediosPago' => $mediosPago
+    'mediosPago' => $mediosPago,
+    'razonesSociales' => $razonesSociales
 ]);
 
 $enlace->close();

@@ -14,7 +14,8 @@ define('EMPRESA_LEMA',              'Flores de Colombia');   // Eslogan
 define('EMPRESA_INICIALES',         'FS');                   // Iniciales para sidebar
 define('EMPRESA_NIT',               '901.104.002-0');
 define('EMPRESA_REPRESENTANTE',     'DANIEL ALBERTO LOPEZ');
-define('EMPRESA_CC_REPRESENTANTE',  '80.096.240');
+define('EMPRESA_CC_REPRESENTANTE',  '80.096.240 de Bogotá');
+define('EMPRESA_PREFIJO_INVOICE',  'F');
 
 // ── ICA / Fitosanitario ───────────────────────────────────────────────────────
 define('EMPRESA_REGISTRO_ICA',      'REGISTRO ICA 25123386');

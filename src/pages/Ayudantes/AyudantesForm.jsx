@@ -67,11 +67,19 @@ const AyudantesForm = ({ ayudante, onSave, onCancel }) => {
                 return false;
             }
         } else if (campo === "NoCedula" && valor && valor.trim() !== '') {
-            // Validar que sea número si se proporciona
-            if (!/^\d+$/.test(valor)) {
+            // Validar que contenga números, "/", "-" y espacios opcionales
+            if (!/^[0-9\/\-\s]+$/.test(valor)) {
                 setErrores(prev => ({
                     ...prev,
-                    [campo]: 'La cédula debe contener solo números'
+                    [campo]: 'Solo se permiten números, "/" y "-"'
+                }));
+                return false;
+            }
+            // Validar longitud máxima
+            if (valor.length > 150) {
+                setErrores(prev => ({
+                    ...prev,
+                    [campo]: 'Máximo 150 caracteres'
                 }));
                 return false;
             }
@@ -162,11 +170,19 @@ const AyudantesForm = ({ ayudante, onSave, onCancel }) => {
             }));
         }
 
-        // Validar que cédula sea numérica en tiempo real
-        if (name === 'NoCedula' && value && !/^\d*$/.test(value)) {
+        // Validar formato de identificación en tiempo real
+        if (name === 'NoCedula' && value && !/^[0-9\/\-\s]*$/.test(value)) {
             setErrores(prev => ({
                 ...prev,
-                NoCedula: 'Solo números permitidos'
+                NoCedula: 'Solo se permiten números, "/" y "-"'
+            }));
+        }
+
+        // Validar longitud máxima de identificación
+        if (name === 'NoCedula' && value.length > 150) {
+            setErrores(prev => ({
+                ...prev,
+                NoCedula: 'Máximo 150 caracteres'
             }));
         }
     };
@@ -185,10 +201,12 @@ const AyudantesForm = ({ ayudante, onSave, onCancel }) => {
             nuevosErrores.NomAyudante = 'Máximo 50 caracteres';
         }
 
-        // Validar formato de cédula (si se proporciona)
+        // Validar formato de cédula/identificación (si se proporciona)
         if (formData.NoCedula && formData.NoCedula.trim() !== '') {
-            if (!/^\d+$/.test(formData.NoCedula)) {
-                nuevosErrores.NoCedula = 'La cédula debe contener solo números';
+            if (!/^[0-9\/\-\s]+$/.test(formData.NoCedula)) {
+                nuevosErrores.NoCedula = 'Solo se permiten números, "/" y "-"';
+            } else if (formData.NoCedula.length > 150) {
+                nuevosErrores.NoCedula = 'Máximo 150 caracteres';
             }
         }
 
@@ -298,9 +316,9 @@ const AyudantesForm = ({ ayudante, onSave, onCancel }) => {
                                 name="NoCedula"
                                 value={formData.NoCedula}
                                 onChange={handleChange}
-                                placeholder="Ej: 1234567890"
+                                placeholder="Ej: 1234567890 o 123456/789012 o 123-456-789"
                                 className={`w-full pl-10 pr-4 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary ${errores.NoCedula ? 'border-red-500' : 'border-gray-300'}`}
-                                maxLength={15}
+                                maxLength={150}
                             />
                         </div>
                         <div className="flex justify-between mt-1">
@@ -320,7 +338,7 @@ const AyudantesForm = ({ ayudante, onSave, onCancel }) => {
                             </div>
                         </div>
                         <p className="text-xs text-gray-500 mt-1">
-                            Solo números. Debe ser único si se proporciona.
+                            Opcional. Números y separadores (/, -). Ej: 1234567890 o 123456/789012. Máximo 150 caracteres.
                         </p>
                     </div>
                 </div>

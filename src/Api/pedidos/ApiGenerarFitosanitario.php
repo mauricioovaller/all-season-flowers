@@ -42,17 +42,21 @@ if (preg_match('/FITO-(\d+)/', $numeroFitosanitario, $matches)) {
 }
 
 try {
-    // 1. Verificar que el pedido existe
-    $checkQuery = "SELECT IdEncabPedido, FechaEntrega FROM SAS_EncabPedido WHERE IdEncabPedido = ?";
+    // 1. Verificar que el pedido existe y no está anulado
+    $checkQuery = "SELECT IdEncabPedido, FechaEntrega, Anulado FROM SAS_EncabPedido WHERE IdEncabPedido = ?";
     $checkStmt = $enlace->prepare($checkQuery);
     $checkStmt->bind_param("i", $idPedido);
     $checkStmt->execute();
-    $checkStmt->bind_result($idPedidoCheck, $fechaEntrega);
+    $checkStmt->bind_result($idPedidoCheck, $fechaEntrega, $anuladoPedido);
     
     if (!$checkStmt->fetch()) {
         throw new Exception("Pedido no encontrado con ID: $idPedido");
     }
     $checkStmt->close();
+
+    if ($anuladoPedido == 1) {
+        throw new Exception("No se puede generar el fitosanitario: el pedido está anulado");
+    }
     
     // 2. Calcular fechas de vigencia
     $fechaVigenciaInicial = $fechaEntrega;

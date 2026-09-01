@@ -27,6 +27,17 @@ import EstadoCuentaCliente from './pages/Reportes/EstadoCuentaCliente';
 import EstadoCuentaProveedor from './pages/Reportes/EstadoCuentaProveedor';
 import Bajas from './modules/bajas/Bajas';
 import Inventario from './pages/Reportes/Inventario';
+import PlanillaDespacho from './pages/Reportes/PlanillaDespacho';
+import SolicitudMuiscas from './pages/Reportes/SolicitudMuiscas';
+import ConsolidadoVentas from './pages/Reportes/ConsolidadoVentas';
+import ConsolidadoCompras from './pages/Reportes/ConsolidadoCompras';
+import ConsolidadoDevolucionesClientes from './pages/Reportes/ConsolidadoDevolucionesClientes';
+import ConsolidadoDevolucionesProveedores from './pages/Reportes/ConsolidadoDevolucionesProveedores';
+import ConsolidadoIngresosRecibidos from './pages/Reportes/ConsolidadoIngresosRecibidos';
+import GestionLegacy from './pages/Reportes/GestionLegacy';
+import PedidosComision from './modules/ventasComision/pedidos/PedidosComision';
+import DevolucionesComision from './modules/ventasComision/devoluciones/DevolucionesComision';
+import CuentaCobro from './modules/ventasComision/cuentaCobro/CuentaCobro';
 import { getPermisos } from './services/permisos/permisosService';
 import './index.css';
 
@@ -102,6 +113,10 @@ function App() {
         return <Bajas />;
       case 'inventario':
         return <Inventario />;
+      case 'planilla-despacho':
+        return <PlanillaDespacho />;
+      case 'solicitud-muiscas':
+        return <SolicitudMuiscas />;
       case 'ejecutivos-venta':
         return <EjecutivosVenta />;
       case 'ejecutivos-compra':
@@ -112,6 +127,24 @@ function App() {
         return <Aerolineas />;
       case 'agencias':
         return <Agencias />;
+      case 'consolidados-ventas':
+        return <ConsolidadoVentas />;
+      case 'consolidados-compras':
+        return <ConsolidadoCompras />;
+      case 'consolidados-devoluciones-clientes':
+        return <ConsolidadoDevolucionesClientes />;
+      case 'consolidados-devoluciones-proveedores':
+        return <ConsolidadoDevolucionesProveedores />;
+      case 'consolidados-ingresos-recibidos':
+        return <ConsolidadoIngresosRecibidos />;
+      case 'gestion-legacy':
+        return <GestionLegacy />;
+      case 'pedidos-comision':
+        return <PedidosComision />;
+      case 'devoluciones-comision':
+        return <DevolucionesComision />;
+      case 'cuenta-cobro':
+        return <CuentaCobro />;
       case 'dashboard':
       default:
         return <Dashboard />;

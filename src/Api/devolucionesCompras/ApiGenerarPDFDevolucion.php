@@ -91,6 +91,9 @@ if (!$stmtEnc->fetch()) {
 }
 $stmtEnc->close();
 
+$esUSD = mb_stripos($moneda, 'dólar') !== false;
+$decMoneda = $esUSD ? 3 : 2;
+
 // CONSULTA 2: DETALLE DE PRODUCTOS DEVUELTOS (solo campos que existen en compras)
 $sqlDetalle = "SELECT
                 dpc.IdDetProducto,
@@ -243,7 +246,7 @@ class PDF_DevolucionCompra extends FPDF
     {
         $this->SetY(-15);
         $this->SetFont('Helvetica', 'I', 8);
-        $this->Cell(0, 10, 'Página ' . $this->PageNo() . '/{nb}', 0, 0, 'C');
+        $this->Cell(0, 10, utf8_decode('Página ' . $this->PageNo() . '/{nb}'), 0, 0, 'C');
     }
     
     function addSeparatorLine()
@@ -306,9 +309,9 @@ foreach ($detalle as $item) {
     $pdf->Cell($anchoVar, 5, utf8_decode(substr($item['variedad'], 0, 10)), 1, 0, 'L');
     $pdf->Cell($anchoGrado, 5, utf8_decode($item['grado']), 1, 0, 'L');
     $pdf->Cell($anchoTallos, 5, $item['tallos'], 1, 0, 'C');
-    $pdf->Cell($anchoPrecio, 5, '$' . number_format($item['precio'], 2), 1, 0, 'R');
+    $pdf->Cell($anchoPrecio, 5, '$' . number_format($item['precio'], $decMoneda), 1, 0, 'R');
     $pdf->Cell($anchoMotivo, 5, utf8_decode(substr($item['motivo'], 0, 25)), 1, 0, 'L');
-    $pdf->Cell($anchoTotal, 5, '$' . number_format($item['total'], 2), 1, 1, 'R');
+    $pdf->Cell($anchoTotal, 5, '$' . number_format($item['total'], $decMoneda), 1, 1, 'R');
 }
 
 // Línea separadora
@@ -318,29 +321,29 @@ $pdf->addSeparatorLine();
 $pdf->SetFont('Helvetica', 'B', 9);
 $pdf->Cell(140, 6, '', 0, 0, 'L');
 $pdf->Cell(27, 6, 'Total a Devolver:', 0, 0, 'R');
-$pdf->Cell(24, 6, '$' . number_format($totalGeneral, 2), 0, 1, 'R');
+$pdf->Cell(24, 6, '$' . number_format($totalGeneral, $decMoneda), 0, 1, 'R');
 
 if ($tieneIva == 1) {
     $iva = $totalGeneral * 0.19;
     $pdf->Cell(140, 6, '', 0, 0, 'L');
     $pdf->Cell(27, 6, 'IVA (19%):', 0, 0, 'R');
-    $pdf->Cell(24, 6, '$' . number_format($iva, 2), 0, 1, 'R');
+    $pdf->Cell(24, 6, '$' . number_format($iva, $decMoneda), 0, 1, 'R');
     
     $totalFinal = $totalGeneral + $iva;
     $pdf->SetFont('Helvetica', 'B', 11);
     $pdf->Cell(140, 8, '', 0, 0, 'L');
     $pdf->Cell(27, 8, 'TOTAL FINAL:', 0, 0, 'R');
-    $pdf->Cell(24, 8, '$' . number_format($totalFinal, 2), 0, 1, 'R');
+    $pdf->Cell(24, 8, '$' . number_format($totalFinal, $decMoneda), 0, 1, 'R');
 } else {
     $pdf->SetFont('Helvetica', 'B', 11);
     $pdf->Cell(140, 8, '', 0, 0, 'L');
     $pdf->Cell(27, 8, 'TOTAL FINAL:', 0, 0, 'R');
-    $pdf->Cell(24, 8, '$' . number_format($totalGeneral, 2), 0, 1, 'R');
+    $pdf->Cell(24, 8, '$' . number_format($totalGeneral, $decMoneda), 0, 1, 'R');
 }
 
 $pdf->Ln(5);
 $pdf->SetFont('Helvetica', 'I', 8);
-$pdf->Cell(0, 5, 'Moneda: ' . utf8_decode($moneda) . ' - TRM: ' . number_format($trm, 2), 0, 1, 'R');
+$pdf->Cell(0, 5, 'Moneda: ' . utf8_decode($moneda) . ' - TRM: ' . number_format($trm, $decMoneda), 0, 1, 'R');
 
 // Espacio para firmas
 $pdf->Ln(15);

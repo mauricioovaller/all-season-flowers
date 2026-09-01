@@ -6,6 +6,21 @@ ini_set('max_execution_time', '300');
 require_once __DIR__ . '/../config/empresa.php';
 require_once FPDF_PATH;
 require_once CONEXION_BD_PATH;
+// Helper multi-cliente de razones sociales ("Empresa Emisora").
+// Si la carpeta helpers/ no está desplegada en el servidor de un cliente,
+// no debe romper el endpoint: se definen fallbacks seguros que desactivan
+// la funcionalidad y todo cae a las constantes de empresa.php (original).
+if (file_exists(__DIR__ . '/helpers/razon_social.php')) {
+    require_once __DIR__ . '/helpers/razon_social.php';
+}
+if (!function_exists('razon_social_columna_existe')) {
+    function razon_social_tabla_existe($enlace): bool { return false; }
+    function razon_social_columna_existe($enlace): bool { return false; }
+    function razon_social_disponible($enlace): bool { return false; }
+    function razon_social_obtener($enlace, $idRazonSocial): ?array { return null; }
+    function razon_social_de_pedido($enlace, $idEncabPedido): ?array { return null; }
+    function razon_social_logo_absoluto($razonSocial): ?string { return null; }
+}
 $enlace->set_charset("utf8mb4");
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
@@ -140,22 +155,32 @@ while ($stmtProductos->fetch()) {
 $stmtProductos->close();
 
 // 🔴 DATOS FIJOS DE LA EMPRESA E INSPECTOR (centralizados en config/empresa.php)
-$empresa_nombre   = EMPRESA_NOMBRE;
-$nit_empresa      = EMPRESA_NIT;
-$direccion_empresa = EMPRESA_DIRECCION;
-$ciudad_empresa   = EMPRESA_CIUDAD;
-$telefono_empresa = EMPRESA_TELEFONO;
-$email_empresa    = EMPRESA_EMAIL;
-$registro_ica     = EMPRESA_REGISTRO_ICA;
-$inspector_nombre = INSPECTOR_NOMBRE;
-$inspector_cc     = INSPECTOR_CC;
-$inspector_tp     = INSPECTOR_TP;
-$inspector_reg_sv = INSPECTOR_REG_SV;
+// Razón social ("Empresa Emisora") — multi-cliente: si el pedido tiene una
+// razón social guardada se usan sus datos, inspector, registro ICA y logo.
+$razonSocial = razon_social_de_pedido($enlace, $idEncabPedido);
+$empresa_nombre   = !empty($razonSocial['Nombre']) ? $razonSocial['Nombre'] : EMPRESA_NOMBRE;
+$nit_empresa      = !empty($razonSocial['NIT']) ? $razonSocial['NIT'] : EMPRESA_NIT;
+$direccion_empresa = !empty($razonSocial['Direccion']) ? $razonSocial['Direccion'] : EMPRESA_DIRECCION;
+$ciudad_empresa   = !empty($razonSocial['Ciudad']) ? $razonSocial['Ciudad'] : EMPRESA_CIUDAD;
+$telefono_empresa = !empty($razonSocial['Telefono']) ? $razonSocial['Telefono'] : EMPRESA_TELEFONO;
+$email_empresa    = !empty($razonSocial['Email']) ? $razonSocial['Email'] : EMPRESA_EMAIL;
+$registro_ica     = !empty($razonSocial['RegistroICA']) ? $razonSocial['RegistroICA'] : EMPRESA_REGISTRO_ICA;
+$inspector_nombre = !empty($razonSocial['InspectorNombre']) ? $razonSocial['InspectorNombre'] : INSPECTOR_NOMBRE;
+$inspector_cc     = !empty($razonSocial['InspectorCC']) ? $razonSocial['InspectorCC'] : INSPECTOR_CC;
+$inspector_tp     = !empty($razonSocial['InspectorTP']) ? $razonSocial['InspectorTP'] : INSPECTOR_TP;
+$inspector_reg_sv = !empty($razonSocial['InspectorRegSV']) ? $razonSocial['InspectorRegSV'] : INSPECTOR_REG_SV;
 
-// 🔴 DATOS DE CULTIVO (por ahora fijos, centralizados en config/empresa.php)
-$cultivo_nombre       = EMPRESA_NOMBRE;
-$cultivo_registro_ica = EMPRESA_CULTIVO_REG_ICA;
+// 🔴 DATOS DE CULTIVO (centralizados en config/empresa.php, razón social si aplica)
+$cultivo_nombre       = !empty($razonSocial['Nombre']) ? $razonSocial['Nombre'] : EMPRESA_NOMBRE;
+$cultivo_registro_ica = !empty($razonSocial['CultivoRegistroICA']) ? $razonSocial['CultivoRegistroICA'] : EMPRESA_CULTIVO_REG_ICA;
 $cultivo_vencimiento  = 'INDEFINIDO';
+
+// Variables globales usadas por el Header del PDF
+$nit_fito       = $nit_empresa;
+$direccion_fito = $direccion_empresa;
+$telefono_fito  = $telefono_empresa;
+$ciudad_fito    = $ciudad_empresa;
+$logo_fito      = razon_social_logo_absoluto($razonSocial) ?: EMPRESA_LOGO_PATH;
 
 // Clase PDF personalizada para fitosanitario
 class PDF_Fitosanitario extends FPDF
@@ -163,21 +188,22 @@ class PDF_Fitosanitario extends FPDF
     function Header()
     {
         global $numero_fitosanitario, $fechaVigenciaInicial;
+        global $nit_fito, $direccion_fito, $telefono_fito, $ciudad_fito, $logo_fito, $cultivo_registro_ica;
 
         // Logo
-        $this->Image(EMPRESA_LOGO_PATH, 20, 10, 65);
+        $this->Image($logo_fito, 20, 10, 65);
         // Configurar fuente
         $this->SetFont('Helvetica', '', 8);
 
         // NIT y datos empresa (parte superior izquierda)
         $this->SetX(110);
-        $this->Cell(100, 4, 'NIT. ' . EMPRESA_NIT, 0, 1, 'C');
+        $this->Cell(100, 4, 'NIT. ' . $nit_fito, 0, 1, 'C');
         $this->SetX(110);
-        $this->Cell(100, 4, 'Finca Villa Clemencia Vrd. Prado', 0, 1, 'C');
+        $this->Cell(100, 4, utf8_decode($direccion_fito), 0, 1, 'C');
         $this->SetX(110);
-        $this->Cell(100, 4, 'Cels. 3114677282 - 3023090940', 0, 1, 'C');
+        $this->Cell(100, 4, 'Cels. ' . utf8_decode($telefono_fito), 0, 1, 'C');
         $this->SetX(110);
-        $this->Cell(100, 4, 'Facatativa, Cundinamarca, Colombia', 0, 1, 'C');
+        $this->Cell(100, 4, utf8_decode($ciudad_fito), 0, 1, 'C');
         $this->SetX(110);
         $this->Cell(100, 4, 'No.: ' . $numero_fitosanitario, 0, 1, 'C');
 
@@ -319,7 +345,7 @@ class PDF_Fitosanitario extends FPDF
         $this->SetFont('Helvetica', 'B', 8);
         $this->Cell(40, 5, 'NO REGISTRO ICA', 'L', 0, 'L');
         $this->SetFont('Helvetica', '', 8);
-        $this->Cell(60, 5, 'EXP250201', 'R', 0, 'L');
+        $this->Cell(60, 5, $cultivo_registro_ica, 'R', 0, 'L');
         $this->SetFont('Helvetica', 'B', 8);
         $this->Cell(40, 5, 'NO REGISTRO ICA', 0, 0, 'L');
         $this->SetFont('Helvetica', '', 8);

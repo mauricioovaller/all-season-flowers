@@ -52,9 +52,11 @@ try {
                   ec.IdProveedor,
                   p.Proveedor AS nombreProveedor,
                   ec.PO_Proveedor,
-                  ec.Estado
+                  ec.Estado,
+                  COALESCE(m.Moneda, '') AS monedaNombre
                FROM SAS_EncabCompra ec
                LEFT JOIN GEN_Proveedores p ON ec.IdProveedor = p.IdProveedor
+               LEFT JOIN GEN_Monedas m ON ec.IdMoneda = m.IdMoneda
                WHERE ec.IdEncabCompra = ?";
     
     $stmtEnc = $enlace->prepare($sqlEnc);
@@ -66,7 +68,7 @@ try {
     
     $stmtEnc->bind_result(
         $idDevolucion, $fechaDevolucion, $observaciones, $idMoneda, $trm,
-        $idProveedor, $nombreProveedor, $poProveedor, $estado
+        $idProveedor, $nombreProveedor, $poProveedor, $estado, $monedaNombre
     );
     
     if (!$stmtEnc->fetch()) {
@@ -156,6 +158,7 @@ try {
             "fechaDevolucion" => $fechaDevolucion,
             "observaciones" => $observaciones,
             "idMoneda" => $idMoneda,
+            "monedaNombre" => $monedaNombre,
             "trm" => $trm,
             "idProveedor" => $idProveedor,
             "nombreProveedor" => $nombreProveedor,

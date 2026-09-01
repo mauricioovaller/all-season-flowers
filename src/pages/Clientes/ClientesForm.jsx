@@ -5,6 +5,7 @@ import Swal from 'sweetalert2';
 
 // Servicio para validaciones
 import { validarNITExistente, getUltimoCodigoCliente, generarCodigoCliente } from '../../services/clientes/clientesService';
+import { getPaises } from '../../services/paisesService';
 
 const ClientesForm = ({ cliente, onSave, onCancel }) => {
     // Estado del formulario
@@ -31,6 +32,15 @@ const ClientesForm = ({ cliente, onSave, onCancel }) => {
     const [nitValido, setNitValido] = useState(true);
     const [validandoNombre, setValidandoNombre] = useState(false);
     const [nombreValido, setNombreValido] = useState(true);
+    const [paises, setPaises] = useState(['Colombia', 'Estados Unidos', 'México', 'España', 'Argentina', 'Chile', 'Perú', 'Ecuador', 'Venezuela', 'Panamá', 'Costa Rica']);
+
+    useEffect(() => {
+        getPaises().then(lista => {
+            if (lista.length > 0) {
+                setPaises(lista.map(p => p.Pais));
+            }
+        });
+    }, []);
 
 
     useEffect(() => {
@@ -293,12 +303,6 @@ const ClientesForm = ({ cliente, onSave, onCancel }) => {
             setGuardando(false);
         }
     };
-
-    // Campos de países comunes (puedes expandir)
-    const paises = [
-        'Colombia', 'Estados Unidos', 'México', 'España', 'Argentina',
-        'Chile', 'Perú', 'Ecuador', 'Venezuela', 'Panamá', 'Costa Rica'
-    ];
 
     // Campos de ciudades comunes en Colombia
     const ciudadesColombia = [

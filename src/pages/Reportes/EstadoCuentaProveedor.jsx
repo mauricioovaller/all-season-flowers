@@ -8,8 +8,14 @@ import { CLIENTE } from '../../config/cliente';
 const EstadoCuentaProveedor = () => {
     const [proveedores, setProveedores] = useState([]);
     const [idProveedor, setIdProveedor] = useState('');
-    const [fechaInicio, setFechaInicio] = useState('');
-    const [fechaFin, setFechaFin] = useState('');
+    const [moneda, setMoneda] = useState('USD');
+    const [fechaInicio, setFechaInicio] = useState(() => {
+        const hoy = new Date();
+        return new Date(hoy.getFullYear(), hoy.getMonth(), 1).toISOString().split('T')[0];
+    });
+    const [fechaFin, setFechaFin] = useState(() => {
+        return new Date().toISOString().split('T')[0];
+    });
     const [resultado, setResultado] = useState(null);
     const [loading, setLoading] = useState(false);
     const [loadingProveedores, setLoadingProveedores] = useState(true);
@@ -26,12 +32,6 @@ const EstadoCuentaProveedor = () => {
             setLoadingProveedores(false);
         };
         cargar();
-
-        // Fecha por defecto: primer día del mes actual hasta hoy
-        const hoy = new Date();
-        const primerDia = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
-        setFechaFin(hoy.toISOString().split('T')[0]);
-        setFechaInicio(primerDia.toISOString().split('T')[0]);
     }, []);
 
     const consultar = async () => {
@@ -86,7 +86,7 @@ const EstadoCuentaProveedor = () => {
                     reader.readAsDataURL(blob);
                 }));
             doc.addImage(imgData, 'JPEG', mg, y, 38, 20);
-        } catch (_) { /* sin logo si falla la carga */ }
+        } catch { /* sin logo si falla la carga */ }
 
         // Nombre empresa (centrado)
         doc.setFontSize(17);
@@ -120,19 +120,25 @@ const EstadoCuentaProveedor = () => {
         y += 9;
 
         // ── TABLA ─────────────────────────────────────────────────────────────
-        // 11 columnas · suma anchos = 265 mm = anchoUtil (mg=7)
-        const cols = [
-            { label: '#Compra', w: 24, num: false },
-            { label: 'Fecha', w: 22, num: false },
-            { label: 'Moneda', w: 12, num: false },
-            { label: 'Valor', w: 28, num: true },
-            { label: 'Valor COP', w: 34, num: true },
-            { label: 'Devoluc.', w: 22, num: true },
-            { label: 'Dev.COP', w: 28, num: true },
-            { label: 'Pagado', w: 22, num: true },
-            { label: 'Pag.COP', w: 28, num: true },
-            { label: 'Saldo', w: 22, num: true },
-            { label: 'Saldo COP', w: 23, num: true },
+        // Columnas según moneda seleccionada
+        const esUSD = moneda === 'USD';
+        const dec = esUSD ? 3 : 2;
+        const cols = esUSD ? [
+            { label: '#Compra', w: 26, num: false },
+            { label: 'Fecha', w: 28, num: false },
+            { label: 'Moneda', w: 16, num: false },
+            { label: 'Valor (USD)', w: 44, num: true },
+            { label: 'Dev. (USD)', w: 40, num: true },
+            { label: 'Pag. (USD)', w: 40, num: true },
+            { label: 'Saldo (USD)', w: 44, num: true },
+        ] : [
+            { label: '#Compra', w: 26, num: false },
+            { label: 'Fecha', w: 28, num: false },
+            { label: 'Moneda', w: 16, num: false },
+            { label: 'Valor (COP)', w: 44, num: true },
+            { label: 'Dev. (COP)', w: 40, num: true },
+            { label: 'Pag. (COP)', w: 40, num: true },
+            { label: 'Saldo (COP)', w: 44, num: true },
         ];
         let xAcc = mg;
         cols.forEach(c => { c.x = xAcc; xAcc += c.w; });
@@ -174,18 +180,22 @@ const EstadoCuentaProveedor = () => {
             }
             fillRow = !fillRow;
 
-            const vals = [
+            const vals = esUSD ? [
                 m.numeroCompra,
                 m.fechaEntrega,
-                m.moneda.split(' ')[0],
-                formatNum(m.valorBase),
-                formatNum(m.valorBaseCOP),
-                formatNum(m.valorDevolucion),
-                formatNum(m.valorDevolucionCOP),
-                formatNum(m.valorPagado),
-                formatNum(m.valorPagadoCOP),
-                formatNum(m.saldo),
-                formatNum(m.saldoCOP),
+                moneda,
+                formatNum(m.valorUSD, dec),
+                formatNum(m.devolucionUSD, dec),
+                formatNum(m.pagadoUSD, dec),
+                formatNum(m.saldoUSD, dec),
+            ] : [
+                m.numeroCompra,
+                m.fechaEntrega,
+                moneda,
+                formatNum(m.valorCOP, dec),
+                formatNum(m.devolucionCOP, dec),
+                formatNum(m.pagadoCOP, dec),
+                formatNum(m.saldoCOP, dec),
             ];
             cols.forEach((c, i) => {
                 const tx = c.num ? c.x + c.w - 1 : c.x + 1;
@@ -206,17 +216,20 @@ const EstadoCuentaProveedor = () => {
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(7.5);
         const t = resultado.totales;
-        doc.text('TOTALES', cols[0].x + 1, y + 4.5);
-        const totVals = [null, null, null,
-            formatNum(t.valorBase),
-            formatNum(t.valorBaseCOP),
-            formatNum(t.valorDevolucion),
-            formatNum(t.valorDevolucionCOP),
-            formatNum(t.valorPagado),
-            formatNum(t.valorPagadoCOP),
-            formatNum(t.saldo),
-            formatNum(t.saldoCOP),
+        const totVals = esUSD ? [
+            null, null, null,
+            formatNum(t.valorUSD, dec),
+            formatNum(t.devolucionUSD, dec),
+            formatNum(t.pagadoUSD, dec),
+            formatNum(t.saldoUSD, dec),
+        ] : [
+            null, null, null,
+            formatNum(t.valorCOP, dec),
+            formatNum(t.devolucionCOP, dec),
+            formatNum(t.pagadoCOP, dec),
+            formatNum(t.saldoCOP, dec),
         ];
+        doc.text('TOTALES', cols[0].x + 1, y + 4.5);
         cols.forEach((c, i) => {
             if (totVals[i]) {
                 doc.text(totVals[i], c.x + c.w - 1, y + 4.5, { align: 'right' });
@@ -228,6 +241,8 @@ const EstadoCuentaProveedor = () => {
 
     const movimientos = resultado?.movimientos || [];
     const totales = resultado?.totales;
+    const esUSD = moneda === 'USD';
+    const dec = esUSD ? 3 : 2;
 
     return (
         <div className="space-y-4">
@@ -246,7 +261,7 @@ const EstadoCuentaProveedor = () => {
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                     {/* Selector de proveedor */}
-                    <div className="md:col-span-2">
+                    <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
                             <Truck className="w-4 h-4 inline mr-1" />Proveedor
                         </label>
@@ -260,6 +275,21 @@ const EstadoCuentaProveedor = () => {
                             {proveedores.map(p => (
                                 <option key={p.IdProveedor} value={p.IdProveedor}>{p.Proveedor}</option>
                             ))}
+                        </select>
+                    </div>
+
+                    {/* Selector de moneda */}
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                            <FileText className="w-4 h-4 inline mr-1" />Moneda
+                        </label>
+                        <select
+                            value={moneda}
+                            onChange={e => setMoneda(e.target.value)}
+                            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        >
+                            <option value="USD">USD</option>
+                            <option value="COP">COP</option>
                         </select>
                     </div>
 
@@ -309,7 +339,7 @@ const EstadoCuentaProveedor = () => {
                                 onClick={exportarPDF}
                                 className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white px-5 py-2 rounded-lg text-sm font-medium transition-colors"
                             >
-                                <Download className="w-4 h-4" />Exportar PDF
+                                <Download className="w-4 h-4" />Exportar PDF ({moneda})
                             </button>
                             <button
                                 onClick={limpiar}
@@ -334,6 +364,7 @@ const EstadoCuentaProveedor = () => {
                         <div>
                             <span className="font-semibold text-indigo-800 text-sm">{resultado.proveedor.nombre}</span>
                             <span className="text-gray-500 text-xs ml-3">Período: {fechaInicio} — {fechaFin}</span>
+                            <span className="text-gray-500 text-xs ml-2">Moneda: {moneda}</span>
                         </div>
                         <span className="text-sm text-gray-600">{movimientos.length} registro(s)</span>
                     </div>
@@ -352,14 +383,10 @@ const EstadoCuentaProveedor = () => {
                                             <th className="px-3 py-3 text-left whitespace-nowrap">#Compra</th>
                                             <th className="px-3 py-3 text-left whitespace-nowrap">Fecha Entrega</th>
                                             <th className="px-3 py-3 text-left whitespace-nowrap">Moneda</th>
-                                            <th className="px-3 py-3 text-right whitespace-nowrap">Valor Compra</th>
-                                            <th className="px-3 py-3 text-right whitespace-nowrap">Valor COP</th>
-                                            <th className="px-3 py-3 text-right whitespace-nowrap">Devolución</th>
-                                            <th className="px-3 py-3 text-right whitespace-nowrap">Devol. COP</th>
-                                            <th className="px-3 py-3 text-right whitespace-nowrap">Pagado</th>
-                                            <th className="px-3 py-3 text-right whitespace-nowrap">Pagado COP</th>
-                                            <th className="px-3 py-3 text-right whitespace-nowrap">Saldo</th>
-                                            <th className="px-3 py-3 text-right whitespace-nowrap">Saldo COP</th>
+                                            <th className="px-3 py-3 text-right whitespace-nowrap">Valor ({moneda})</th>
+                                            <th className="px-3 py-3 text-right whitespace-nowrap">Dev. ({moneda})</th>
+                                            <th className="px-3 py-3 text-right whitespace-nowrap">Pag. ({moneda})</th>
+                                            <th className="px-3 py-3 text-right whitespace-nowrap">Saldo ({moneda})</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -367,18 +394,12 @@ const EstadoCuentaProveedor = () => {
                                             <tr key={m.idCompra} className={i % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
                                                 <td className="px-3 py-2 font-medium text-indigo-700">{m.numeroCompra}</td>
                                                 <td className="px-3 py-2 whitespace-nowrap">{m.fechaEntrega}</td>
-                                                <td className="px-3 py-2 whitespace-nowrap">{m.moneda}</td>
-                                                <td className="px-3 py-2 text-right font-medium">{formatNum(m.valorBase)}</td>
-                                                <td className="px-3 py-2 text-right text-gray-600">{formatNum(m.valorBaseCOP)}</td>
-                                                <td className="px-3 py-2 text-right text-orange-600">{formatNum(m.valorDevolucion)}</td>
-                                                <td className="px-3 py-2 text-right text-orange-500">{formatNum(m.valorDevolucionCOP)}</td>
-                                                <td className="px-3 py-2 text-right text-blue-600">{formatNum(m.valorPagado)}</td>
-                                                <td className="px-3 py-2 text-right text-blue-500">{formatNum(m.valorPagadoCOP)}</td>
-                                                <td className={`px-3 py-2 text-right font-semibold ${m.saldo > 0 ? 'text-red-600' : 'text-green-600'}`}>
-                                                    {formatNum(m.saldo)}
-                                                </td>
-                                                <td className={`px-3 py-2 text-right font-semibold ${m.saldoCOP > 0 ? 'text-red-500' : 'text-green-500'}`}>
-                                                    {formatNum(m.saldoCOP)}
+                                                <td className="px-3 py-2 whitespace-nowrap">{moneda}</td>
+                                                <td className={`px-3 py-2 text-right font-medium`}>{formatNum(m[`valor${moneda}`], dec)}</td>
+                                                <td className="px-3 py-2 text-right text-orange-600">{formatNum(m[`devolucion${moneda}`], dec)}</td>
+                                                <td className="px-3 py-2 text-right text-blue-600">{formatNum(m[`pagado${moneda}`], dec)}</td>
+                                                <td className={`px-3 py-2 text-right font-semibold ${m[`saldo${moneda}`] > 0 ? 'text-red-600' : 'text-green-600'}`}>
+                                                    {formatNum(m[`saldo${moneda}`], dec)}
                                                 </td>
                                             </tr>
                                         ))}
@@ -388,14 +409,10 @@ const EstadoCuentaProveedor = () => {
                                         <tfoot>
                                             <tr className="bg-indigo-700 text-white font-bold text-xs">
                                                 <td colSpan={3} className="px-3 py-3">TOTALES</td>
-                                                <td className="px-3 py-3 text-right">{formatNum(totales.valorBase)}</td>
-                                                <td className="px-3 py-3 text-right">{formatNum(totales.valorBaseCOP)}</td>
-                                                <td className="px-3 py-3 text-right">{formatNum(totales.valorDevolucion)}</td>
-                                                <td className="px-3 py-3 text-right">{formatNum(totales.valorDevolucionCOP)}</td>
-                                                <td className="px-3 py-3 text-right">{formatNum(totales.valorPagado)}</td>
-                                                <td className="px-3 py-3 text-right">{formatNum(totales.valorPagadoCOP)}</td>
-                                                <td className="px-3 py-3 text-right">{formatNum(totales.saldo)}</td>
-                                                <td className="px-3 py-3 text-right">{formatNum(totales.saldoCOP)}</td>
+                                                <td className="px-3 py-3 text-right">{formatNum(totales[`valor${moneda}`], dec)}</td>
+                                                <td className="px-3 py-3 text-right">{formatNum(totales[`devolucion${moneda}`], dec)}</td>
+                                                <td className="px-3 py-3 text-right">{formatNum(totales[`pagado${moneda}`], dec)}</td>
+                                                <td className="px-3 py-3 text-right">{formatNum(totales[`saldo${moneda}`], dec)}</td>
                                             </tr>
                                         </tfoot>
                                     )}
@@ -408,36 +425,32 @@ const EstadoCuentaProveedor = () => {
                                     <div key={m.idCompra} className={`p-4 ${i % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}>
                                         <div className="flex justify-between items-start mb-1">
                                             <span className="font-bold text-indigo-700 text-base">{m.numeroCompra}</span>
-                                            <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded">{m.moneda.split(' ')[0]}</span>
+                                            <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded">{moneda}</span>
                                         </div>
                                         <p className="text-xs text-gray-400 mb-3">{m.fechaEntrega}</p>
                                         <div className="space-y-2">
                                             <div className="flex justify-between items-end">
-                                                <span className="text-xs text-gray-500">Valor</span>
+                                                <span className="text-xs text-gray-500">Valor ({moneda})</span>
                                                 <div className="text-right">
-                                                    <div className="text-sm font-medium text-gray-800">{formatNum(m.valorBase)}</div>
-                                                    <div className="text-xs text-gray-500">{formatNum(m.valorBaseCOP)} COP</div>
+                                                    <div className="text-sm font-medium text-gray-800">{formatNum(m[`valor${moneda}`], dec)}</div>
                                                 </div>
                                             </div>
                                             <div className="flex justify-between items-end">
-                                                <span className="text-xs text-gray-500">Devolución</span>
+                                                <span className="text-xs text-gray-500">Dev. ({moneda})</span>
                                                 <div className="text-right">
-                                                    <div className="text-sm font-medium text-orange-600">{formatNum(m.valorDevolucion)}</div>
-                                                    <div className="text-xs text-orange-500">{formatNum(m.valorDevolucionCOP)} COP</div>
+                                                    <div className="text-sm font-medium text-orange-600">{formatNum(m[`devolucion${moneda}`], dec)}</div>
                                                 </div>
                                             </div>
                                             <div className="flex justify-between items-end">
-                                                <span className="text-xs text-gray-500">Pagado</span>
+                                                <span className="text-xs text-gray-500">Pag. ({moneda})</span>
                                                 <div className="text-right">
-                                                    <div className="text-sm font-medium text-blue-600">{formatNum(m.valorPagado)}</div>
-                                                    <div className="text-xs text-blue-500">{formatNum(m.valorPagadoCOP)} COP</div>
+                                                    <div className="text-sm font-medium text-blue-600">{formatNum(m[`pagado${moneda}`], dec)}</div>
                                                 </div>
                                             </div>
                                             <div className="flex justify-between items-end border-t border-gray-200 pt-2">
-                                                <span className="text-xs font-semibold text-gray-700">Saldo</span>
+                                                <span className="text-xs font-semibold text-gray-700">Saldo ({moneda})</span>
                                                 <div className="text-right">
-                                                    <div className={`text-sm font-bold ${m.saldo > 0 ? 'text-red-600' : 'text-green-600'}`}>{formatNum(m.saldo)}</div>
-                                                    <div className={`text-xs font-semibold ${m.saldoCOP > 0 ? 'text-red-500' : 'text-green-500'}`}>{formatNum(m.saldoCOP)} COP</div>
+                                                    <div className={`text-sm font-bold ${m[`saldo${moneda}`] > 0 ? 'text-red-600' : 'text-green-600'}`}>{formatNum(m[`saldo${moneda}`], dec)}</div>
                                                 </div>
                                             </div>
                                         </div>
@@ -448,31 +461,27 @@ const EstadoCuentaProveedor = () => {
                                         <p className="font-bold text-sm mb-3">TOTALES</p>
                                         <div className="space-y-2">
                                             <div className="flex justify-between items-end">
-                                                <span className="text-xs text-indigo-200">Valor</span>
+                                                <span className="text-xs text-indigo-200">Valor ({moneda})</span>
                                                 <div className="text-right">
-                                                    <div className="text-sm font-medium">{formatNum(totales.valorBase)}</div>
-                                                    <div className="text-xs text-indigo-200">{formatNum(totales.valorBaseCOP)} COP</div>
+                                                    <div className="text-sm font-medium">{formatNum(totales[`valor${moneda}`], dec)}</div>
                                                 </div>
                                             </div>
                                             <div className="flex justify-between items-end">
-                                                <span className="text-xs text-indigo-200">Devolución</span>
+                                                <span className="text-xs text-indigo-200">Dev. ({moneda})</span>
                                                 <div className="text-right">
-                                                    <div className="text-sm font-medium">{formatNum(totales.valorDevolucion)}</div>
-                                                    <div className="text-xs text-indigo-200">{formatNum(totales.valorDevolucionCOP)} COP</div>
+                                                    <div className="text-sm font-medium">{formatNum(totales[`devolucion${moneda}`], dec)}</div>
                                                 </div>
                                             </div>
                                             <div className="flex justify-between items-end">
-                                                <span className="text-xs text-indigo-200">Pagado</span>
+                                                <span className="text-xs text-indigo-200">Pag. ({moneda})</span>
                                                 <div className="text-right">
-                                                    <div className="text-sm font-medium">{formatNum(totales.valorPagado)}</div>
-                                                    <div className="text-xs text-indigo-200">{formatNum(totales.valorPagadoCOP)} COP</div>
+                                                    <div className="text-sm font-medium">{formatNum(totales[`pagado${moneda}`], dec)}</div>
                                                 </div>
                                             </div>
                                             <div className="flex justify-between items-end border-t border-indigo-500 pt-2">
-                                                <span className="text-xs font-bold">Saldo</span>
+                                                <span className="text-xs font-bold">Saldo ({moneda})</span>
                                                 <div className="text-right">
-                                                    <div className="text-sm font-bold">{formatNum(totales.saldo)}</div>
-                                                    <div className="text-xs text-indigo-200 font-semibold">{formatNum(totales.saldoCOP)} COP</div>
+                                                    <div className="text-sm font-bold">{formatNum(totales[`saldo${moneda}`], dec)}</div>
                                                 </div>
                                             </div>
                                         </div>

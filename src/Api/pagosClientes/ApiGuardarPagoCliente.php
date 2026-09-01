@@ -64,106 +64,154 @@ try {
     $advertencias = [];
     $facturasValidadas = [];
 
+    $idLegacyActualizados = [];
+
     foreach ($facturas as $factura) {
         $invoice = intval($factura["invoice"]);
         $valorPagoFactura = floatval($factura["valorPago"]);
+        $esLegacy = !empty($factura["esLegacy"]);
 
-        // Obtener IdEncabPedido y moneda de la factura
-        $sqlInfoFactura = "SELECT ep.IdEncabPedido, ep.IdMoneda, m.Moneda, ep.IdCliente 
-                          FROM SAS_EncabPedido ep 
-                          LEFT JOIN GEN_Monedas m ON ep.IdMoneda = m.IdMoneda 
-                          WHERE ep.Factura = ?";
-        $stmtInfo = $enlace->prepare($sqlInfoFactura);
-        if (!$stmtInfo) {
-            throw new Exception("Error preparando consulta de información de factura: " . $enlace->error);
-        }
-        $stmtInfo->bind_param("i", $invoice);
-        $stmtInfo->execute();
-        $stmtInfo->bind_result($idEncabPedido, $idMonedaFactura, $monedaFactura, $idClienteFactura);
+        if ($esLegacy) {
+            // ── FACTURA LEGACY ──
+            $sqlLegacy = "SELECT leg.IdLegacyMovimiento, leg.IdMoneda, m.Moneda, leg.IdEntidad,
+                                 leg.Valor, leg.Credito, leg.Pago,
+                                 (leg.Valor - leg.Credito - leg.Pago) as saldoPendiente
+                          FROM SAS_LegacyMovimientos leg
+                          LEFT JOIN GEN_Monedas m ON leg.IdMoneda = m.IdMoneda
+                          WHERE leg.Tipo = 'C'
+                            AND leg.NumeroDocumento = ?
+                            AND leg.IdEntidad = ?
+                            AND leg.Anulado = 0
+                          LIMIT 1";
+            $stmtLeg = $enlace->prepare($sqlLegacy);
+            if (!$stmtLeg) {
+                throw new Exception("Error preparando consulta legacy: " . $enlace->error);
+            }
+            $invoiceStr = $factura["invoiceString"] ?? (string)$invoice;
+            $stmtLeg->bind_param("si", $invoiceStr, $idCliente);
+            $stmtLeg->execute();
+            $stmtLeg->bind_result($idLegacyMov, $idMonedaFactura, $monedaFactura, $idEntidadLegacy, $valorLeg, $creditoLeg, $pagoLeg, $saldoLeg);
+            if (!$stmtLeg->fetch()) {
+                $stmtLeg->close();
+                throw new Exception("Factura legacy $invoice no encontrada");
+            }
+            $stmtLeg->close();
+            $saldoPendiente = floatval($saldoLeg);
 
-        if (!$stmtInfo->fetch()) {
+            if ($idEntidadLegacy != $idCliente) {
+                throw new Exception("La factura legacy $invoice no pertenece al cliente seleccionado");
+            }
+            if ($idMonedaFactura != $idMoneda) {
+                throw new Exception("La factura legacy $invoice tiene moneda diferente a la seleccionada para el pago");
+            }
+            if ($saldoPendiente <= 0) {
+                throw new Exception("La factura legacy $invoice no tiene saldo pendiente");
+            }
+            if ($valorPagoFactura > $saldoPendiente) {
+                $advertencias[] = "El valor a pagar de la factura legacy $invoice ($valorPagoFactura) excede el saldo pendiente ($saldoPendiente)";
+            }
+
+            $facturasValidadas[] = [
+                'invoice' => $invoice,
+                'valorPago' => $valorPagoFactura,
+                'idEncabPedido' => 0,
+                'saldoPendiente' => $saldoPendiente,
+                'esLegacy' => true,
+                'idLegacyMov' => $idLegacyMov
+            ];
+            $idLegacyActualizados[] = $idLegacyMov;
+        } else {
+            // ── FACTURA ACTUAL ──
+            $sqlInfoFactura = "SELECT ep.IdEncabPedido, ep.IdMoneda, m.Moneda, ep.IdCliente, ep.Anulado 
+                              FROM SAS_EncabPedido ep 
+                              LEFT JOIN GEN_Monedas m ON ep.IdMoneda = m.IdMoneda 
+                              WHERE ep.Factura = ?";
+            $stmtInfo = $enlace->prepare($sqlInfoFactura);
+            if (!$stmtInfo) {
+                throw new Exception("Error preparando consulta de información de factura: " . $enlace->error);
+            }
+            $stmtInfo->bind_param("i", $invoice);
+            $stmtInfo->execute();
+            $stmtInfo->bind_result($idEncabPedido, $idMonedaFactura, $monedaFactura, $idClienteFactura, $anuladoFactura);
+
+            if (!$stmtInfo->fetch()) {
+                $stmtInfo->close();
+                throw new Exception("Factura $invoice no encontrada");
+            }
             $stmtInfo->close();
-            throw new Exception("Factura $invoice no encontrada");
+
+            if ($idClienteFactura != $idCliente) {
+                throw new Exception("La factura $invoice no pertenece al cliente seleccionado");
+            }
+            if ($idMonedaFactura != $idMoneda) {
+                throw new Exception("La factura $invoice tiene moneda diferente a la seleccionada para el pago");
+            }
+            if ($anuladoFactura == 1) {
+                throw new Exception("La factura $invoice pertenece a un pedido anulado y no puede pagarse");
+            }
+
+            $sqlSaldo = "
+                SELECT 
+                    (
+                        COALESCE((
+                            SELECT SUM(
+                                CASE 
+                                    WHEN dp.IdUnidad = 4 THEN de.Cantidad * (dp.Tallos_Ramo * dp.Ramos_Caja) * dp.Precio_Venta
+                                    ELSE de.Cantidad * dp.Ramos_Caja * dp.Precio_Venta
+                                END
+                            )
+                            FROM SAS_DetEmpaque de
+                            INNER JOIN SAS_DetProducto dp ON de.IdDetEmpaque = dp.IdDetEmpaque
+                            WHERE de.IdEncabPedido = ?
+                        ), 0)
+                        - COALESCE((
+                            SELECT SUM(
+                                (COALESCE(dp.TallosDevolucion, 0) * COALESCE(dp.Precio_Venta, 0)) + 
+                                COALESCE(dp.Flete, 0) + 
+                                COALESCE(dp.Fumigacion, 0) + 
+                                COALESCE(dp.Otros, 0)
+                            )
+                            FROM SAS_DetEmpaque de
+                            INNER JOIN SAS_DetProducto dp ON de.IdDetEmpaque = dp.IdDetEmpaque
+                            WHERE de.IdEncabPedido = ?
+                            AND COALESCE(dp.TallosDevolucion, 0) > 0
+                        ), 0)
+                        - COALESCE((
+                            SELECT SUM(dpc.ValorPago)
+                            FROM SAS_EncabPagoCliente epc
+                            INNER JOIN SAS_DetPagoCliente dpc ON epc.IdEncabPagoCliente = dpc.IdEncabPagoCliente
+                            WHERE dpc.Invoice = ?
+                            AND epc.Anulado = 0
+                            AND epc.IdEncabPagoCliente != ?
+                        ), 0)
+                    ) as saldoPendiente
+            ";
+
+            $stmtSaldo = $enlace->prepare($sqlSaldo);
+            if (!$stmtSaldo) {
+                throw new Exception("Error preparando consulta de saldo: " . $enlace->error);
+            }
+            $stmtSaldo->bind_param("iiii", $idEncabPedido, $idEncabPedido, $invoice, $idEncabPagoClienteExistente);
+            $stmtSaldo->execute();
+            $stmtSaldo->bind_result($saldoPendiente);
+            $stmtSaldo->fetch();
+            $stmtSaldo->close();
+
+            if ($saldoPendiente <= 0) {
+                throw new Exception("La factura $invoice no tiene saldo pendiente");
+            }
+            if ($valorPagoFactura > $saldoPendiente) {
+                $advertencias[] = "El valor a pagar de la factura $invoice ($valorPagoFactura) excede el saldo pendiente ($saldoPendiente)";
+            }
+
+            $facturasValidadas[] = [
+                'invoice' => $invoice,
+                'valorPago' => $valorPagoFactura,
+                'idEncabPedido' => $idEncabPedido,
+                'saldoPendiente' => $saldoPendiente,
+                'esLegacy' => false
+            ];
         }
-        $stmtInfo->close();
-
-        // Verificar que la factura sea del mismo cliente
-        if ($idClienteFactura != $idCliente) {
-            throw new Exception("La factura $invoice no pertenece al cliente seleccionado");
-        }
-
-        // Verificar que la moneda de la factura coincida con la moneda del pago
-        if ($idMonedaFactura != $idMoneda) {
-            throw new Exception("La factura $invoice tiene moneda diferente a la seleccionada para el pago");
-        }
-
-        // Calcular saldo pendiente de la factura
-        $sqlSaldo = "
-            SELECT 
-                (
-                    -- VALOR FACTURA
-                    COALESCE((
-                        SELECT SUM(
-                            CASE 
-                                WHEN dp.IdUnidad = 4 THEN de.Cantidad * (dp.Tallos_Ramo * dp.Ramos_Caja) * dp.Precio_Venta
-                                ELSE de.Cantidad * dp.Ramos_Caja * dp.Precio_Venta
-                            END
-                        )
-                        FROM SAS_DetEmpaque de
-                        INNER JOIN SAS_DetProducto dp ON de.IdDetEmpaque = dp.IdDetEmpaque
-                        WHERE de.IdEncabPedido = ?
-                    ), 0)
-                    -- VALOR DEVOLUCIONES
-                    - COALESCE((
-                        SELECT SUM(
-                            (COALESCE(dp.TallosDevolucion, 0) * COALESCE(dp.Precio_Venta, 0)) + 
-                            COALESCE(dp.Flete, 0) + 
-                            COALESCE(dp.Fumigacion, 0) + 
-                            COALESCE(dp.Otros, 0)
-                        )
-                        FROM SAS_DetEmpaque de
-                        INNER JOIN SAS_DetProducto dp ON de.IdDetEmpaque = dp.IdDetEmpaque
-                        WHERE de.IdEncabPedido = ?
-                        AND COALESCE(dp.TallosDevolucion, 0) > 0
-                    ), 0)
-                    -- VALOR PAGOS PREVIOS
-                    - COALESCE((
-                        SELECT SUM(dpc.ValorPago)
-                        FROM SAS_EncabPagoCliente epc
-                        INNER JOIN SAS_DetPagoCliente dpc ON epc.IdEncabPagoCliente = dpc.IdEncabPagoCliente
-                        WHERE dpc.Invoice = ?
-                        AND epc.Anulado = 0
-                        AND epc.IdEncabPagoCliente != ?
-                    ), 0)
-                ) as saldoPendiente
-        ";
-
-        $stmtSaldo = $enlace->prepare($sqlSaldo);
-        if (!$stmtSaldo) {
-            throw new Exception("Error preparando consulta de saldo: " . $enlace->error);
-        }
-        $stmtSaldo->bind_param("iiii", $idEncabPedido, $idEncabPedido, $invoice, $idEncabPagoClienteExistente);
-        $stmtSaldo->execute();
-        $stmtSaldo->bind_result($saldoPendiente);
-        $stmtSaldo->fetch();
-        $stmtSaldo->close();
-
-        // Validar saldo pendiente
-        if ($saldoPendiente <= 0) {
-            throw new Exception("La factura $invoice no tiene saldo pendiente");
-        }
-
-        // Advertencia si el valor a pagar excede el saldo pendiente
-        if ($valorPagoFactura > $saldoPendiente) {
-            $advertencias[] = "El valor a pagar de la factura $invoice ($valorPagoFactura) excede el saldo pendiente ($saldoPendiente)";
-        }
-
-        $facturasValidadas[] = [
-            'invoice' => $invoice,
-            'valorPago' => $valorPagoFactura,
-            'idEncabPedido' => $idEncabPedido,
-            'saldoPendiente' => $saldoPendiente
-        ];
     }
 
     // Convertir fecha a formato datetime si es solo fecha
@@ -272,6 +320,32 @@ try {
             throw new Exception("Error ejecutando inserción de detalle: " . $stmtDet->error);
         }
         $stmtDet->close();
+    }
+
+    // 5. Actualizar Pago en SAS_LegacyMovimientos para facturas legacy
+    //    Se recalcula desde SAS_DetPagoCliente para reflejar pagos nuevos/editados/anulados
+    foreach ($idLegacyActualizados as $idLegMov) {
+        $sqlRecalcPago = "
+            UPDATE SAS_LegacyMovimientos leg
+            SET leg.Pago = COALESCE((
+                SELECT SUM(dpc.ValorPago)
+                FROM SAS_DetPagoCliente dpc
+                INNER JOIN SAS_EncabPagoCliente epc ON dpc.IdEncabPagoCliente = epc.IdEncabPagoCliente
+                WHERE dpc.Invoice = CAST(leg.NumeroDocumento AS UNSIGNED)
+                  AND dpc.Anulado = 0
+                  AND epc.Anulado = 0
+            ), 0)
+            WHERE leg.IdLegacyMovimiento = ?";
+        $stmtRecalc = $enlace->prepare($sqlRecalcPago);
+        if (!$stmtRecalc) {
+            throw new Exception("Error preparando actualización de pago legacy: " . $enlace->error);
+        }
+        $stmtRecalc->bind_param("i", $idLegMov);
+        $stmtRecalc->execute();
+        if ($stmtRecalc->errno) {
+            throw new Exception("Error actualizando pago legacy: " . $stmtRecalc->error);
+        }
+        $stmtRecalc->close();
     }
 
     $enlace->commit();
